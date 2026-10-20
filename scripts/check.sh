@@ -12,6 +12,9 @@
 # skip for a missing tool (cc, node, python3) fails instead, so a green run means every test ran.
 set -eu
 cd "$(dirname "$0")/.."
+# Run from a git hook (pre-push), git exports GIT_DIR and friends for this repository. They would
+# override `git -C <dir>` in the tests that build a scratch repository, which then commit here instead.
+unset $(git rev-parse --local-env-vars)
 
 quick=no
 for a in "$@"; do
