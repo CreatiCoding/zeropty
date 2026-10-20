@@ -754,11 +754,16 @@ int main(void) {
         "40",
         "-y",
         "8",
-        &format!("{run} | od -c | grep -c 033; {run} </dev/null; {run} >{}; echo DONE; exec sleep 100", file.display()),
+        &format!(
+            "{run} | od -c | grep -c 033; {run} </dev/null; {run} >{}; env -u ZEROPTY_TTY_ID {run}; env -u ZEROPTY_TTY_ID {run} | od -c | grep -c 033; echo DONE; exec sleep 100",
+            file.display()
+        ),
     ]);
     let screen = s.wait_capture(&["capture-pane", "-p", "-t", "=t:"], |o| o.contains("DONE"));
     // Piped on: no OSC in the pipe (0 lines with ESC). From /dev/null: stdin is no terminal, so no raw mode.
-    assert!(screen.starts_with("0\ntty=011\nDONE\n"), "{screen:?}");
+    // Without ZEROPTY_TTY_ID (a session from a server before it, kept across restart-server): the
+    // session's pipe and socket as the program starts with them, still not a pipe on.
+    assert!(screen.starts_with("0\ntty=011\ntty=111\n0\nDONE\n"), "{screen:?}");
     assert_eq!(std::fs::read_to_string(&file).unwrap(), "tty=101\n");
     let outside = Command::new(tty)
         .arg(&probe)

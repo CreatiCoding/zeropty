@@ -24,14 +24,31 @@ static int fake_init;
 // ZEROPTY_TTY_ID ("dev:ino,dev:ino", input then output). Only an fd open on one of them is a terminal:
 // one redirected to a file, a pipe or /dev/null is not, whatever its number, and neither is anything in
 // a process started outside a session (DYLD_INSERT_LIBRARIES is inherited by every child).
+// A pipe's inode number is a kernel address, reused once the pipe is freed: a shimmed process that
+// outlives its session (nohup) could take a new pipe for the old terminal. Within the session the
+// server holds both files open, so neither number is reused.
 struct id { dev_t dev; ino_t ino; int set; };
 static struct id tty_in, tty_out;
+
+// The file `fd` is open on, when it is of type `type` (S_IFIFO, S_IFSOCK).
+static struct id file_of(int fd, mode_t type) {
+  struct stat st;
+  if (fstat(fd, &st) != 0 || (st.st_mode & S_IFMT) != type) return (struct id){ 0, 0, 0 };
+  return (struct id){ st.st_dev, st.st_ino, 1 };
+}
 
 __attribute__((constructor)) static void read_tty_id(void) {
   const char *v = getenv("ZEROPTY_TTY_ID");
   int id, od; unsigned long long ii, oi;
   if (v && sscanf(v, "%d:%llu,%d:%llu", &id, &ii, &od, &oi) == 4) {
     tty_in = (struct id){ id, ii, 1 }; tty_out = (struct id){ od, oi, 1 };
+  } else if (!v && getenv("ZEROPTY_SESSION")) {
+    // A session started by a server from before ZEROPTY_TTY_ID (kept across restart-server): such a
+    // server made the input a pipe and the output a socket, so take them from this process's fds as
+    // it starts. A redirect to a file or a pipe on is then still not a terminal.
+    tty_in = file_of(0, S_IFIFO);
+    tty_out = file_of(1, S_IFSOCK);
+    if (!tty_out.set) tty_out = file_of(2, S_IFSOCK);
   }
 }
 
