@@ -1,0 +1,57 @@
+[package]
+name = "zeropty"
+version.workspace = true
+rust-version.workspace = true
+edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "A PTY-free, tmux-compatible session engine for AI agents on macOS: run, read and wait on 1000 sessions, standalone or embedded"
+repository = "https://github.com/CreatiCoding/zeropty"
+readme = "README.md"
+keywords = ["tmux", "terminal", "session", "agent", "embedded"]
+categories = ["command-line-utilities", "development-tools"]
+
+[dependencies]
+libc = "0.2.190"
+# v2: 400 busy claude sessions took 3.5 MB against 4.5 MB with v3 (v3 spreads 1-8 KB blocks over more pages).
+libmimalloc-sys = { version = "0.1.49", features = ["extended", "v2"] }
+mimalloc = "0.1.52"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+unicode-width = "0.2.2"
+vte = "0.15.0"
+# zstd itself, to give it our allocator (src/term/cold.rs, mod zmem).
+zstd-sys = { version = "2.1.2", default-features = false, features = ["experimental"] }
+
+[dev-dependencies]
+zstd = { version = "0.14.3", default-features = false }
+rand = "0.9"
+vt100 = "0.16.2"
+
+[profile.release]
+debug = "line-tables-only"
+
+[workspace]
+members = [".", "bindings/c", "bindings/node"]
+
+# One version for every crate, the C header (ZEROPTY_VERSION_*), the Node clients and `zeropty --version`.
+# Change it only with `node scripts/release.mjs bump ...` (docs/RELEASING.md); tests/version.rs checks they agree.
+[workspace.package]
+version = "0.1.0"
+# MSRV: napi 3 needs 1.88. scripts/check.sh checks the workspace on exactly this toolchain (docs/VERSIONING.md).
+rust-version = "1.88"
+
+# scripts/check.sh runs clippy with -D warnings. These are allowed on purpose, or are existing debt to clear in their own commits:
+[workspace.lints.clippy]
+# The extern "C" functions take the host's pointers by design: the C ABI cannot mark them unsafe for C callers.
+not_unsafe_ptr_arg_deref = "allow"
+# Boxed maps/vecs and uneven enum variants keep idle sessions' structs small (memory is the product).
+box_collection = "allow"
+vec_box = "allow"
+large_enum_variant = "allow"
+# Style debt, kept to avoid churn in hot files while other work is in flight.
+collapsible_if = "allow"
+type_complexity = "allow"
+len_without_is_empty = "allow"
+
+[lints]
+workspace = true

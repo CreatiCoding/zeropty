@@ -1,0 +1,18 @@
+#!/bin/sh
+# Runs scripts/check.sh before a push: there is no hosted CI, so this is what keeps main green. Enable
+# once per clone (with the commit-msg hook):
+#   git config core.hooksPath .githooks
+# ZEROPTY_PRE_PUSH=quick runs `check.sh --quick`; `git push --no-verify` skips it (say why in the commit).
+# A push that only deletes a remote branch is not checked.
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+  case $local_sha in
+    *[!0]*) ;;
+    *) continue ;;
+  esac
+  root=$(git rev-parse --show-toplevel)
+  if [ "${ZEROPTY_PRE_PUSH:-}" = quick ]; then
+    exec "$root/scripts/check.sh" --quick
+  fi
+  exec "$root/scripts/check.sh"
+done
+exit 0

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability (private)
+    url: https://github.com/CreatiCoding/zeropty/security/advisories/new
+    about: Report security problems here instead of in a public issue. If the link does not open, open an issue that says only "I need a channel for a security report", without details (SECURITY.md).
+  - name: Usage and FAQ
+    url: https://github.com/CreatiCoding/zeropty/blob/main/docs/README.md
+    about: Command reference, frequently asked questions, examples

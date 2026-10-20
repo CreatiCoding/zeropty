@@ -1,0 +1,43 @@
+#!/bin/sh
+# Runs a program with the session's pipes in place of a terminal: shim.dylib answers isatty, tcgetattr,
+# TIOCGWINSZ, tcgetpgrp and /dev/tty for it. macOS drops DYLD_INSERT_LIBRARIES for SIP-protected
+# binaries (/usr/bin, /bin, /sbin, /System) and for ones signed with the hardened runtime: those run from
+# an ad-hoc signed copy, refreshed whenever the original changes (an update). A copy has none of the
+# original's privileges (setuid, entitlements): top or ps do not run that way. A script's interpreter
+# behind /usr/bin/env loses the shim too (SIP clears DYLD_* there); run the interpreter itself instead.
+# usage: zeropty-tty program [args...]   e.g. zeropty new-session -d -s v "zeropty-tty vim notes.txt"
+set -e
+HERE=$(cd "$(dirname "$0")" && pwd)
+[ $# -ge 1 ] || { echo "usage: zeropty-tty program [args...]" >&2; exit 2; }
+PROG=$1; shift
+case $PROG in
+  */*) ;;
+  *) PROG=$(command -v "$PROG") || { echo "zeropty-tty: $PROG: not found" >&2; exit 127; } ;;
+esac
+REAL=$(realpath "$PROG")
+RUN=$REAL
+copy=no
+case $REAL in
+  /usr/local/*) ;;
+  /usr/*|/bin/*|/sbin/*|/System/*) copy=yes ;;
+esac
+CACHE=${ZEROPTY_CACHE:-$HOME/.zeropty}/tty
+# Under its own name: some programs go by it (/usr/bin/python3 asks xcode-select for the tool it names).
+DIR=$CACHE/$(printf %s "$REAL" | shasum | cut -c1-12)
+COPY=$DIR/$(basename "$REAL")
+SRC="$REAL $(stat -f '%m %z' "$REAL")"
+if [ $copy = no ] && [ "$(cat "$COPY.src" 2>/dev/null)" != "$SRC" ]; then
+  # The hardened runtime shows in the signature's flags; checked once per version of the program.
+  codesign -dv "$REAL" 2>&1 | grep -q 'flags=.*runtime' && copy=yes
+fi
+[ -x "$COPY" ] && [ "$(cat "$COPY.src" 2>/dev/null)" = "$SRC" ] && copy=yes
+if [ $copy = yes ]; then
+  if [ ! -x "$COPY" ] || [ "$(cat "$COPY.src" 2>/dev/null)" != "$SRC" ]; then
+    mkdir -p "$DIR"
+    # Built next to the final path and renamed, so concurrent sessions never see a half-written binary.
+    TMP=$COPY.$$
+    cp "$REAL" "$TMP" && codesign --force -s - "$TMP" 2>/dev/null && mv -f "$TMP" "$COPY" && echo "$SRC" > "$COPY.src"
+  fi
+  RUN=$COPY
+fi
+DYLD_INSERT_LIBRARIES=${ZEROPTY_SHIM:-$HERE/shim.dylib} exec "$RUN" "$@"

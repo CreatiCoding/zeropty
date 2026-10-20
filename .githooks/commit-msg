@@ -1,0 +1,7 @@
+#!/bin/sh
+# Rejects a commit whose message is not a Conventional Commit (CONTRIBUTING.md). Enable once per clone:
+#   git config core.hooksPath .githooks
+# Skips quietly when node is missing; scripts/check.sh (run by the pre-push hook) checks every commit of
+# the range anyway.
+command -v node >/dev/null 2>&1 || exit 0
+exec node "$(git rev-parse --show-toplevel)/scripts/check-commits.mjs" --file "$1"

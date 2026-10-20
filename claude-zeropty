@@ -1,0 +1,7 @@
+#!/bin/sh
+# Runs claude with pipes in place of a terminal (zeropty-tty: shim.dylib, from an ad-hoc signed copy since
+# the shipped binary's hardened runtime drops DYLD_INSERT_LIBRARIES; refreshed after every update).
+set -e
+HERE=$(cd "$(dirname "$0")" && pwd)
+REAL=${ZEROPTY_CLAUDE_REAL:-$(command -v claude)}
+exec "$HERE/zeropty-tty" "$REAL" "$@"

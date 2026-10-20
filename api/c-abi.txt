@@ -1,0 +1,58 @@
+# C ABI (libzeropty_c.dylib, zeropty.h): compared with the build by scripts/check-api.mjs (docs/VERSIONING.md). Regenerate with
+# `node scripts/check-api.mjs --update`; a line that goes away is a breaking change.
+header decl char *(*host_command)(zeropty_host *, const char *)
+header decl char *zeropty_add_plugin(zeropty *, const char *, zeropty_plugin_fn, void *)
+header decl char *zeropty_call_poll(zeropty_call *)
+header decl char *zeropty_command(zeropty *, const char *)
+header decl char *zeropty_host_command(zeropty_host *, const char *)
+header decl char *zeropty_load_plugin(zeropty *, const char *)
+header decl const char *zeropty_version(void)
+header decl int zeropty_fd(zeropty *)
+header decl int zeropty_listen(zeropty *, const char *)
+header decl long long zeropty_call_due_ms(zeropty_call *)
+header decl long long zeropty_timeout_ms(zeropty *)
+header decl typedef char *(*zeropty_plugin_fn)(void *, const char *, zeropty_host *)
+header decl typedef int (*zeropty_plugin_init_fn)(const zeropty_plugin_api *, zeropty_plugin_def *)
+header decl typedef struct zeropty zeropty
+header decl typedef struct zeropty_call zeropty_call
+header decl typedef struct zeropty_host zeropty_host
+header decl typedef struct zeropty_plugin_api { unsigned int api
+header decl typedef struct zeropty_plugin_def { const char *manifest_json
+header decl unsigned int size
+header decl void (*free)(char *)
+header decl void *user
+header decl void zeropty_call_free(zeropty_call *)
+header decl void zeropty_close(zeropty *)
+header decl void zeropty_free(char *)
+header decl void zeropty_process(zeropty *)
+header decl zeropty *zeropty_open(const char *)
+header decl zeropty *zeropty_open_polled(const char *)
+header decl zeropty_call *zeropty_command_start(zeropty *, const char *)
+header decl zeropty_plugin_api
+header decl zeropty_plugin_def
+header decl zeropty_plugin_fn callback
+header macro ZEROPTY_PLUGIN_API
+header macro ZEROPTY_VERSION_IS_PRERELEASE
+header macro ZEROPTY_VERSION_MAJOR
+header macro ZEROPTY_VERSION_MINOR
+header macro ZEROPTY_VERSION_NUMBER
+header macro ZEROPTY_VERSION_PATCH
+header macro ZEROPTY_VERSION_PRERELEASE
+header macro ZEROPTY_VERSION_STRING
+symbol zeropty_add_plugin
+symbol zeropty_call_due_ms
+symbol zeropty_call_free
+symbol zeropty_call_poll
+symbol zeropty_close
+symbol zeropty_command
+symbol zeropty_command_start
+symbol zeropty_fd
+symbol zeropty_free
+symbol zeropty_host_command
+symbol zeropty_listen
+symbol zeropty_load_plugin
+symbol zeropty_open
+symbol zeropty_open_polled
+symbol zeropty_process
+symbol zeropty_timeout_ms
+symbol zeropty_version

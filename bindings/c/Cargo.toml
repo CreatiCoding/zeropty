@@ -1,0 +1,23 @@
+[package]
+name = "zeropty-c"
+version.workspace = true
+rust-version.workspace = true
+edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "zeropty embedded in any process, through a C ABI (requests and replies as JSON, as on the socket)"
+repository = "https://github.com/CreatiCoding/zeropty"
+
+[lib]
+name = "zeropty_c"
+# rlib beside the library, as for the Node module: one rustc run writes every crate type, so a plain
+# `cargo test` also builds libzeropty_c.dylib, which tests/plugin.rs links examples/plugins/count.c with
+# (with the cdylib alone, cargo test left it to whatever an earlier `cargo build` wrote).
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+zeropty = { path = "../.." }
+mimalloc = "0.1.52"
+serde_json = "1.0.154"
+
+[lints]
+workspace = true

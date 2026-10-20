@@ -1,0 +1,4 @@
+target/
+dist/
+# README's terminal demo (docs/assets/demo.mjs) is served from https://cdn.creco.dev/zeropty/
+docs/assets/demo-*.webp

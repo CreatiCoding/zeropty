@@ -1,0 +1,52 @@
+# git-cliff (https://git-cliff.org): renders Conventional Commits as CHANGELOG.md sections in the
+# Keep a Changelog format. scripts/release.mjs runs it (`notes` drafts [Unreleased], `bump --generate` fills an
+# empty one); scripts/check.sh renders it before every push so a broken template or commit is caught early.
+# Pinned in scripts/release.mjs (GIT_CLIFF).
+
+[changelog]
+# release.mjs keeps CHANGELOG.md's header and links; git-cliff only renders sections.
+header = ""
+body = """
+{% if version -%}
+## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else -%}
+## [Unreleased]
+{% endif -%}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim }}
+{% for commit in commits %}
+- {% if commit.breaking %}**BREAKING** {% endif %}{% if commit.scope and commit.scope != "security" %}{{ commit.scope }}: {% endif %}{{ commit.message | split(pat="\n") | first | upper_first | trim }}{% if commit.breaking and commit.breaking_description and commit.breaking_description != commit.message %}: {{ commit.breaking_description | split(pat="\n") | join(sep=" ") | trim }}{% endif %}
+{%- endfor %}
+{% endfor %}
+"""
+footer = ""
+trim = true
+
+[git]
+conventional_commits = true
+# Commits that are not Conventional Commits are left out (scripts/check.sh and the commit-msg hook reject them).
+filter_unconventional = true
+split_commits = false
+# The <!-- n --> prefixes order the groups as Keep a Changelog lists them; the template strips them.
+# Deprecated and Removed entries are written by hand when curating [Unreleased] (a removal is BREAKING).
+commit_parsers = [
+  { message = "^chore\\(release\\)", skip = true },
+  # Same as scripts/lib/conventional.mjs: a fix to a still unreleased feature is not news (not for breaking ones).
+  # git-cliff matches a footer as token + separator + value with no space ("Changelog:skip").
+  { footer = "^Changelog: ?skip$", skip = true },
+  { message = "^[a-z]+(\\([^)]*\\))?!:", group = "<!-- 1 -->Changed" },
+  # git-cliff keeps footers out of the body, so a `BREAKING CHANGE:` footer is matched as a footer (a body
+  # pattern never saw it, and `fix: x` + footer landed under Fixed). scripts/test/cliff.test.mjs renders both.
+  { footer = "^BREAKING[ -]CHANGE", group = "<!-- 1 -->Changed" },
+  { message = "^feat", group = "<!-- 0 -->Added" },
+  { message = "^fix\\(security\\)", group = "<!-- 5 -->Security" },
+  { message = "^fix", group = "<!-- 4 -->Fixed" },
+  { message = "^perf", group = "<!-- 1 -->Changed" },
+  { message = "^revert", group = "<!-- 1 -->Changed" },
+  # Not user-visible: refactor, docs, test, build, ci, chore, style.
+  { message = ".*", skip = true },
+]
+protect_breaking_commits = true
+filter_commits = false
+tag_pattern = "^v[0-9]+\\.[0-9]+\\.[0-9]+"
+sort_commits = "oldest"

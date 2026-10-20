@@ -1,0 +1,6 @@
+# The code is written wide (one idea per line), so rustfmt's 100-column default would rewrap most of it.
+# The whole tree is formatted (commit e12f84f, `style: cargo fmt --all`); scripts/check.sh enforces it with
+# `cargo fmt --all --check`.
+edition = "2024"
+max_width = 160
+use_small_heuristics = "Max"

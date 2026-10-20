@@ -1,0 +1,31 @@
+name: Feature request
+description: Propose a new command, option, tmux compatibility or embedding API
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: 'Describe the problem you want to solve. Example: "Among 200 agents, I want to find the sessions waiting for input within 1 second"'
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: The command or API you want. If tmux has the same feature, write it in tmux's command format (zeropty follows tmux's command format).
+      render: sh
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: How do you do it today?
+      description: What you use now and what it costs (time, memory, number of commands)
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Checks
+      options:
+        - label: "I checked that this is not already covered in [Usage](https://github.com/CreatiCoding/zeropty/blob/main/docs/USAGE.md) or the [FAQ](https://github.com/CreatiCoding/zeropty/blob/main/docs/FAQ.md)"
+          required: true

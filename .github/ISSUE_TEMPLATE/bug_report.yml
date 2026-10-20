@@ -1,0 +1,69 @@
+name: Bug report
+description: Tell us about something that does not behave as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the report. If this is a security vulnerability, please use [private reporting](https://github.com/CreatiCoding/zeropty/security/advisories/new) instead of this form.
+        Please make sure your logs and screens contain no personal paths, tokens or prompts. This repository is public.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What actually happened, and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: The shortest commands or code you can. Best of all if it reproduces with a plain program such as `cat` or `sh`.
+      render: sh
+      placeholder: |
+        zeropty new-session -d -s t 'exec cat'
+        zeropty send-keys -t '=t:' -l 'hello'
+        zeropty capture-pane -p -t '=t:'
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output and errors
+      description: The command output, exit code and error messages. If the screen differs, it helps to include the output of `capture-pane -p -e` together with the result of doing the same thing in tmux.
+      render: text
+  - type: dropdown
+    id: mode
+    attributes:
+      label: How are you using it?
+      multiple: true
+      options:
+        - CLI (dist/zeropty)
+        - zsh function / bash builtin
+        - Node client (client/zeropty.mjs)
+        - Node embedded (client/embedded.mjs)
+        - C ABI (libzeropty_c)
+        - Rust crate
+        - attach
+        - zeropty-tty / claude-zeropty
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: zeropty version or commit
+      description: "`zeropty -V` and `git rev-parse --short HEAD`"
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and chip
+      placeholder: macOS 26.6, Apple M1
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Number of sessions, load, `zeropty stats` output, etc.

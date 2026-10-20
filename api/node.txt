@@ -1,0 +1,16 @@
+# Node API: compared with the build by scripts/check-api.mjs (docs/VERSIONING.md). Regenerate with
+# `node scripts/check-api.mjs --update`; a line that goes away is a breaking change.
+client/embedded.mjs VERSION string
+client/embedded.mjs listen function
+client/embedded.mjs open function
+client/embedded.mjs version function
+client/embedded.mjs zeropty function
+client/embedded.mjs zeroptySync function
+client/zeropty.mjs VERSION string
+client/zeropty.mjs cliPath function
+client/zeropty.mjs sockPath function
+client/zeropty.mjs zeropty function
+client/zeropty.mjs zeroptySync function
+zeropty.node Client class close,command
+zeropty.node Engine class command,commandStart,listen
+zeropty.node version function
