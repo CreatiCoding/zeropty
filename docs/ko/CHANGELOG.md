@@ -15,6 +15,8 @@ zeropty의 사용자에게 보이는 변경을 모두 여기에 적어요.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-20
+
 ### Fixed
 
 - `zeropty-tty`: `/dev/tty`를 읽기+쓰기로 연 프로그램(stdin을 파이프로 받은 `fzf`)은 키는 읽어도 쓰기가 모두 `EBADF`로
@@ -106,6 +108,7 @@ hardened runtime으로 서명된 프로그램은 shim을 못 읽어서 `zeropty-
 
 - 출력을 읽는 쪽이 파이프를 일찍 닫아도(`zeropty capture-pane -p ... | head -1`) CLI가 패닉하지 않아요.
 
-[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/CreatiCoding/zeropty/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/CreatiCoding/zeropty/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/CreatiCoding/zeropty/releases/tag/v0.1.0

@@ -18,10 +18,10 @@ extern "C" {
  * not match these declarations. */
 #define ZEROPTY_VERSION_MAJOR 0
 #define ZEROPTY_VERSION_MINOR 1
-#define ZEROPTY_VERSION_PATCH 1
+#define ZEROPTY_VERSION_PATCH 2
 /* The pre-release part ("rc.1" in 0.2.0-rc.1), "" for a release. */
 #define ZEROPTY_VERSION_PRERELEASE ""
-#define ZEROPTY_VERSION_STRING "0.1.1"
+#define ZEROPTY_VERSION_STRING "0.1.2"
 /* One number to compare with #if: MAJOR * 1000000 + MINOR * 1000 + PATCH. It leaves the pre-release out, so
  * 0.2.0-rc.1 and 0.2.0 have the same number: tell them apart with ZEROPTY_VERSION_PRERELEASE (or
  * ZEROPTY_VERSION_IS_PRERELEASE, which #if can test). */

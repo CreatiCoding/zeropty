@@ -45,7 +45,7 @@ zeropty kill-session -t '=work:'
 ```sh
 zeropty --help     # 명령 목록 (종료 코드 0)
 zeropty help send-keys   # 명령 하나: 사용법, 하는 일, 문서 링크 (없는 명령이면 종료 코드 2)
-zeropty -V         # zeropty 0.1.0 (--version도 같아요)
+zeropty -V         # zeropty X.Y.Z (--version도 같아요)
 zeropty            # usage: zeropty serve | <tmux command> ...  (표준 에러, 종료 코드 2)
 ```
 
