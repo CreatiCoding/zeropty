@@ -776,6 +776,36 @@ int main(void) {
     assert_eq!(String::from_utf8_lossy(&outside.stdout), "tty=000\n");
 }
 
+/// zeropty-tty names its signed copy after the name the program was run by, not the link's target
+/// (claude is a link to claude.exe), so ps and pgrep find it under that name. Each name of one program
+/// gets its own copy, and no name can stand for another's stamp (a link named "mytrue.src").
+#[test]
+fn zeropty_tty_copy_keeps_the_name_it_was_run_by() {
+    let s = Server::new("ttyname");
+    let tty = concat!(env!("CARGO_MANIFEST_DIR"), "/zeropty-tty");
+    for name in ["mytrue", "mytrue.src", "mytrue"] {
+        let link = s.dir.join(name);
+        if !link.exists() {
+            std::os::unix::fs::symlink("/usr/bin/true", &link).unwrap();
+        }
+        // Whether the copy then runs depends on the machine (see terminal_programs_through_zeropty_tty).
+        let _ = Command::new(tty).arg(&link).env("ZEROPTY_CACHE", &s.dir).status().unwrap();
+    }
+    let dirs: Vec<PathBuf> = std::fs::read_dir(s.dir.join("tty")).unwrap().map(|d| d.unwrap().path()).collect();
+    assert_eq!(dirs.len(), 1, "one directory for the one target: {dirs:?}");
+    let names = |sub: &str| {
+        let mut v: Vec<String> = std::fs::read_dir(dirs[0].join(sub)).unwrap().map(|f| f.unwrap().file_name().to_string_lossy().into_owned()).collect();
+        v.sort();
+        v
+    };
+    assert_eq!(names("bin"), ["mytrue", "mytrue.src"]);
+    assert_eq!(names("src"), ["mytrue", "mytrue.src"]);
+    for name in ["mytrue", "mytrue.src"] {
+        let copy = std::fs::read(dirs[0].join("bin").join(name)).unwrap();
+        assert!(copy.len() > 1000 && !copy.starts_with(b"/usr/bin/true "), "{name} is a binary, not a stamp");
+    }
+}
+
 /// The line discipline a PTY applies to keys, as tmux's sessions have it: Enter ends a line, C-c
 /// interrupts, BSpace/C-w/C-u edit the line, C-d ends input, typing echoes; and raw mode (from the
 /// shim, or printed by the program itself) passes keys as they are.
