@@ -15,33 +15,10 @@ zeropty의 사용자에게 보이는 변경을 모두 여기에 적어요.
 
 ## [Unreleased]
 
-### Added
-
-- 플러그인 시스템([docs/PLUGINS.md](PLUGINS.md)): 세션 생성·종료·이름 변경·출력 이벤트를 받고 새 명령을 더해요.
-  Rust `Plugin` 트레이트(`API_VERSION` 1), 소켓의 `plugin-attach`(언어 무관, 프로세스 밖), C 콜백
-  `zeropty_add_plugin`, dylib 플러그인 `zeropty plugin-run`/`zeropty_load_plugin`, 옵트인 자동 시작 디렉터리
-  `ZEROPTY_PLUGIN_DIR`, 상태 확인 `list-plugins`. 플러그인이 없으면 비용이 없고, 패닉·멈춤·느린 플러그인은 엔진을
-  붙잡지 못해요.
-- 기다리지 않는 명령 호출: C `zeropty_command_start`·`zeropty_call_poll`·`zeropty_call_due_ms`·`zeropty_call_free`,
-  Node `Engine.commandStart`.
-
-- `zeropty --version`: `zeropty -V`와 같은 출력(`zeropty 0.1.0`)이에요. zsh 함수, bash builtin, `client/zeropty.mjs`도
-  `-V`처럼 프로그램을 실행해 답해요.
-- 포맷 변수 `#{version}`: 실행 중인 서버(또는 임베디드 엔진)의 버전이에요. 이 변수만 쓰는 `display-message -p`는 세션이
-  없어도 돼요(`zeropty display -p '#{version}'`).
-- C ABI: `zeropty.h`에 `ZEROPTY_VERSION_MAJOR`·`_MINOR`·`_PATCH`·`_PRERELEASE`·`_IS_PRERELEASE`·`_STRING`·`_NUMBER`,
-  링크된 라이브러리의 버전을 돌려주는 `zeropty_version()`. `ZEROPTY_VERSION_NUMBER`는 프리릴리스를 담지 않아서
-  `0.2.0-rc.1`과 `0.2.0`이 같은 값이에요. 둘은 `ZEROPTY_VERSION_IS_PRERELEASE`로 구별해요.
-- Node: `zeropty.node`와 `client/embedded.mjs`의 `version()`, `client/zeropty.mjs`와 `client/embedded.mjs`의 `VERSION`.
-- 버전 정책 `docs/VERSIONING.md`: 깨는 변경으로 보는 호환 범위(CLI의 인자·출력·종료 코드, 소켓 프로토콜, 세션 레코드,
-  C ABI, Node API, 환경변수, `dist/` 이름)와 MSRV(Rust 1.88). 1.0 전에는 MINOR 릴리스가 이 범위를 깰 수 있고, 그때는
-  `**BREAKING**` 항목으로 알려요.
-- `zeropty --help`(`-h`, `help`): 명령과 옵션 목록을, `zeropty help <명령>`은 그 명령의 사용법과 문서 링크를 출력해요. 서버 없이 답해요.
-- 문서: 한국어 README 개편, 문서 목록(`docs/README.md`), FAQ, 실행되는 예제(`examples/`), 모든 공개 Rust 항목의 rustdoc과 예제.
+## [0.1.1] - 2026-10-20
 
 ### Fixed
 
-- 출력을 읽는 쪽이 파이프를 일찍 닫아도(`zeropty capture-pane -p ... | head -1`) CLI가 패닉하지 않아요.
 - `zeropty-tty`: shim이 어느 프로그램이든 fd 0-2를 터미널로 쳐서, stdout을 파이프나 파일로 돌린 프로그램의 출력에
   `\e]zeropty-tty;N\a` 모드 신호가 섞이고, stdin이 `/dev/null`인 프로그램이 실패하고(kqueue `EINVAL`), 자식 프로세스도
   같은 영향을 받았어요. 이제 서버가 새 `ZEROPTY_TTY_ID` 변수로 알려 주는 세션 자신의 파이프와 소켓만 터미널로 치고,
@@ -95,6 +72,31 @@ hardened runtime으로 서명된 프로그램은 shim을 못 읽어서 `zeropty-
 - tmux 3.7c와 Mac mini M1 한 대에서 번갈아 잰 벤치마크(docs/BENCHMARKS.md): 잰 14개 항목 중 11개가 10배 이상이고, 3개는
   아직이에요(독립 서버의 대기 400개 메모리 6.2배, tmux 제어 모드 대비 `send-keys` 임베디드 8~10배·소켓 2.2~2.8배).
   이유는 그 문서에 적었어요.
+- 플러그인 시스템([docs/PLUGINS.md](PLUGINS.md)): 세션 생성·종료·이름 변경·출력 이벤트를 받고 새 명령을 더해요.
+  Rust `Plugin` 트레이트(`API_VERSION` 1), 소켓의 `plugin-attach`(언어 무관, 프로세스 밖), C 콜백
+  `zeropty_add_plugin`, dylib 플러그인 `zeropty plugin-run`/`zeropty_load_plugin`, 옵트인 자동 시작 디렉터리
+  `ZEROPTY_PLUGIN_DIR`, 상태 확인 `list-plugins`. 플러그인이 없으면 비용이 없고, 패닉·멈춤·느린 플러그인은 엔진을
+  붙잡지 못해요.
+- 기다리지 않는 명령 호출: C `zeropty_command_start`·`zeropty_call_poll`·`zeropty_call_due_ms`·`zeropty_call_free`,
+  Node `Engine.commandStart`.
+- `zeropty --version`: `zeropty -V`와 같은 출력(`zeropty 0.1.0`)이에요. zsh 함수, bash builtin, `client/zeropty.mjs`도
+  `-V`처럼 프로그램을 실행해 답해요.
+- 포맷 변수 `#{version}`: 실행 중인 서버(또는 임베디드 엔진)의 버전이에요. 이 변수만 쓰는 `display-message -p`는 세션이
+  없어도 돼요(`zeropty display -p '#{version}'`).
+- C ABI: `zeropty.h`에 `ZEROPTY_VERSION_MAJOR`·`_MINOR`·`_PATCH`·`_PRERELEASE`·`_IS_PRERELEASE`·`_STRING`·`_NUMBER`,
+  링크된 라이브러리의 버전을 돌려주는 `zeropty_version()`. `ZEROPTY_VERSION_NUMBER`는 프리릴리스를 담지 않아서
+  `0.2.0-rc.1`과 `0.2.0`이 같은 값이에요. 둘은 `ZEROPTY_VERSION_IS_PRERELEASE`로 구별해요.
+- Node: `zeropty.node`와 `client/embedded.mjs`의 `version()`, `client/zeropty.mjs`와 `client/embedded.mjs`의 `VERSION`.
+- 버전 정책 `docs/VERSIONING.md`: 깨는 변경으로 보는 호환 범위(CLI의 인자·출력·종료 코드, 소켓 프로토콜, 세션 레코드,
+  C ABI, Node API, 환경변수, `dist/` 이름)와 MSRV(Rust 1.88). 1.0 전에는 MINOR 릴리스가 이 범위를 깰 수 있고, 그때는
+  `**BREAKING**` 항목으로 알려요.
+- `zeropty --help`(`-h`, `help`): 명령과 옵션 목록을, `zeropty help <명령>`은 그 명령의 사용법과 문서 링크를 출력해요. 서버 없이 답해요.
+- 문서: 한국어 README 개편, 문서 목록(`docs/README.md`), FAQ, 실행되는 예제(`examples/`), 모든 공개 Rust 항목의 rustdoc과 예제.
 
-[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/ddd8811b1cff59992d96ddc5cad522e1a0568254...HEAD
-[0.1.0]: https://github.com/CreatiCoding/zeropty/tree/ddd8811b1cff59992d96ddc5cad522e1a0568254
+### Fixed
+
+- 출력을 읽는 쪽이 파이프를 일찍 닫아도(`zeropty capture-pane -p ... | head -1`) CLI가 패닉하지 않아요.
+
+[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/CreatiCoding/zeropty/compare/c612089b29c802ab5118f1904c67b4671f53ceca...v0.1.1
+[0.1.0]: https://github.com/CreatiCoding/zeropty/tree/c612089b29c802ab5118f1904c67b4671f53ceca

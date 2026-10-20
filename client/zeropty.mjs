@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 /** This client's version (Semantic Versioning, docs/VERSIONING.md); scripts/release.mjs sets it. */
-export const VERSION = '0.1.0'
+export const VERSION = '0.1.1'
 export const sockPath = () => process.env.ZEROPTY_SOCK || path.join(os.homedir(), '.zeropty', 'mux.sock')
 export const cliPath = () => process.env.ZEROPTY_BIN || path.join(here, '..', 'dist', 'zeropty')
 
