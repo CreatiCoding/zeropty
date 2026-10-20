@@ -8,7 +8,7 @@
 
 use std::io::{self, ErrorKind};
 use std::mem::MaybeUninit;
-use std::os::fd::{AsRawFd as _, BorrowedFd, FromRawFd as _, OwnedFd, RawFd};
+use std::os::fd::{AsFd as _, AsRawFd as _, BorrowedFd, FromRawFd as _, OwnedFd, RawFd};
 use std::os::unix::net::UnixStream;
 use std::sync::{PoisonError, RwLock};
 
@@ -185,20 +185,34 @@ pub(crate) fn no_sigpipe(fd: BorrowedFd<'_>) -> io::Result<()> {
 /// program up until the next read (the engine's BURST_LOWAT has that read come early).
 const OUTPUT_BUF: libc::c_int = 64 << 10;
 
-/// A session's output channel (read end, write end): a socket pair, not a pipe. macOS gives pipes their
-/// buffers from one 16 MB pool for the whole system: past ~250 pipes holding 64 KB, every other pipe
-/// gets 512 bytes, which no read threshold can tell apart (fstat and kevent still say 16 KB). Such a
-/// session's program then printed 512 bytes per coalesced read (300 ms): 1000 sessions replaying real
-/// claude work had 59% of their output through, the rest held up in the programs. A socket's buffer is
+/// What zeropty writes ahead of the program reading its keys (a pipe's 16 KB, which input had before).
+const INPUT_BUF: libc::c_int = 16 << 10;
+
+/// A session's terminal (zeropty's end, the program's end): one socket pair both ways, as a PTY is one
+/// file, so /dev/tty opened read-write (fzf) both reads keys and draws. Not a pipe: macOS gives pipes
+/// their buffers from one 16 MB pool for the whole system: past ~250 pipes holding 64 KB, every other
+/// pipe gets 512 bytes, which no read threshold can tell apart (fstat and kevent still say 16 KB). Such
+/// a session's program then printed 512 bytes per coalesced read (300 ms): 1000 sessions replaying real
+/// claude work had 59% of their output through, the rest held up in the programs. A socket's buffers are
 /// its own, set here.
-pub(crate) fn output_channel() -> io::Result<(OwnedFd, OwnedFd)> {
-    let (r, w) = socket_pair()?;
-    // One way only. The second shutdown finds the pair half closed already (ENOTCONN): harmless.
-    let _ = r.shutdown(std::net::Shutdown::Write);
-    let _ = w.shutdown(std::net::Shutdown::Read);
-    set_socket_option(w.as_raw_fd(), libc::SO_SNDBUF, OUTPUT_BUF)?;
-    set_socket_option(r.as_raw_fd(), libc::SO_RCVBUF, OUTPUT_BUF)?;
-    Ok((r.into(), w.into()))
+pub(crate) fn terminal_channel() -> io::Result<(OwnedFd, OwnedFd)> {
+    let (ours, theirs) = socket_pair()?;
+    set_socket_option(theirs.as_raw_fd(), libc::SO_SNDBUF, OUTPUT_BUF)?;
+    set_socket_option(ours.as_raw_fd(), libc::SO_RCVBUF, OUTPUT_BUF)?;
+    set_socket_option(ours.as_raw_fd(), libc::SO_SNDBUF, INPUT_BUF)?;
+    set_socket_option(theirs.as_raw_fd(), libc::SO_RCVBUF, INPUT_BUF)?;
+    // Keys sent after the program is gone fail with EPIPE, not SIGPIPE, also in a process embedding the
+    // engine that does not ignore SIGPIPE.
+    no_sigpipe(ours.as_fd())?;
+    Ok((ours.into(), theirs.into()))
+}
+
+/// End of input on a session's terminal (C-d): the program's reads see EOF while its output still
+/// flows, as a pipe's write end closed did. An fd that is not a socket (the input pipe of a session from
+/// an older server, kept across restart-server) has nothing to shut: closing it is its EOF.
+pub(crate) fn shut_input(fd: BorrowedFd<'_>) {
+    // SAFETY: shutdown takes an fd held open by `fd` and touches no memory.
+    let _ = unsafe { libc::shutdown(fd.as_raw_fd(), libc::SHUT_WR) };
 }
 
 /// Room for the two fds a session sends, aligned for cmsghdr.
@@ -305,7 +319,7 @@ mod tests {
 
     #[test]
     fn nonblocking_reads_and_writes() {
-        let (r, w) = super::output_channel().unwrap();
+        let (r, w) = super::terminal_channel().unwrap();
         super::set_nonblocking(r.as_raw_fd()).unwrap();
         super::set_nonblocking(w.as_raw_fd()).unwrap();
         assert!(super::set_nonblocking(-1).is_err());
@@ -330,7 +344,7 @@ mod tests {
 
     #[test]
     fn reads_into_uninitialized_memory() {
-        let (r, w) = super::output_channel().unwrap();
+        let (r, w) = super::terminal_channel().unwrap();
         super::set_nonblocking(r.as_raw_fd()).unwrap();
         let mut v: Vec<u8> = Vec::with_capacity(16);
         assert_eq!(super::read_uninit(r.as_fd(), v.spare_capacity_mut()), None, "nothing waiting");
@@ -379,7 +393,7 @@ mod tests {
     #[test]
     fn fds_go_along() {
         let (a, b) = crate::sys::fd::socket_pair().unwrap();
-        let (r, w) = super::output_channel().unwrap();
+        let (r, w) = super::terminal_channel().unwrap();
         super::send_with_fds(&a, b"head", &[w.as_fd()]).unwrap();
         let mut buf = [0u8; 4];
         let fds = super::recv_with_fds(&b, &mut buf).unwrap();

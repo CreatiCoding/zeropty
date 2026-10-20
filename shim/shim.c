@@ -1,4 +1,4 @@
-// Makes the session's pipe and socket look like a terminal, so a TUI runs without a PTY.
+// Makes the session's socket look like a terminal, so a TUI runs without a PTY.
 #include <errno.h>
 #include <fcntl.h>
 #include <stdarg.h>
@@ -20,15 +20,19 @@
 static struct termios fake;
 static int fake_init;
 
-// The session's terminal is two files: its input pipe and its output socket. The server names them in
-// ZEROPTY_TTY_ID ("dev:ino,dev:ino", input then output). Only an fd open on one of them is a terminal:
-// one redirected to a file, a pipe or /dev/null is not, whatever its number, and neither is anything in
-// a process started outside a session (DYLD_INSERT_LIBRARIES is inherited by every child).
-// A pipe's inode number is a kernel address, reused once the pipe is freed: a shimmed process that
-// outlives its session (nohup) could take a new pipe for the old terminal. Within the session the
-// server holds both files open, so neither number is reused.
+// The session's terminal is one socket, read and written both ways as a PTY is. The server names it in
+// ZEROPTY_TTY_ID ("dev:ino"): `tty_out`. Only an fd open on it is a terminal: one redirected to a file,
+// a pipe or /dev/null is not, whatever its number, and neither is anything in a process started outside
+// a session (DYLD_INSERT_LIBRARIES is inherited by every child).
+// A session from an older server, kept across restart-server, has two files: an input pipe (`tty_in`,
+// read only) and the output socket, named "dev:ino,dev:ino", or not at all by a server older still.
+// An inode number of a pipe or socket is a kernel address, reused once the file is freed: a shimmed
+// process that outlives its session (nohup) could take a new one for the old terminal. Within the
+// session the server holds the files open, so no number is reused.
 struct id { dev_t dev; ino_t ino; int set; };
 static struct id tty_in, tty_out;
+// The session is from an older server: its input is `tty_in` (a pipe), or nothing when fd 0 was not it.
+static int legacy;
 
 // The file `fd` is open on, when it is of type `type` (S_IFIFO, S_IFSOCK).
 static struct id file_of(int fd, mode_t type) {
@@ -40,9 +44,13 @@ static struct id file_of(int fd, mode_t type) {
 __attribute__((constructor)) static void read_tty_id(void) {
   const char *v = getenv("ZEROPTY_TTY_ID");
   int id, od; unsigned long long ii, oi;
-  if (v && sscanf(v, "%d:%llu,%d:%llu", &id, &ii, &od, &oi) == 4) {
-    tty_in = (struct id){ id, ii, 1 }; tty_out = (struct id){ od, oi, 1 };
+  int n = v ? sscanf(v, "%d:%llu,%d:%llu", &id, &ii, &od, &oi) : 0;
+  if (n == 4) {
+    tty_in = (struct id){ id, ii, 1 }; tty_out = (struct id){ od, oi, 1 }; legacy = 1;
+  } else if (n == 2) {
+    tty_out = (struct id){ id, ii, 1 };
   } else if (!v && getenv("ZEROPTY_SESSION")) {
+    legacy = 1;
     // A session started by a server from before ZEROPTY_TTY_ID (kept across restart-server): such a
     // server made the input a pipe and the output a socket, so take them from this process's fds as
     // it starts. A redirect to a file or a pipe on is then still not a terminal.
@@ -60,8 +68,9 @@ static int is(int fd, const struct id *f) {
 // A dup of either (a /dev/tty stand-in from my_open included) is the same file, so it counts too.
 static int ours(int fd) { return is(fd, &tty_in) || is(fd, &tty_out); }
 
-// Where mode changes go: the session's output, as this process has it (stdout, else stderr), or nowhere.
-static int out_fd(void) { return is(1, &tty_out) ? 1 : is(2, &tty_out) ? 2 : -1; }
+// Where mode changes go: the session's socket, as this process has it (stdout, else stderr, else stdin:
+// one file, so the same stream whichever), or nowhere.
+static int out_fd(void) { return is(1, &tty_out) ? 1 : is(2, &tty_out) ? 2 : is(0, &tty_out) ? 0 : -1; }
 
 static int env_int(const char *k, int d) { const char *v = getenv(k); return v ? atoi(v) : d; }
 
@@ -143,14 +152,16 @@ static int my_ioctl(int fd, unsigned long req, ...) {
 }
 
 // A session has no controlling terminal, so opening /dev/tty fails (ENXIO); programs that read keys
-// from it (less, more, fzf) then quit. They get the session's input instead (its output for write-only),
-// when this process still has it: a dup, so a terminal too.
+// from it (less, more, fzf) then quit. They get the session's socket instead, when this process still
+// has it: a dup, so a terminal too, read and written whatever the mode asked. In a session from an
+// older server reading goes to its input pipe, which cannot be written.
 static int my_open(const char *path, int flags, ...) {
   int mode = 0;
   if (flags & O_CREAT) { va_list ap; va_start(ap, flags); mode = va_arg(ap, int); va_end(ap); }
   int fd = open(path, flags, mode);
   if (fd < 0 && path && strcmp(path, "/dev/tty") == 0) {
-    int e = errno, from = (flags & O_ACCMODE) == O_WRONLY ? out_fd() : is(0, &tty_in) ? 0 : -1;
+    int e = errno, from = out_fd();
+    if ((flags & O_ACCMODE) != O_WRONLY && legacy) from = is(0, &tty_in) ? 0 : -1;
     if (from < 0) { errno = e; return fd; }
     fd = fcntl(from, (flags & O_CLOEXEC) ? F_DUPFD_CLOEXEC : F_DUPFD, 3);
   }

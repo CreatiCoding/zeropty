@@ -1,6 +1,6 @@
 //! Moving sessions between engines in different processes, their programs left running: an zeropty server
 //! and a program embedding the engine, or an old server and a new one. Each session's screen goes as a
-//! record (Engine::export_session) and its pipes' fds along with it over the Unix socket (SCM_RIGHTS).
+//! record (Engine::export_session) and its terminal's fds along with it over the Unix socket (SCM_RIGHTS).
 //! A session leaves the engine handing it over only once the other side says it took it; on any failure
 //! before that, the taker lets go of what it took, so every session stays in exactly one place.
 //!

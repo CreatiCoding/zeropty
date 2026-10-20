@@ -195,14 +195,14 @@ tmux와 같은 세션에서 대조했어요. `#{version}`만 쓰는 포맷은 �
 
 ## 터미널이 필요한 프로그램: zeropty-tty
 
-세션은 PTY가 아니라 파이프라서, `isatty()`로 터미널인지 확인하는 프로그램(vim, less, python REPL, claude)은 그냥 띄우면 터미널이 아니라고 판단해요. `zeropty-tty`로 띄우면 돼요.
+세션의 터미널은 PTY가 아니라 소켓이라서, `isatty()`로 터미널인지 확인하는 프로그램(vim, less, python REPL, claude)은 그냥 띄우면 터미널이 아니라고 판단해요. `zeropty-tty`로 띄우면 돼요.
 
 ```sh
 zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"
 ```
 
 - shim(`dist/shim.dylib`)이 `isatty`, `tcgetattr`, 창 크기(`TIOCGWINSZ`), `tcgetpgrp`, `/dev/tty`에 터미널처럼 답해요. `DYLD_INSERT_LIBRARIES`로 넣어요.
-- 터미널로 치는 건 세션 자신의 입력 파이프와 출력 소켓뿐이에요(어느 fd 번호에 있든). stdout을 파이프로 넘기거나(`zeropty-tty prog | cat`) 파일로 돌린 프로그램, stdin이 `/dev/null`인 프로그램은 거기서 터미널을 보지 못해요(tmux와 같아요). 모드 변경 신호도 그 출력에 섞이지 않아요. 자식 프로세스도 `DYLD_INSERT_LIBRARIES`를 물려받지만 같은 규칙을 따르고, 세션 밖에서는 shim이 아무것도 터미널로 답하지 않아요. 업그레이드 전에 시작해서 `restart-server`로 이어진 세션(`ZEROPTY_TTY_ID` 없음)에서는 프로그램이 시작할 때 가진 fd에서 세션의 파이프와 소켓을 찾아요.
+- 터미널로 치는 건 세션 자신의 소켓뿐이에요(어느 fd 번호에 있든). stdin, stdout, stderr가 모두 그 소켓 하나예요(tmux에서 PTY 하나인 것처럼). 읽기, 쓰기, 읽기+쓰기 어느 모드로 연 `/dev/tty`도 그 소켓이라서, 그걸로 키를 읽고 화면을 그리는 프로그램(stdin을 파이프로 받은 `fzf`)도 돌아요. stdout을 파이프로 넘기거나(`zeropty-tty prog | cat`) 파일로 돌린 프로그램, stdin이 `/dev/null`인 프로그램은 거기서 터미널을 보지 못해요(tmux와 같아요). 모드 변경 신호도 그 출력에 섞이지 않아요. 자식 프로세스도 `DYLD_INSERT_LIBRARIES`를 물려받지만 같은 규칙을 따르고, 세션 밖에서는 shim이 아무것도 터미널로 답하지 않아요. 예전 서버가 시작해서 `restart-server`로 이어진 세션은 입력이 아직 파이프예요. shim이 그 파이프와 소켓을 찾고(`ZEROPTY_TTY_ID`에서, 그게 없으면 프로그램이 시작할 때 가진 fd에서), 거기서 읽기로 연 `/dev/tty`는 그 파이프라서 쓸 수 없어요.
 - macOS는 `/usr/bin` 같은 SIP 보호 바이너리와 hardened runtime 서명 바이너리에 shim을 넣지 못하게 해요. 그래서 `zeropty-tty`는 이런 프로그램을 서명만 바꾼 사본(`~/.zeropty/tty/`)으로 실행하고, 원본이 바뀌면 다시 만들어요. 사본이든 아니든 프로그램은 실행할 때 쓴 이름으로 돌아요(`claude.exe`를 가리키는 `claude` 링크는 `claude`로 실행돼요). 그래서 `ps`, `pgrep`에서 그 이름으로 찾을 수 있어요.
 - 사본에는 원본의 권한이 없어서 `top`, `ps`는 안 돼요. `/usr/bin/env`를 거치는 스크립트는 SIP가 shim을 지워요. 인터프리터를 직접 `zeropty-tty`로 띄워요.
 - `dist/claude-zeropty`는 `zeropty-tty claude`를 하는 작은 래퍼예요. 다른 claude를 쓰려면 `ZEROPTY_CLAUDE_REAL`로 경로를 줘요.
@@ -217,7 +217,8 @@ zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"
 - 입력한 글자가 화면에 에코돼요. 그래서 `send-keys -l 'echo hi'`를 보내면 화면에 `echo hi`가 먼저 보여요. `wait-pane -m`으로 결과를 기다릴 때는 입력한 줄에 없는 글자를 고르세요.
 - 프로그램이 raw 모드로 바꾸면(claude, vim, python REPL: shim이 알려요) 키가 그대로 가요.
 - shim 없는 프로그램이 raw 모드를 원하면 `printf '\033]zeropty-tty;0\007'`를 출력해요(`stty raw -echo`에 해당).
-- **PTY와 다른 점 하나:** 파이프에는 EOF를 한 번만 알리는 방법이 없어서, `C-d`의 EOF는 입력을 닫아요. 그 뒤로는 입력을 받지 못해요.
+- **PTY와 다른 점 하나:** 세션의 소켓에는 EOF를 한 번만 알리는 방법이 없어서, `C-d`의 EOF는 입력 쪽을 닫아요. 그 뒤로는 입력을 받지 못해요(출력은 계속 나와요).
+- PTY처럼 stdin, stdout, stderr가 파일 하나라서, 프로그램이 그중 하나에 `O_NONBLOCK`을 걸면 셋 모두에, 세션에서 그 뒤에 실행하는 명령에도 걸려요(그 뒤 큰 파일을 `cat`하면 `Resource temporarily unavailable`로 실패할 수 있어요). 0.1.1 이하에서는 stdin이 따로 된 파이프여서 그런 변경이 stdin에만 남았어요.
 
 ## 다른 프로그램에서: 소켓
 
@@ -364,7 +365,7 @@ if (zeropty_listen(a, "/tmp/myapp.sock") != 0) { /* 못 열었어요 */ }
 
 ## 세션 옮기기
 
-세션을 다른 프로세스로 옮겨요. **실행 중인 프로그램은 그대로**예요(pid도 같아요). 화면·스크롤백은 바이트로, 파이프는 fd 전달(SCM_RIGHTS)로 넘겨요.
+세션을 다른 프로세스로 옮겨요. **실행 중인 프로그램은 그대로**예요(pid도 같아요). 화면·스크롤백은 바이트로, 세션의 fd는 fd 전달(SCM_RIGHTS)로 넘겨요.
 
 ```sh
 zeropty pull-sessions -s ~/.zeropty/other.sock [이름...]   # 다른 서버의 세션을 이 서버로 (이름 없으면 전부)
@@ -383,7 +384,7 @@ zeropty restart-server                                  # 새 서버가 세션�
 
 - 연결의 **첫 요청 줄**이 `{"argv":["export-sessions", 이름...],"cwd":""}` 또는 `{"argv":["import-sessions"],"cwd":""}`이면, 그 연결은 세션을 넘기는 데만 쓰고 끝나면 닫혀요. 그동안 서버는 다른 일을 하지 않아요(보통 몇 ms).
 - 양쪽 모두 한 단계에 10초까지 기다려요.
-- 세션 하나는 `[레코드 길이 u32 LE][레코드]`로 가요. 파이프 fd(입력, 출력 중 열려 있는 것, 0\~2개)는 길이 4바이트에 SCM_RIGHTS로 붙여 보내요. 길이 0이 끝 표시예요. 레코드는 256MB를 넘을 수 없어요.
+- 세션 하나는 `[레코드 길이 u32 LE][레코드]`로 가요. 세션의 fd(입력, 출력 중 열려 있는 것, 0\~2개)는 길이 4바이트에 SCM_RIGHTS로 붙여 보내요. 길이 0이 끝 표시예요. 레코드는 256MB를 넘을 수 없어요.
 - 나머지 줄은 모두 JSON 한 줄이에요.
 
 ```

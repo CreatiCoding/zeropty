@@ -1,4 +1,4 @@
-//! One session: its program's pipes, its screen (live or frozen) and what reads its output (recording,
+//! One session: its program's terminal, its screen (live or frozen) and what reads its output (recording,
 //! pipe-pane, attached terminals, wait-panes).
 //!
 //! Invariants:
@@ -66,7 +66,7 @@ pub(super) struct Sess {
     pub(super) generation: u32,
     pub(super) name: Box<str>,
     pub(super) pid: i32,
-    /// Non-blocking; None once closed (C-d). Bytes the pipe did not take yet wait in Extra::pending,
+    /// Non-blocking; None once closed (C-d). Bytes the socket did not take yet wait in Extra::pending,
     /// flushed when it turns writable.
     pub(super) stdin: Option<OwnedFd>,
     /// Non-blocking; None once the program closed its output.
@@ -102,7 +102,7 @@ pub(super) struct Sess {
 
 #[derive(Default)]
 pub(super) struct Extra {
-    /// Input the pipe did not take yet.
+    /// Input the program's socket did not take yet.
     pub(super) pending: Vec<u8>,
     /// Ids of the terminals attached to it (Engine::attach): what it prints is copied to them.
     pub(super) viewers: Vec<u32>,
@@ -456,8 +456,8 @@ impl Sess {
         self.out = None
     }
 
-    /// Writes to the program's input, queueing what the pipe cannot take now (it is written when the
-    /// pipe turns writable: `flush`).
+    /// Writes to the program's input, queueing what the socket cannot take now (it is written when the
+    /// socket turns writable: `flush`).
     pub(super) fn write(&mut self, poller: &impl Poller, udata: usize, bytes: &[u8]) -> Result<(), CmdError> {
         let Some(stdin) = self.stdin.as_ref() else { return Err(CmdError::new("write: input closed\n")) };
         if let Some(x) = self.extra.as_mut().filter(|x| !x.pending.is_empty()) {
@@ -486,14 +486,17 @@ impl Sess {
         self.trim_extra();
     }
 
-    /// End of input for the program (C-d on an empty line): a pipe has no way to say it but closing, so
-    /// it is for good, where a tty's EOF is one read's. Programs that stop at it (cat, a shell) are alike.
+    /// End of input for the program (C-d on an empty line): shutting the socket's input is for good,
+    /// where a tty's EOF is one read's. Programs that stop at it (cat, a shell) are alike. Its output
+    /// still flows: `out` is the same socket.
     fn close_input(&mut self) {
         if self.extra.as_ref().is_some_and(|x| !x.pending.is_empty()) {
             self.extra().eof = true;
             return;
         }
-        self.stdin = None;
+        if let Some(stdin) = self.stdin.take() {
+            fd::shut_input(stdin.as_fd());
+        }
     }
 
     /// Keys for the program, through the line discipline a PTY would apply (see super::ldisc); true when
@@ -553,7 +556,7 @@ impl Sess {
         }
     }
 
-    /// Closes its pipes (the program sees EOF on its input, EPIPE or SIGPIPE on its output).
+    /// Closes its terminal (the program sees EOF on its input, EPIPE or SIGPIPE on its output).
     pub(super) fn close(&mut self) {
         self.stdin = None;
         self.out = None;
@@ -598,7 +601,7 @@ mod tests {
     /// Output read goes to the screen and is forwarded to viewers; wait-panes see their text.
     #[test]
     fn output_reaches_screen_viewers_and_waits() {
-        let (r, w) = crate::sys::fd::output_channel().unwrap();
+        let (r, w) = crate::sys::fd::terminal_channel().unwrap();
         crate::sys::fd::set_nonblocking(r.as_raw_fd()).unwrap();
         let mut s = session(Some(r));
         let x = s.extra();

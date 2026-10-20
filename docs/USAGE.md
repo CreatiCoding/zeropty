@@ -195,14 +195,14 @@ Running the `zeropty` program starts a process for every command (2.47\~2.60ms).
 
 ## Programs that need a terminal: zeropty-tty
 
-A session is a pipe, not a PTY, so programs that check for a terminal with `isatty()` (vim, less, the python REPL, claude) decide they are not on a terminal when launched directly. Launch them with `zeropty-tty` instead.
+A session's terminal is a socket, not a PTY, so programs that check for a terminal with `isatty()` (vim, less, the python REPL, claude) decide they are not on a terminal when launched directly. Launch them with `zeropty-tty` instead.
 
 ```sh
 zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"
 ```
 
 - The shim (`dist/shim.dylib`) answers `isatty`, `tcgetattr`, the window size (`TIOCGWINSZ`), `tcgetpgrp` and `/dev/tty` as a terminal would. It is injected with `DYLD_INSERT_LIBRARIES`.
-- Only the session's own input pipe and output socket count as the terminal, whatever fd number they sit on. A program whose stdout is piped on (`zeropty-tty prog | cat`) or redirected to a file, or whose stdin is `/dev/null`, sees no terminal there, just as under tmux, and its mode changes never land in that output. Children inherit `DYLD_INSERT_LIBRARIES`, and the same rule applies to them; outside a session the shim answers nothing. In a session started before an upgrade (kept by `restart-server`, so without `ZEROPTY_TTY_ID`), the shim takes the session's pipe and socket from the fds the program starts with.
+- Only the session's own socket counts as the terminal, whatever fd number it sits on: stdin, stdout and stderr are that one socket, as they are one PTY under tmux. `/dev/tty` opened for reading, writing or both is that socket too, so a program that reads keys and draws through it (`fzf` with its stdin piped in) works. A program whose stdout is piped on (`zeropty-tty prog | cat`) or redirected to a file, or whose stdin is `/dev/null`, sees no terminal there, just as under tmux, and its mode changes never land in that output. Children inherit `DYLD_INSERT_LIBRARIES`, and the same rule applies to them; outside a session the shim answers nothing. A session started by an older server and kept by `restart-server` still has a pipe for its input: the shim finds the pipe and the socket (from `ZEROPTY_TTY_ID`, or from the fds the program starts with when that is unset), and `/dev/tty` opened for reading there is the pipe, which cannot be written.
 - macOS does not let the shim into SIP-protected binaries such as those in `/usr/bin`, or into binaries signed with the hardened runtime. So `zeropty-tty` runs such programs from a copy with only the signature changed (`~/.zeropty/tty/`), and rebuilds the copy when the original changes. A program, copied or not, runs under the name it was run by (a `claude` symlink to `claude.exe` runs as `claude`), so `ps` and `pgrep` find it under that name.
 - The copy does not carry the original's privileges, so `top` and `ps` do not work. For scripts that go through `/usr/bin/env`, SIP strips the shim; launch the interpreter directly with `zeropty-tty`.
 - `dist/claude-zeropty` is a small wrapper that runs `zeropty-tty claude`. To use a different claude, give its path in `ZEROPTY_CLAUDE_REAL`.
@@ -217,7 +217,8 @@ Keys pass through a line discipline, just as with a PTY. A new session starts in
 - Typed characters are echoed to the screen. So if you send `send-keys -l 'echo hi'`, `echo hi` appears on screen first. When waiting for a result with `wait-pane -m`, pick text that is not in the line you typed.
 - When a program switches to raw mode (claude, vim, the python REPL: the shim reports it), keys pass through unchanged.
 - A program without the shim that wants raw mode prints `printf '\033]zeropty-tty;0\007'` (the equivalent of `stty raw -echo`).
-- **One difference from a PTY:** a pipe has no way to signal EOF just once, so the EOF from `C-d` closes the input. No input is accepted after that.
+- **One difference from a PTY:** the session's socket has no way to signal EOF just once, so the EOF from `C-d` shuts its input. No input is accepted after that; output still flows.
+- Like a PTY, stdin, stdout and stderr are one file, so a program that sets `O_NONBLOCK` on one of them sets it on all three, for the commands that run after it in the session too (a later `cat` of a large file can then fail with `Resource temporarily unavailable`). Under 0.1.1 and earlier, stdin was a separate pipe and such a change stayed on it.
 
 ## From other programs: the socket
 
@@ -364,7 +365,7 @@ if (zeropty_listen(a, "/tmp/myapp.sock") != 0) { /* could not open it */ }
 
 ## Moving sessions
 
-Moves sessions to another process. **Running programs keep running** (even the pid stays the same). The screen and scrollback are transferred as bytes, and the pipes by fd passing (SCM_RIGHTS).
+Moves sessions to another process. **Running programs keep running** (even the pid stays the same). The screen and scrollback are transferred as bytes, and the session's fds by fd passing (SCM_RIGHTS).
 
 ```sh
 zeropty pull-sessions -s ~/.zeropty/other.sock [name...]   # another server's sessions into this one (all if no names)
@@ -383,7 +384,7 @@ These are **internal** requests that `pull-sessions`, `push-sessions` and `resta
 
 - If the **first request line** of a connection is `{"argv":["export-sessions", name...],"cwd":""}` or `{"argv":["import-sessions"],"cwd":""}`, the connection is used only to hand over sessions and is closed when done. Meanwhile the server does nothing else (usually a few ms).
 - Each side waits up to 10 seconds per step.
-- Each session is sent as `[record length u32 LE][record]`. The pipe fds (whichever of input and output are open, 0\~2 of them) are attached to the 4-byte length with SCM_RIGHTS. A length of 0 marks the end. A record may not exceed 256MB.
+- Each session is sent as `[record length u32 LE][record]`. The session's fds (whichever of input and output are open, 0\~2 of them) are attached to the 4-byte length with SCM_RIGHTS. A length of 0 marks the end. A record may not exceed 256MB.
 - Every other line is a single line of JSON.
 
 ```
