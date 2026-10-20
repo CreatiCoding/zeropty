@@ -227,7 +227,7 @@ zeropty = { git = "https://github.com/CreatiCoding/zeropty" }
 
 ## Why it is fast
 
-- **Pipes instead of PTYs.** No kernel PTY limit. Programs that need a terminal are fooled by a small shim that intercepts `isatty` and `ioctl`.
+- **Sockets instead of PTYs.** No kernel PTY limit. Programs that need a terminal are fooled by a small shim that intercepts `isatty` and `ioctl`.
 - **Quiet screens are frozen.** Most of 1000 sessions sit still. A screen quiet for 250ms is kept in about 1KB, and after 10 seconds it is compressed once more with zstd.
 - **6 bytes per cell.** The screen parser is our own (the `vt100` crate uses 32 bytes). Its results are compared with `vt100` on recorded claude sessions and thousands of sets of random input.
 - **One thread, one kqueue.** Output is gathered for 300ms and read at once. Readers always get the latest screen (pending output is handled just before reading).

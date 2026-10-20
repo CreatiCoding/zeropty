@@ -31,6 +31,8 @@ static int fake_init;
 // session the server holds the files open, so no number is reused.
 struct id { dev_t dev; ino_t ino; int set; };
 static struct id tty_in, tty_out;
+// The session is from an older server: its input is `tty_in` (a pipe), or nothing when fd 0 was not it.
+static int legacy;
 
 // The file `fd` is open on, when it is of type `type` (S_IFIFO, S_IFSOCK).
 static struct id file_of(int fd, mode_t type) {
@@ -44,10 +46,11 @@ __attribute__((constructor)) static void read_tty_id(void) {
   int id, od; unsigned long long ii, oi;
   int n = v ? sscanf(v, "%d:%llu,%d:%llu", &id, &ii, &od, &oi) : 0;
   if (n == 4) {
-    tty_in = (struct id){ id, ii, 1 }; tty_out = (struct id){ od, oi, 1 };
+    tty_in = (struct id){ id, ii, 1 }; tty_out = (struct id){ od, oi, 1 }; legacy = 1;
   } else if (n == 2) {
     tty_out = (struct id){ id, ii, 1 };
   } else if (!v && getenv("ZEROPTY_SESSION")) {
+    legacy = 1;
     // A session started by a server from before ZEROPTY_TTY_ID (kept across restart-server): such a
     // server made the input a pipe and the output a socket, so take them from this process's fds as
     // it starts. A redirect to a file or a pipe on is then still not a terminal.
@@ -158,7 +161,7 @@ static int my_open(const char *path, int flags, ...) {
   int fd = open(path, flags, mode);
   if (fd < 0 && path && strcmp(path, "/dev/tty") == 0) {
     int e = errno, from = out_fd();
-    if ((flags & O_ACCMODE) != O_WRONLY && tty_in.set) from = is(0, &tty_in) ? 0 : -1;
+    if ((flags & O_ACCMODE) != O_WRONLY && legacy) from = is(0, &tty_in) ? 0 : -1;
     if (from < 0) { errno = e; return fd; }
     fd = fcntl(from, (flags & O_CLOEXEC) ? F_DUPFD_CLOEXEC : F_DUPFD, 3);
   }

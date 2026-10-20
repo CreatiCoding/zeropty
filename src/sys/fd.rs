@@ -8,7 +8,7 @@
 
 use std::io::{self, ErrorKind};
 use std::mem::MaybeUninit;
-use std::os::fd::{AsRawFd as _, BorrowedFd, FromRawFd as _, OwnedFd, RawFd};
+use std::os::fd::{AsFd as _, AsRawFd as _, BorrowedFd, FromRawFd as _, OwnedFd, RawFd};
 use std::os::unix::net::UnixStream;
 use std::sync::{PoisonError, RwLock};
 
@@ -201,6 +201,9 @@ pub(crate) fn terminal_channel() -> io::Result<(OwnedFd, OwnedFd)> {
     set_socket_option(ours.as_raw_fd(), libc::SO_RCVBUF, OUTPUT_BUF)?;
     set_socket_option(ours.as_raw_fd(), libc::SO_SNDBUF, INPUT_BUF)?;
     set_socket_option(theirs.as_raw_fd(), libc::SO_RCVBUF, INPUT_BUF)?;
+    // Keys sent after the program is gone fail with EPIPE, not SIGPIPE, also in a process embedding the
+    // engine that does not ignore SIGPIPE.
+    no_sigpipe(ours.as_fd())?;
     Ok((ours.into(), theirs.into()))
 }
 

@@ -7,7 +7,7 @@
 **In one line: we exploit the fact that most of 1000 sessions are quiet.** Quiet screens are folded away so they use almost no memory, and busy screens batch their work so there is less of it. The numbers below were measured by turning each technique on and off, and the same evidence is recorded in the code comments.
 
 - [Overall architecture](#overall-architecture)
-- [1. Pipes instead of PTYs](#1-pipes-instead-of-ptys)
+- [1. Sockets instead of PTYs](#1-sockets-instead-of-ptys)
 - [2. A small screen structure](#2-a-small-screen-structure)
 - [3. Folding screens away (memory)](#3-folding-screens-away-memory)
 - [4. Doing less work by batching it (CPU)](#4-doing-less-work-by-batching-it-cpu)
@@ -15,7 +15,7 @@
 - [6. Only measurements decide](#6-only-measurements-decide)
 - [Code map](#code-map)
 
-Diagrams: [overall architecture](#overall-architecture) · [the shim and the line discipline](#1-pipes-instead-of-ptys) · [cell layout](#2-a-small-screen-structure) · [screen state transitions](#3-folding-screens-away-memory) · [output batching and the flush before capture](#4-doing-less-work-by-batching-it-cpu) · [how a command reaches the engine](#5-not-starting-processes-latency)
+Diagrams: [overall architecture](#overall-architecture) · [the shim and the line discipline](#1-sockets-instead-of-ptys) · [cell layout](#2-a-small-screen-structure) · [screen state transitions](#3-folding-screens-away-memory) · [output batching and the flush before capture](#4-doing-less-work-by-batching-it-cpu) · [how a command reaches the engine](#5-not-starting-processes-latency)
 
 ## Overall architecture
 
@@ -50,7 +50,7 @@ flowchart LR
 - **Plugins** listen to session events and add commands. Separate processes attached over the socket, C libraries launched with `plugin-run` and callbacks inside the host process all go through the same registry ([PLUGINS.md](PLUGINS.md)).
 - The **engine** waits on a single kqueue for every session's output, process exits and timers. If the host registers its own fds on the same kqueue (`Engine::watch`, with `HOST_TAG` in the tag), a single event loop is all you need.
 
-## 1. Pipes instead of PTYs
+## 1. Sockets instead of PTYs
 
 tmux opens one PTY per window and so runs into the macOS PTY limit (511 by default, 999 at most). zeropty connects sessions with socket pairs, so there is no such limit. claude gets `shim.dylib` injected so it sees a terminal (the `claude-zeropty` wrapper). The shim intercepts `isatty`, `tcgetattr`, `ioctl(TIOCGWINSZ)` and others.
 

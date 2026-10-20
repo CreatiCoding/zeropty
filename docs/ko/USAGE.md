@@ -218,6 +218,7 @@ zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"
 - 프로그램이 raw 모드로 바꾸면(claude, vim, python REPL: shim이 알려요) 키가 그대로 가요.
 - shim 없는 프로그램이 raw 모드를 원하면 `printf '\033]zeropty-tty;0\007'`를 출력해요(`stty raw -echo`에 해당).
 - **PTY와 다른 점 하나:** 세션의 소켓에는 EOF를 한 번만 알리는 방법이 없어서, `C-d`의 EOF는 입력 쪽을 닫아요. 그 뒤로는 입력을 받지 못해요(출력은 계속 나와요).
+- PTY처럼 stdin, stdout, stderr가 파일 하나라서, 프로그램이 그중 하나에 `O_NONBLOCK`을 걸면 셋 모두에, 세션에서 그 뒤에 실행하는 명령에도 걸려요(그 뒤 큰 파일을 `cat`하면 `Resource temporarily unavailable`로 실패할 수 있어요). 0.1.1 이하에서는 stdin이 따로 된 파이프여서 그런 변경이 stdin에만 남았어요.
 
 ## 다른 프로그램에서: 소켓
 

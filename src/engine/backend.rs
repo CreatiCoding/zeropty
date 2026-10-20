@@ -174,9 +174,9 @@ pub struct Spawn<'a> {
 pub struct Spawned {
     /// Its pid, which is also its process group's id.
     pub pid: i32,
-    /// The write end of its input.
+    /// Where its input is written: zeropty's end of its terminal socket (a dup of `out`).
     pub stdin: OwnedFd,
-    /// The read end of its output (stdout and stderr together).
+    /// Where its output is read (stdout and stderr together): zeropty's end of its terminal socket.
     pub out: OwnedFd,
 }
 

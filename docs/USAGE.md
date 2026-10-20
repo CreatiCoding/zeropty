@@ -218,6 +218,7 @@ Keys pass through a line discipline, just as with a PTY. A new session starts in
 - When a program switches to raw mode (claude, vim, the python REPL: the shim reports it), keys pass through unchanged.
 - A program without the shim that wants raw mode prints `printf '\033]zeropty-tty;0\007'` (the equivalent of `stty raw -echo`).
 - **One difference from a PTY:** the session's socket has no way to signal EOF just once, so the EOF from `C-d` shuts its input. No input is accepted after that; output still flows.
+- Like a PTY, stdin, stdout and stderr are one file, so a program that sets `O_NONBLOCK` on one of them sets it on all three, for the commands that run after it in the session too (a later `cat` of a large file can then fail with `Resource temporarily unavailable`). Under 0.1.1 and earlier, stdin was a separate pipe and such a change stayed on it.
 
 ## From other programs: the socket
 
