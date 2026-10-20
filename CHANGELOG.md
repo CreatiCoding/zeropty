@@ -55,6 +55,9 @@ release; polish that draft into entries written in English, and add the same ent
   by the server in the new `ZEROPTY_TTY_ID` variable, and mode signals go only to the session's output.
 - `zeropty-tty`: the signed copy took the name of the link's target (`claude` ran as `claude.exe`), so `ps` and
   `pgrep claude` did not find it. A program, copied or not, now runs under the name it was run by.
+- `display-message` with `-t` naming a session that does not exist now prints the format with the session's
+  variables empty and exits 0, as tmux does, instead of failing with exit 1. To test whether a session exists, use
+  `has-session`. Every other command still fails with exit 1 and `can't find session: <name>`, as in tmux.
 
 ## [0.1.0] - 2026-10-20
 

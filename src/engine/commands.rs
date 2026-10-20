@@ -7,7 +7,7 @@
 use super::Engine;
 use super::args::{Args, parse};
 use super::backend::{Backend, Clock as _, Poller as _, Programs as _, Spawn};
-use super::format::{expand, only_server_vars, reads_screen};
+use super::format::{expand, only_server_vars, reads_screen, without_session};
 use super::options::KILL_GRACE_MS;
 use super::render::{self, Capture};
 use super::reply::{CmdError, Reply, fail, ok};
@@ -324,9 +324,13 @@ impl<B: Backend> Engine<B> {
         let fmt = c.args.get('F').map(str::to_owned).or_else(|| c.args.rest.first().cloned()).unwrap_or_default();
         let slot = match self.find(c.args.get('t')) {
             Ok(slot) => slot,
+            // A -t naming no session is not an error to tmux: the format is printed with the session's
+            // variables empty, and the exit code is 0. (An empty -t means the current session to tmux,
+            // which a session here does not have: it fails as before.)
+            Err(_) if c.args.get('t').is_some_and(|t| !t.is_empty()) => return Ok(ok(format!("{}\n", without_session(&fmt)))),
             // The server's own variables need no session: `display -p '#{version}'` asks a running
             // server (or embedded engine) which version it is, with no session yet.
-            Err(_) if c.args.get('t').is_none() && only_server_vars(&fmt) => return Ok(ok(format!("{}\n", fmt.replace("#{version}", super::VERSION)))),
+            Err(_) if c.args.get('t').is_none() && only_server_vars(&fmt) => return Ok(ok(format!("{}\n", without_session(&fmt)))),
             Err(e) => return Err(e),
         };
         if reads_screen(&fmt) {
