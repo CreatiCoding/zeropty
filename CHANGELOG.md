@@ -17,6 +17,8 @@ release; polish that draft into entries written in English, and add the same ent
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-20
+
 ### Fixed
 
 - `zeropty-tty`: `/dev/tty` opened for reading and writing (`fzf` with its stdin piped in) could read keys but every
@@ -117,6 +119,7 @@ the interfaces in docs/VERSIONING.md.
 
 - The CLI no longer panics when the reader closes the pipe early (`zeropty capture-pane -p ... | head -1`).
 
-[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/CreatiCoding/zeropty/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/CreatiCoding/zeropty/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/CreatiCoding/zeropty/releases/tag/v0.1.0

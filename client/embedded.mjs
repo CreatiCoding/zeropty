@@ -13,7 +13,7 @@ const native = require(process.env.ZEROPTY_NODE || path.join(here, '..', 'dist',
 const { Engine } = native
 
 /** This module's version (Semantic Versioning, docs/VERSIONING.md); scripts/release.mjs sets it. */
-export const VERSION = '0.1.1'
+export const VERSION = '0.1.2'
 
 /** The loaded zeropty.node's version; it should equal VERSION (a dist/ built from another checkout may not). */
 export function version() {

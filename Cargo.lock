@@ -542,7 +542,7 @@ dependencies = [
 
 [[package]]
 name = "zeropty"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "libc",
  "libmimalloc-sys",
@@ -559,7 +559,7 @@ dependencies = [
 
 [[package]]
 name = "zeropty-c"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "mimalloc",
  "serde_json",
@@ -568,7 +568,7 @@ dependencies = [
 
 [[package]]
 name = "zeropty-node"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "mimalloc",
  "napi",
