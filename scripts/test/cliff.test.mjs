@@ -9,6 +9,12 @@ import { after, test } from 'node:test'
 import { ROOT, cliff } from '../release.mjs'
 import { parse, sectionsFor } from '../lib/conventional.mjs'
 
+// GIT_DIR and friends (a git hook exports them) would point git and git-cliff at the repository the tests
+// run from, not the scratch one: the commits and config below would land there.
+for (const name of execFileSync('git', ['rev-parse', '--local-env-vars'], { encoding: 'utf8' }).split('\n')) {
+  if (name) delete process.env[name]
+}
+
 const dir = mkdtempSync(path.join(os.tmpdir(), 'zeropty-cliff-'))
 after(() => rmSync(dir, { recursive: true, force: true }))
 
