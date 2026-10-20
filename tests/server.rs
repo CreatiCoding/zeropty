@@ -61,12 +61,24 @@ impl Drop for Server {
 fn missing_targets_answer_as_tmux_does() {
     let s = Server::new("missing");
     s.ok(&["new-session", "-d", "-s", "keep", "exec sleep 100"]);
-    for t in ["=nope:", "=nope", "nope", "nope:0"] {
-        let o = s.run(&["display-message", "-p", "-t", t, "v=#{version} s=#{session_name} lit"]);
+    let version = env!("CARGO_PKG_VERSION");
+    for (t, args, want) in [
+        ("=nope:", &["v=#{version} s=#{session_name} lit"][..], format!("v={version} s= lit\n")),
+        ("=nope", &["v=#{version} s=#{session_name} lit"], format!("v={version} s= lit\n")),
+        ("nope", &["v=#{version} s=#{session_name} lit"], format!("v={version} s= lit\n")),
+        ("nope:0", &["v=#{version} s=#{session_name} lit"], format!("v={version} s= lit\n")),
+        ("=nope:0.0", &["s=#{session_name}"], "s=\n".to_owned()),
+        ("=nope:", &["-F", "f=#{session_name}"], "f=\n".to_owned()),
+        ("=nope:", &[""], "\n".to_owned()),
+        // A screen variable reads pending output first: with no session there is none to read.
+        ("=nope:", &["#{cursor_x},#{cursor_y}"], ",\n".to_owned()),
+    ] {
+        let o = s.run(&[&["display-message", "-p", "-t", t][..], args].concat());
         let got = (o.status.code(), String::from_utf8_lossy(&o.stdout).into_owned(), String::from_utf8_lossy(&o.stderr).into_owned());
-        assert_eq!(got, (Some(0), format!("v={} s= lit\n", env!("CARGO_PKG_VERSION")), String::new()), "display-message -t {t}");
+        assert_eq!(got, (Some(0), want, String::new()), "display-message -t {t} {args:?}");
     }
-    // Without -p too (a session here has no status line, so it prints either way).
+    // Without -p too, exit 0 as in tmux. Unlike tmux, the text is printed: a session here has no
+    // status line to show it on.
     assert_eq!(s.ok(&["display-message", "-t", "=nope:", "hello"]), "hello\n");
     for cmd in [
         &["capture-pane", "-p", "-t", "=nope:"][..],

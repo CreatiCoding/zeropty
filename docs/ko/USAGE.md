@@ -181,7 +181,7 @@ tmux와 같은 세션에서 대조했어요. `#{version}`만 쓰는 포맷은 �
 | 코드 | 뜻 |
 |---|---|
 | 0 | 성공 |
-| 1 | 실패: 없는 세션, 모르는 옵션, `wait-pane` 시간 초과·세션 종료, `grep-panes`·`has-session`의 "없음", 서버 없음(`no server running on ...`) |
+| 1 | 실패: 없는 세션(`display-message -t`는 예외, [포맷 변수](#포맷-변수) 참고), 모르는 옵션, `wait-pane` 시간 초과·세션 종료, `grep-panes`·`has-session`의 "없음", 서버 없음(`no server running on ...`) |
 | 2 | 사용법 오류: 인자 없이 실행, `zeropty help <모르는 명령>`, `attach`의 모르는 인자 |
 
 ## 셸에서 빠르게: zsh 함수, bash builtin

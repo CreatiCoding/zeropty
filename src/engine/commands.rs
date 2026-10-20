@@ -325,11 +325,12 @@ impl<B: Backend> Engine<B> {
         let slot = match self.find(c.args.get('t')) {
             Ok(slot) => slot,
             // A -t naming no session is not an error to tmux: the format is printed with the session's
-            // variables empty, and the exit code is 0.
-            Err(_) if c.args.get('t').is_some() => return Ok(ok(format!("{}\n", without_session(&fmt)))),
+            // variables empty, and the exit code is 0. (An empty -t means the current session to tmux,
+            // which a session here does not have: it fails as before.)
+            Err(_) if c.args.get('t').is_some_and(|t| !t.is_empty()) => return Ok(ok(format!("{}\n", without_session(&fmt)))),
             // The server's own variables need no session: `display -p '#{version}'` asks a running
             // server (or embedded engine) which version it is, with no session yet.
-            Err(_) if only_server_vars(&fmt) => return Ok(ok(format!("{}\n", without_session(&fmt)))),
+            Err(_) if c.args.get('t').is_none() && only_server_vars(&fmt) => return Ok(ok(format!("{}\n", without_session(&fmt)))),
             Err(e) => return Err(e),
         };
         if reads_screen(&fmt) {

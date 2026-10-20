@@ -181,7 +181,7 @@ These were checked against tmux on the same sessions. A format that uses only `#
 | Code | Meaning |
 |---|---|
 | 0 | Success |
-| 1 | Failure: missing session, unknown option, `wait-pane` timeout or session end, "not found" from `grep-panes` or `has-session`, no server (`no server running on ...`) |
+| 1 | Failure: missing session (except `display-message -t`, see [format variables](#format-variables)), unknown option, `wait-pane` timeout or session end, "not found" from `grep-panes` or `has-session`, no server (`no server running on ...`) |
 | 2 | Usage error: run without arguments, `zeropty help <unknown command>`, unknown argument to `attach` |
 
 ## Fast from the shell: zsh function, bash builtin
