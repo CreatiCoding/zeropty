@@ -56,7 +56,8 @@ impl Drop for Server {
 
 /// A target naming no session, command by command, as tmux 3.x answers it (measured with tmux 3.7c, a
 /// server running): display-message prints its format with the session's variables empty and exits 0;
-/// every other command fails with exit 1 and "can't find session: <name>".
+/// every other command fails with exit 1 ("can't find session: <name>" for the =name forms used here;
+/// other forms in missing_target_errors_are_worded_as_tmux_words_them).
 #[test]
 fn missing_targets_answer_as_tmux_does() {
     let s = Server::new("missing");
@@ -973,4 +974,53 @@ fn pipe_rename_resize_environment() {
     s.ok(&["set-environment", "-gu", "ZEROPTY_T_VAR"]);
     s.ok(&["new-session", "-d", "-s", "e2", "-x", "40", "-y", "3", "echo \"[$ZEROPTY_T_VAR]\"; exec sleep 100"]);
     s.wait_capture(&["capture-pane", "-p", "-t", "=e2:"], |o| o.starts_with("[]"));
+}
+
+/// The error for a missing target, worded per command as tmux 3.7c words it (a server running, the
+/// target in each form). Only people read these (docs/VERSIONING.md), but tmux users grep for them.
+#[test]
+fn missing_target_errors_are_worded_as_tmux_words_them() {
+    let s = Server::new("misswords");
+    s.ok(&["new-session", "-d", "-s", "keep", "exec sleep 100"]);
+    let pane = |t: &str| format!("can't find pane: {t}\n");
+    let session = "can't find session: nope\n".to_owned();
+    for (cmd, t, want) in [
+        (&["capture-pane", "-p"][..], "nope", pane("nope")),
+        (&["capture-pane", "-p"], "=nope", pane("=nope")),
+        (&["capture-pane", "-p"], "nope:", session.clone()),
+        (&["capture-pane", "-p"], "=nope:", session.clone()),
+        (&["capture-pane", "-p"], "nope:0.0", session.clone()),
+        (&["send-keys"], "nope", pane("nope")),
+        (&["pipe-pane"], "nope", pane("nope")),
+        (&["paste-buffer"], "nope", pane("nope")),
+        (&["resize-window", "-x", "10"], "nope", "can't find window: nope\n".to_owned()),
+        (&["resize-window", "-x", "10"], "=nope", "can't find window: nope\n".to_owned()),
+        (&["resize-window", "-x", "10"], "=nope:", session.clone()),
+        (&["set-environment", "A", "B"], "nope", "no such session: nope\n".to_owned()),
+        (&["set-environment", "A", "B"], "=nope:", "no such session: =nope:\n".to_owned()),
+        (&["kill-session"], "nope", session.clone()),
+        (&["kill-session"], "=nope", session.clone()),
+        (&["has-session"], "nope", session.clone()),
+        (&["rename-session", "other"], "nope", session.clone()),
+        (&["resize-pane", "-x", "10"], "nope", pane("nope")),
+        (&["resize-pane", "-x", "10"], "=nope", pane("=nope")),
+        // Ids and window.pane, whatever the command looks for.
+        (&["capture-pane", "-p"], "$99", "can't find session: $99\n".to_owned()),
+        (&["resize-window", "-x", "10"], "$99", "can't find session: $99\n".to_owned()),
+        (&["capture-pane", "-p"], "@99", "can't find window: @99\n".to_owned()),
+        (&["kill-session"], "@99", "can't find window: @99\n".to_owned()),
+        (&["resize-window", "-x", "10"], "%99", "can't find pane: %99\n".to_owned()),
+        (&["kill-session"], "%99", "can't find pane: %99\n".to_owned()),
+        (&["capture-pane", "-p"], "nope.0", "can't find window: nope\n".to_owned()),
+        (&["send-keys"], "=nope.0", "can't find window: nope\n".to_owned()),
+        (&["kill-session"], "nope.", "can't find window: nope\n".to_owned()),
+        (&["capture-pane", "-p"], "$99.0", "can't find window: $99\n".to_owned()),
+        (&["capture-pane", "-p"], "@99.1", "can't find window: @99\n".to_owned()),
+        (&["set-environment", "A", "B"], "nope.0", "no such session: nope.0\n".to_owned()),
+    ] {
+        let (name, rest) = cmd.split_first().unwrap();
+        let o = s.run(&[&[*name, "-t", t][..], rest].concat());
+        let got = (o.status.code(), String::from_utf8_lossy(&o.stderr).into_owned());
+        assert_eq!(got, (Some(1), want), "{name} -t {t}");
+    }
 }
