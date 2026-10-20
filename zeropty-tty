@@ -22,9 +22,11 @@ case $REAL in
   /usr/*|/bin/*|/sbin/*|/System/*) copy=yes ;;
 esac
 CACHE=${ZEROPTY_CACHE:-$HOME/.zeropty}/tty
-# Under its own name: some programs go by it (/usr/bin/python3 asks xcode-select for the tool it names).
+# Under the name it was run by, not its target's (claude's is claude.exe): ps and pgrep look for that
+# name, and some programs go by it (/usr/bin/python3 asks xcode-select for the tool it names). The
+# directory still follows the target, so each name of one program gets its own copy beside the others.
 DIR=$CACHE/$(printf %s "$REAL" | shasum | cut -c1-12)
-COPY=$DIR/$(basename "$REAL")
+COPY=$DIR/$(basename "$PROG")
 SRC="$REAL $(stat -f '%m %z' "$REAL")"
 if [ $copy = no ] && [ "$(cat "$COPY.src" 2>/dev/null)" != "$SRC" ]; then
   # The hardened runtime shows in the signature's flags; checked once per version of the program.

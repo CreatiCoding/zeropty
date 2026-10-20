@@ -202,7 +202,7 @@ zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"
 ```
 
 - shim(`dist/shim.dylib`)이 `isatty`, `tcgetattr`, 창 크기(`TIOCGWINSZ`), `tcgetpgrp`, `/dev/tty`에 터미널처럼 답해요. `DYLD_INSERT_LIBRARIES`로 넣어요.
-- macOS는 `/usr/bin` 같은 SIP 보호 바이너리와 hardened runtime 서명 바이너리에 shim을 넣지 못하게 해요. 그래서 `zeropty-tty`는 이런 프로그램을 서명만 바꾼 사본(`~/.zeropty/tty/`)으로 실행하고, 원본이 바뀌면 다시 만들어요.
+- macOS는 `/usr/bin` 같은 SIP 보호 바이너리와 hardened runtime 서명 바이너리에 shim을 넣지 못하게 해요. 그래서 `zeropty-tty`는 이런 프로그램을 서명만 바꾼 사본(`~/.zeropty/tty/`)으로 실행하고, 원본이 바뀌면 다시 만들어요. 사본은 실행할 때 쓴 이름을 그대로 써요(`claude.exe`를 가리키는 `claude` 링크는 `claude`로 실행돼요). 그래서 `ps`, `pgrep`에서 그 이름으로 찾을 수 있어요.
 - 사본에는 원본의 권한이 없어서 `top`, `ps`는 안 돼요. `/usr/bin/env`를 거치는 스크립트는 SIP가 shim을 지워요. 인터프리터를 직접 `zeropty-tty`로 띄워요.
 - `dist/claude-zeropty`는 `zeropty-tty claude`를 하는 작은 래퍼예요. 다른 claude를 쓰려면 `ZEROPTY_CLAUDE_REAL`로 경로를 줘요.
 

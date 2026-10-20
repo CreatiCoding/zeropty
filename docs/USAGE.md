@@ -202,7 +202,7 @@ zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"
 ```
 
 - The shim (`dist/shim.dylib`) answers `isatty`, `tcgetattr`, the window size (`TIOCGWINSZ`), `tcgetpgrp` and `/dev/tty` as a terminal would. It is injected with `DYLD_INSERT_LIBRARIES`.
-- macOS does not let the shim into SIP-protected binaries such as those in `/usr/bin`, or into binaries signed with the hardened runtime. So `zeropty-tty` runs such programs from a copy with only the signature changed (`~/.zeropty/tty/`), and rebuilds the copy when the original changes.
+- macOS does not let the shim into SIP-protected binaries such as those in `/usr/bin`, or into binaries signed with the hardened runtime. So `zeropty-tty` runs such programs from a copy with only the signature changed (`~/.zeropty/tty/`), and rebuilds the copy when the original changes. The copy keeps the name the program was run by (a `claude` symlink to `claude.exe` runs as `claude`), so `ps` and `pgrep` find it under that name.
 - The copy does not carry the original's privileges, so `top` and `ps` do not work. For scripts that go through `/usr/bin/env`, SIP strips the shim; launch the interpreter directly with `zeropty-tty`.
 - `dist/claude-zeropty` is a small wrapper that runs `zeropty-tty claude`. To use a different claude, give its path in `ZEROPTY_CLAUDE_REAL`.
 

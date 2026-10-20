@@ -49,6 +49,8 @@ release; polish that draft into entries written in English, and add the same ent
 ### Fixed
 
 - The CLI no longer panics when the reader closes the pipe early (`zeropty capture-pane -p ... | head -1`).
+- `zeropty-tty`: the signed copy took the name of the link's target (`claude` ran as `claude.exe`), so `ps` and
+  `pgrep claude` did not find it. The copy now keeps the name the program was run by.
 
 ## [0.1.0] - 2026-10-20
 

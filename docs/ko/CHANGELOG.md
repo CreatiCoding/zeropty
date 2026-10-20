@@ -42,6 +42,8 @@ zeropty의 사용자에게 보이는 변경을 모두 여기에 적어요.
 ### Fixed
 
 - 출력을 읽는 쪽이 파이프를 일찍 닫아도(`zeropty capture-pane -p ... | head -1`) CLI가 패닉하지 않아요.
+- `zeropty-tty`: 서명한 사본이 링크 대상의 이름을 써서(`claude`가 `claude.exe`로 실행됨) `ps`, `pgrep claude`로
+  찾을 수 없었어요. 이제 사본은 실행할 때 쓴 이름을 그대로 써요.
 
 ## [0.1.0] - 2026-10-20
 
