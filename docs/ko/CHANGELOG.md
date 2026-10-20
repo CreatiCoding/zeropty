@@ -42,6 +42,12 @@ zeropty의 사용자에게 보이는 변경을 모두 여기에 적어요.
 ### Fixed
 
 - 출력을 읽는 쪽이 파이프를 일찍 닫아도(`zeropty capture-pane -p ... | head -1`) CLI가 패닉하지 않아요.
+- `zeropty-tty`: shim이 어느 프로그램이든 fd 0-2를 터미널로 쳐서, stdout을 파이프나 파일로 돌린 프로그램의 출력에
+  `\e]zeropty-tty;N\a` 모드 신호가 섞이고, stdin이 `/dev/null`인 프로그램이 실패하고(kqueue `EINVAL`), 자식 프로세스도
+  같은 영향을 받았어요. 이제 서버가 새 `ZEROPTY_TTY_ID` 변수로 알려 주는 세션 자신의 파이프와 소켓만 터미널로 치고,
+  모드 신호는 세션 출력으로만 보내요.
+- `zeropty-tty`: 서명한 사본이 링크 대상의 이름을 써서(`claude`가 `claude.exe`로 실행됨) `ps`, `pgrep claude`로
+  찾을 수 없었어요. 이제 사본이든 아니든 프로그램은 실행할 때 쓴 이름으로 돌아요.
 - `display-message`의 `-t`가 없는 세션을 가리키면 이제 tmux처럼 세션 변수를 비운 포맷을 출력하고 종료 코드 0이에요(전에는
   종료 코드 1로 실패). 세션이 있는지 확인하려면 `has-session`을 쓰세요. 다른 명령은 tmux처럼 여전히 종료 코드 1과
   `can't find session: <이름>`으로 실패해요.

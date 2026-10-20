@@ -82,7 +82,7 @@ zeropty는 [Semantic Versioning 2.0.0](https://semver.org/lang/ko/)을 따라요
 
 | 공개 (이름·의미·기본값을 지켜요) | 내부 (예고 없이 바뀔 수 있어요) |
 |---|---|
-| `ZEROPTY_SOCK`, `ZEROPTY_HISTORY`, `ZEROPTY_COALESCE_MS`, `ZEROPTY_FREEZE_MS`, `ZEROPTY_COLD`, `ZEROPTY_COLD_DIR`, `ZEROPTY_RECORD` ([USAGE.md](USAGE.md#환경변수)) | `ZEROPTY_COLS`, `ZEROPTY_ROWS`, `ZEROPTY_SIZE_FILE` (엔진이 shim에 넘기는 값, 같은 빌드끼리만 써요) |
+| `ZEROPTY_SOCK`, `ZEROPTY_HISTORY`, `ZEROPTY_COALESCE_MS`, `ZEROPTY_FREEZE_MS`, `ZEROPTY_COLD`, `ZEROPTY_COLD_DIR`, `ZEROPTY_RECORD` ([USAGE.md](USAGE.md#환경변수)) | `ZEROPTY_COLS`, `ZEROPTY_ROWS`, `ZEROPTY_SIZE_FILE`, `ZEROPTY_TTY_ID` (엔진이 shim에 넘기는 값, 같은 빌드끼리만 써요) |
 | `ZEROPTY_BIN`, `ZEROPTY_NODE` (클라이언트가 쓸 바이너리·모듈), `ZEROPTY_SHIM`, `ZEROPTY_CACHE`, `ZEROPTY_CLAUDE_REAL` (`zeropty-tty`, `claude-zeropty`) | `ZEROPTY_MALLOC_ADDED` (서버 재실행용), `ZEROPTY_PURGE_MS` (측정용) |
 | `ZEROPTY_SESSION` (세션 안 프로그램이 읽는 세션 이름) | 테스트·벤치마크에서만 쓰는 나머지 `ZEROPTY_*` |
 

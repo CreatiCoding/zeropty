@@ -49,6 +49,12 @@ release; polish that draft into entries written in English, and add the same ent
 ### Fixed
 
 - The CLI no longer panics when the reader closes the pipe early (`zeropty capture-pane -p ... | head -1`).
+- `zeropty-tty`: the shim treated any program's fds 0-2 as a terminal, so a program whose stdout was piped or
+  redirected got `\e]zeropty-tty;N\a` mode signals mixed into that output, a program reading `/dev/null` as stdin
+  failed (kqueue `EINVAL`), and children inherited the effect. Now only the session's own pipe and socket count, named
+  by the server in the new `ZEROPTY_TTY_ID` variable, and mode signals go only to the session's output.
+- `zeropty-tty`: the signed copy took the name of the link's target (`claude` ran as `claude.exe`), so `ps` and
+  `pgrep claude` did not find it. A program, copied or not, now runs under the name it was run by.
 - `display-message` with `-t` naming a session that does not exist now prints the format with the session's
   variables empty and exits 0, as tmux does, instead of failing with exit 1. To test whether a session exists, use
   `has-session`. Every other command still fails with exit 1 and `can't find session: <name>`, as in tmux.
