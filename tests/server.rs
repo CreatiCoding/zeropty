@@ -974,3 +974,37 @@ fn pipe_rename_resize_environment() {
     s.ok(&["new-session", "-d", "-s", "e2", "-x", "40", "-y", "3", "echo \"[$ZEROPTY_T_VAR]\"; exec sleep 100"]);
     s.wait_capture(&["capture-pane", "-p", "-t", "=e2:"], |o| o.starts_with("[]"));
 }
+
+/// The error for a missing target, worded per command as tmux 3.7c words it (a server running, the
+/// target in each form). Only people read these (docs/VERSIONING.md), but tmux users grep for them.
+#[test]
+fn missing_target_errors_are_worded_as_tmux_words_them() {
+    let s = Server::new("misswords");
+    s.ok(&["new-session", "-d", "-s", "keep", "exec sleep 100"]);
+    let pane = |t: &str| format!("can't find pane: {t}\n");
+    let session = "can't find session: nope\n".to_owned();
+    for (cmd, t, want) in [
+        (&["capture-pane", "-p"][..], "nope", pane("nope")),
+        (&["capture-pane", "-p"], "=nope", pane("=nope")),
+        (&["capture-pane", "-p"], "nope:", session.clone()),
+        (&["capture-pane", "-p"], "=nope:", session.clone()),
+        (&["capture-pane", "-p"], "nope:0.0", session.clone()),
+        (&["send-keys"], "nope", pane("nope")),
+        (&["pipe-pane"], "nope", pane("nope")),
+        (&["paste-buffer"], "nope", pane("nope")),
+        (&["resize-window", "-x", "10"], "nope", "can't find window: nope\n".to_owned()),
+        (&["resize-window", "-x", "10"], "=nope", "can't find window: nope\n".to_owned()),
+        (&["resize-window", "-x", "10"], "=nope:", session.clone()),
+        (&["set-environment", "A", "B"], "nope", "no such session: nope\n".to_owned()),
+        (&["set-environment", "A", "B"], "=nope:", "no such session: =nope:\n".to_owned()),
+        (&["kill-session"], "nope", session.clone()),
+        (&["kill-session"], "=nope", session.clone()),
+        (&["has-session"], "nope", session.clone()),
+        (&["rename-session", "other"], "nope", session.clone()),
+    ] {
+        let (name, rest) = cmd.split_first().unwrap();
+        let o = s.run(&[&[*name, "-t", t][..], rest].concat());
+        let got = (o.status.code(), String::from_utf8_lossy(&o.stderr).into_owned());
+        assert_eq!(got, (Some(1), want), "{name} -t {t}");
+    }
+}

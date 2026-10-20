@@ -170,6 +170,14 @@ pub struct Engine<B: Backend = System> {
     tap: tap::Tap,
 }
 
+/// What tmux looks a command's -t up as, which only words the error when nothing matches.
+#[derive(Clone, Copy)]
+enum Lookup {
+    Session,
+    Window,
+    Pane,
+}
+
 impl Engine {
     /// An engine with no sessions, on a kqueue of its own.
     ///
@@ -683,8 +691,22 @@ impl<B: Backend> Engine<B> {
 
     /// The slot of the session `target` names, or the error saying there is none.
     fn find(&self, target: Option<&str>) -> Result<usize, CmdError> {
+        self.find_as(target, Lookup::Session)
+    }
+
+    /// As [`Engine::find`], for a command whose -t tmux looks up as `kind`, with tmux's error: a target
+    /// with no ':' is looked up as a pane or window first, so tmux names that ("can't find pane: x",
+    /// the target as given; "can't find window: x", without its '='). With a ':' it is the session part
+    /// that failed ("can't find session: x"). Measured with tmux 3.7c.
+    fn find_as(&self, target: Option<&str>, kind: Lookup) -> Result<usize, CmdError> {
         let name = session_name(target.unwrap_or(""));
-        self.names.find(name, &self.slots).ok_or_else(|| CmdError::new(format!("can't find session: {name}\n")))
+        self.names.find(name, &self.slots).ok_or_else(|| {
+            CmdError::new(match (kind, target) {
+                (Lookup::Pane, Some(t)) if !t.contains(':') => format!("can't find pane: {t}\n"),
+                (Lookup::Window, Some(t)) if !t.contains(':') => format!("can't find window: {name}\n"),
+                _ => format!("can't find session: {name}\n"),
+            })
+        })
     }
 
     /// Session `slot`, which must be there.

@@ -4,7 +4,6 @@
 //!
 //! wait-pane and attach are not here: they last, so a host runs them (Engine::wait_start, Engine::attach).
 
-use super::Engine;
 use super::args::{Args, parse};
 use super::backend::{Backend, Clock as _, Poller as _, Programs as _, Spawn};
 use super::format::{expand, only_server_vars, reads_screen, without_session};
@@ -12,6 +11,7 @@ use super::options::KILL_GRACE_MS;
 use super::render::{self, Capture};
 use super::reply::{CmdError, Reply, fail, ok};
 use super::session::{PanePipe, Recorder, Screenful, Sess, Started};
+use super::{Engine, Lookup};
 use crate::sys::kq::{Change, Interest};
 use crate::sys::time::{ctime, unix_now};
 use crate::term::{MAX_SIZE, TTY_COOKED, Term};
@@ -245,7 +245,7 @@ impl<B: Backend> Engine<B> {
     /// all as text, -H each as a byte in hexadecimal; -N sends the whole lot that many times.
     fn send_keys(&mut self, c: Call) -> Outcome {
         let a = &c.args;
-        let slot = self.find(a.get('t'))?;
+        let slot = self.find_as(a.get('t'), Lookup::Pane)?;
         let repeat: usize = match a.get('N') {
             None => 1,
             Some(n) => n.parse().ok().filter(|&n| n > 0).ok_or_else(|| CmdError::new(format!("send-keys: repeat count invalid: {n}\n")))?,
@@ -268,7 +268,7 @@ impl<B: Backend> Engine<B> {
     }
 
     fn capture(&mut self, c: Call) -> Outcome {
-        let slot = self.find(c.args.get('t'))?;
+        let slot = self.find_as(c.args.get('t'), Lookup::Pane)?;
         // Coalescing may have left output unread; a capture always sees all of it.
         self.drain_now(slot);
         self.read_now(slot);
@@ -342,7 +342,7 @@ impl<B: Backend> Engine<B> {
     /// pipe-pane [-o] -t target [command]: what the session prints from now on also goes to `command`'s
     /// input (tmux's -O, its default); without a command, or with -o when one runs, the pipe closes.
     fn pipe_pane(&mut self, c: Call) -> Outcome {
-        let slot = self.find(c.args.get('t'))?;
+        let slot = self.find_as(c.args.get('t'), Lookup::Pane)?;
         // What it printed before goes to the screen only.
         self.drain_now(slot);
         let tag = self.key(slot).udata();
@@ -381,7 +381,7 @@ impl<B: Backend> Engine<B> {
     /// program gets SIGWINCH), also once attached terminals leave.
     fn resize(&mut self, c: Call) -> Outcome {
         let a = &c.args;
-        let slot = self.find(a.get('t'))?;
+        let slot = self.find_as(a.get('t'), Lookup::Window)?;
         let s = self.slots.get(slot).unwrap();
         let num = |flag: char, cur: u16| -> Result<u16, CmdError> {
             a.get(flag).map_or(Ok(cur), |v| v.parse::<u16>().ok().filter(|&n| n > 0).ok_or_else(|| CmdError::new(format!("resize: -{flag} invalid: {v}\n"))))
@@ -399,7 +399,8 @@ impl<B: Backend> Engine<B> {
     fn set_environment(&mut self, c: Call) -> Outcome {
         let a = &c.args;
         if !a.has('g') {
-            self.find(a.get('t'))?;
+            // tmux words this one its own way, with the target as given.
+            self.find(a.get('t')).map_err(|_| CmdError::new(format!("no such session: {}\n", a.get('t').unwrap_or(""))))?;
         }
         let name = a.rest.first().ok_or_else(|| CmdError::new("set-environment: name?\n"))?.clone();
         let value = if a.has('u') { None } else { Some(a.rest.get(1).cloned().unwrap_or_default()) };
@@ -486,7 +487,7 @@ impl<B: Backend> Engine<B> {
     fn paste_buffer(&mut self, c: Call) -> Outcome {
         let a = &c.args;
         let name = a.get('b').unwrap_or("buffer0").to_owned();
-        let slot = self.find(a.get('t'))?;
+        let slot = self.find_as(a.get('t'), Lookup::Pane)?;
         let data = if a.has('d') { self.buffers.remove(&name) } else { self.buffers.get(&name).cloned() }
             .ok_or_else(|| CmdError::new(format!("no buffer {name}\n")))?;
         // Without -r, tmux turns LF into CR as a typed Enter would be, or into -s's separator.
