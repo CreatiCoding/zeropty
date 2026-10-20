@@ -42,6 +42,10 @@ zeropty의 사용자에게 보이는 변경을 모두 여기에 적어요.
 ### Fixed
 
 - 출력을 읽는 쪽이 파이프를 일찍 닫아도(`zeropty capture-pane -p ... | head -1`) CLI가 패닉하지 않아요.
+- `zeropty-tty`: shim이 어느 프로그램이든 fd 0-2를 터미널로 쳐서, stdout을 파이프나 파일로 돌린 프로그램의 출력에
+  `\e]zeropty-tty;N\a` 모드 신호가 섞이고, stdin이 `/dev/null`인 프로그램이 실패하고(kqueue `EINVAL`), 자식 프로세스도
+  같은 영향을 받았어요. 이제 서버가 새 `ZEROPTY_TTY_ID` 변수로 알려 주는 세션 자신의 파이프와 소켓만 터미널로 치고,
+  모드 신호는 세션 출력으로만 보내요.
 - `zeropty-tty`: 서명한 사본이 링크 대상의 이름을 써서(`claude`가 `claude.exe`로 실행됨) `ps`, `pgrep claude`로
   찾을 수 없었어요. 이제 사본은 실행할 때 쓴 이름을 그대로 써요.
 

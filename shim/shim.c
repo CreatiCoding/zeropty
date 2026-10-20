@@ -1,4 +1,5 @@
-// Makes fds 0-2 look like a terminal when they are pipes/sockets, so a TUI runs without a PTY.
+// Makes the session's pipe and socket look like a terminal, so a TUI runs without a PTY.
+#include <errno.h>
 #include <fcntl.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -10,6 +11,7 @@
 #include <sys/ttydefaults.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 
 #define INTERPOSE(n, o) \
   __attribute__((used)) static struct { const void *r; const void *o; } _i_##o \
@@ -18,10 +20,48 @@
 static struct termios fake;
 static int fake_init;
 
-// Fds standing in for /dev/tty (my_open), besides 0-2.
-static unsigned char tty_fd[1024];
+// The session's terminal is two files: its input pipe and its output socket. The server names them in
+// ZEROPTY_TTY_ID ("dev:ino,dev:ino", input then output). Only an fd open on one of them is a terminal:
+// one redirected to a file, a pipe or /dev/null is not, whatever its number, and neither is anything in
+// a process started outside a session (DYLD_INSERT_LIBRARIES is inherited by every child).
+// A pipe's inode number is a kernel address, reused once the pipe is freed: a shimmed process that
+// outlives its session (nohup) could take a new pipe for the old terminal. Within the session the
+// server holds both files open, so neither number is reused.
+struct id { dev_t dev; ino_t ino; int set; };
+static struct id tty_in, tty_out;
 
-static int ours(int fd) { return fd >= 0 && (fd <= 2 || (fd < (int)sizeof tty_fd && tty_fd[fd])); }
+// The file `fd` is open on, when it is of type `type` (S_IFIFO, S_IFSOCK).
+static struct id file_of(int fd, mode_t type) {
+  struct stat st;
+  if (fstat(fd, &st) != 0 || (st.st_mode & S_IFMT) != type) return (struct id){ 0, 0, 0 };
+  return (struct id){ st.st_dev, st.st_ino, 1 };
+}
+
+__attribute__((constructor)) static void read_tty_id(void) {
+  const char *v = getenv("ZEROPTY_TTY_ID");
+  int id, od; unsigned long long ii, oi;
+  if (v && sscanf(v, "%d:%llu,%d:%llu", &id, &ii, &od, &oi) == 4) {
+    tty_in = (struct id){ id, ii, 1 }; tty_out = (struct id){ od, oi, 1 };
+  } else if (!v && getenv("ZEROPTY_SESSION")) {
+    // A session started by a server from before ZEROPTY_TTY_ID (kept across restart-server): such a
+    // server made the input a pipe and the output a socket, so take them from this process's fds as
+    // it starts. A redirect to a file or a pipe on is then still not a terminal.
+    tty_in = file_of(0, S_IFIFO);
+    tty_out = file_of(1, S_IFSOCK);
+    if (!tty_out.set) tty_out = file_of(2, S_IFSOCK);
+  }
+}
+
+static int is(int fd, const struct id *f) {
+  struct stat st;
+  return f->set && fd >= 0 && fstat(fd, &st) == 0 && st.st_dev == f->dev && st.st_ino == f->ino;
+}
+
+// A dup of either (a /dev/tty stand-in from my_open included) is the same file, so it counts too.
+static int ours(int fd) { return is(fd, &tty_in) || is(fd, &tty_out); }
+
+// Where mode changes go: the session's output, as this process has it (stdout, else stderr), or nowhere.
+static int out_fd(void) { return is(1, &tty_out) ? 1 : is(2, &tty_out) ? 2 : -1; }
 
 static int env_int(const char *k, int d) { const char *v = getenv(k); return v ? atoi(v) : d; }
 
@@ -70,13 +110,15 @@ static int my_tcsetattr(int fd, int act, const struct termios *t) {
   fake = *t;
   // Input modes too (raw mode clears them all): zeropty applies them to the keys it is sent, so they go out
   // in the output stream, ahead of anything printed after them.
+  int out = out_fd();
+  if (out < 0) return 0;
   if (tty_flags(&old) != tty_flags(t)) {
     char m[32]; int n = snprintf(m, sizeof m, "\033]zeropty-tty;%d\007", tty_flags(t));
-    (void)!write(1, m, n);
+    (void)!write(out, m, n);
   }
   if (onlcr(&old) != onlcr(t)) {
     const char *m = onlcr(t) ? "\033]zeropty-onlcr;1\007" : "\033]zeropty-onlcr;0\007";
-    (void)!write(1, m, strlen(m));
+    (void)!write(out, m, strlen(m));
   }
   return 0;
 }
@@ -102,25 +144,20 @@ static int my_ioctl(int fd, unsigned long req, ...) {
 
 // A session has no controlling terminal, so opening /dev/tty fails (ENXIO); programs that read keys
 // from it (less, more, fzf) then quit. They get the session's input instead (its output for write-only),
-// which counts as a terminal like fds 0-2.
+// when this process still has it: a dup, so a terminal too.
 static int my_open(const char *path, int flags, ...) {
   int mode = 0;
   if (flags & O_CREAT) { va_list ap; va_start(ap, flags); mode = va_arg(ap, int); va_end(ap); }
   int fd = open(path, flags, mode);
-  if (fd < 0 && path && strcmp(path, "/dev/tty") == 0 && my_isatty(0)) {
-    fd = fcntl((flags & O_ACCMODE) == O_WRONLY ? 1 : 0, (flags & O_CLOEXEC) ? F_DUPFD_CLOEXEC : F_DUPFD, 3);
-    if (fd >= 0 && fd < (int)sizeof tty_fd) tty_fd[fd] = 1;
+  if (fd < 0 && path && strcmp(path, "/dev/tty") == 0) {
+    int e = errno, from = (flags & O_ACCMODE) == O_WRONLY ? out_fd() : is(0, &tty_in) ? 0 : -1;
+    if (from < 0) { errno = e; return fd; }
+    fd = fcntl(from, (flags & O_CLOEXEC) ? F_DUPFD_CLOEXEC : F_DUPFD, 3);
   }
   return fd;
 }
 
-static int my_close(int fd) {
-  if (fd > 2 && fd < (int)sizeof tty_fd) tty_fd[fd] = 0;
-  return close(fd);
-}
-
 INTERPOSE(my_open, open);
-INTERPOSE(my_close, close);
 INTERPOSE(my_isatty, isatty);
 INTERPOSE(my_tcgetattr, tcgetattr);
 INTERPOSE(my_tcsetattr, tcsetattr);

@@ -82,7 +82,7 @@ Changing or removing anything below is a **breaking change**. Adding something n
 
 | Public (name, meaning and default are kept) | Internal (may change without notice) |
 |---|---|
-| `ZEROPTY_SOCK`, `ZEROPTY_HISTORY`, `ZEROPTY_COALESCE_MS`, `ZEROPTY_FREEZE_MS`, `ZEROPTY_COLD`, `ZEROPTY_COLD_DIR`, `ZEROPTY_RECORD` ([USAGE.md](USAGE.md#environment-variables)) | `ZEROPTY_COLS`, `ZEROPTY_ROWS`, `ZEROPTY_SIZE_FILE` (values the engine passes to the shim, used only within the same build) |
+| `ZEROPTY_SOCK`, `ZEROPTY_HISTORY`, `ZEROPTY_COALESCE_MS`, `ZEROPTY_FREEZE_MS`, `ZEROPTY_COLD`, `ZEROPTY_COLD_DIR`, `ZEROPTY_RECORD` ([USAGE.md](USAGE.md#environment-variables)) | `ZEROPTY_COLS`, `ZEROPTY_ROWS`, `ZEROPTY_SIZE_FILE`, `ZEROPTY_TTY_ID` (values the engine passes to the shim, used only within the same build) |
 | `ZEROPTY_BIN`, `ZEROPTY_NODE` (the binary and module the clients use), `ZEROPTY_SHIM`, `ZEROPTY_CACHE`, `ZEROPTY_CLAUDE_REAL` (`zeropty-tty`, `claude-zeropty`) | `ZEROPTY_MALLOC_ADDED` (for re-executing the server), `ZEROPTY_PURGE_MS` (for measurements) |
 | `ZEROPTY_SESSION` (the session name that programs inside a session read) | Every other `ZEROPTY_*` used only by tests and benchmarks |
 
