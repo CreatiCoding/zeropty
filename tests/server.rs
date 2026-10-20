@@ -1014,6 +1014,8 @@ fn missing_target_errors_are_worded_as_tmux_words_them() {
         (&["capture-pane", "-p"], "nope.0", "can't find window: nope\n".to_owned()),
         (&["send-keys"], "=nope.0", "can't find window: nope\n".to_owned()),
         (&["kill-session"], "nope.", "can't find window: nope\n".to_owned()),
+        (&["capture-pane", "-p"], "$99.0", "can't find window: $99\n".to_owned()),
+        (&["capture-pane", "-p"], "@99.1", "can't find window: @99\n".to_owned()),
         (&["set-environment", "A", "B"], "nope.0", "no such session: nope.0\n".to_owned()),
     ] {
         let (name, rest) = cmd.split_first().unwrap();

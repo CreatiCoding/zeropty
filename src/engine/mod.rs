@@ -179,8 +179,8 @@ enum Lookup {
 }
 
 /// The error tmux 3.7c gives when `target` names nothing, for a command that looks it up as `kind`.
-/// With a ':' it is the session part that failed. Without one, tmux reads it as an id ($session,
-/// @window, %pane) whatever the command, as a window when it has a '.' (window.pane), and otherwise
+/// With a ':' it is the session part that failed. Without one, tmux reads it as a window when it has a
+/// '.' (window.pane, "$1.0" too), as an id ($session, @window, %pane) whatever the command, and otherwise
 /// as what the command looks for: a pane is named as given, a window and a session without the '='.
 fn missing(target: Option<&str>, kind: Lookup) -> String {
     let t = target.unwrap_or("");
@@ -188,11 +188,11 @@ fn missing(target: Option<&str>, kind: Lookup) -> String {
     if target.is_none() || t.contains(':') {
         return format!("can't find session: {name}\n");
     }
-    match (t.chars().next(), t.split_once('.')) {
-        (Some('$'), _) => format!("can't find session: {t}\n"),
-        (Some('@'), _) => format!("can't find window: {t}\n"),
-        (Some('%'), _) => format!("can't find pane: {t}\n"),
-        (_, Some((window, _))) => format!("can't find window: {}\n", window.strip_prefix('=').unwrap_or(window)),
+    match (t.split_once('.'), t.chars().next()) {
+        (Some((window, _)), _) => format!("can't find window: {}\n", window.strip_prefix('=').unwrap_or(window)),
+        (_, Some('$')) => format!("can't find session: {t}\n"),
+        (_, Some('@')) => format!("can't find window: {t}\n"),
+        (_, Some('%')) => format!("can't find pane: {t}\n"),
         _ => match kind {
             Lookup::Pane => format!("can't find pane: {t}\n"),
             Lookup::Window => format!("can't find window: {name}\n"),
