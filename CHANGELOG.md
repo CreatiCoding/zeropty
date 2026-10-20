@@ -39,9 +39,8 @@ release; polish that draft into entries written in English, and add the same ent
 ## [0.1.0] - 2026-10-20
 
 The first public version: a session engine for programs that drive many terminal programs (coding agents, scripts, test
-harnesses), which accepts tmux's command format without a PTY. macOS only. There is no tag yet: when it is published,
-the commit in this state gets the `v0.1.0` tag (until then, the link at the bottom points to that commit). The date is
-that commit's date.
+harnesses), which accepts tmux's command format without a PTY. macOS only. Tagged `v0.1.0` on the first public
+commit, `c612089`.
 
 Known limitations: macOS only (kqueue, the DYLD shim). One program per session, so there are no windows, panes, status
 line, copy mode, key bindings or configuration file. `wait-pane` is not available as an embedded function call, only over
@@ -110,5 +109,5 @@ the interfaces in docs/VERSIONING.md.
 - The CLI no longer panics when the reader closes the pipe early (`zeropty capture-pane -p ... | head -1`).
 
 [Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.1...HEAD
-[0.1.1]: https://github.com/CreatiCoding/zeropty/compare/c612089b29c802ab5118f1904c67b4671f53ceca...v0.1.1
-[0.1.0]: https://github.com/CreatiCoding/zeropty/tree/c612089b29c802ab5118f1904c67b4671f53ceca
+[0.1.1]: https://github.com/CreatiCoding/zeropty/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/CreatiCoding/zeropty/releases/tag/v0.1.0

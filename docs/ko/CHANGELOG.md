@@ -36,8 +36,8 @@ zeropty의 사용자에게 보이는 변경을 모두 여기에 적어요.
 ## [0.1.0] - 2026-10-20
 
 첫 공개 버전이에요. 터미널 프로그램을 많이 다루는 프로그램(코딩 에이전트, 스크립트, 테스트 하네스)을 위한 세션 엔진으로,
-tmux의 명령 형식을 PTY 없이 받아요. macOS 전용이에요. 아직 태그가 없어요: 공개할 때 이 상태의 커밋에 `v0.1.0` 태그를 달아요
-(맨 아래 링크는 그때까지 그 커밋을 가리켜요). 날짜는 그 커밋의 날짜예요.
+tmux의 명령 형식을 PTY 없이 받아요. macOS 전용이에요. 첫 공개 커밋 `c612089`에
+`v0.1.0` 태그를 달았어요.
 
 알려진 한계: macOS만 돼요(kqueue, DYLD shim). 세션 하나에 프로그램 하나라서 창·패널·상태 줄·복사 모드·키 바인딩·설정
 파일이 없어요. `wait-pane`은 임베디드 함수 호출로는 못 쓰고 소켓으로만 돼요(임베디드 `listen` 포함). SIP로 보호되거나
@@ -98,5 +98,5 @@ hardened runtime으로 서명된 프로그램은 shim을 못 읽어서 `zeropty-
 - 출력을 읽는 쪽이 파이프를 일찍 닫아도(`zeropty capture-pane -p ... | head -1`) CLI가 패닉하지 않아요.
 
 [Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.1...HEAD
-[0.1.1]: https://github.com/CreatiCoding/zeropty/compare/c612089b29c802ab5118f1904c67b4671f53ceca...v0.1.1
-[0.1.0]: https://github.com/CreatiCoding/zeropty/tree/c612089b29c802ab5118f1904c67b4671f53ceca
+[0.1.1]: https://github.com/CreatiCoding/zeropty/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/CreatiCoding/zeropty/releases/tag/v0.1.0
