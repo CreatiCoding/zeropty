@@ -178,6 +178,29 @@ enum Lookup {
     Pane,
 }
 
+/// The error tmux 3.7c gives when `target` names nothing, for a command that looks it up as `kind`.
+/// With a ':' it is the session part that failed. Without one, tmux reads it as an id ($session,
+/// @window, %pane) whatever the command, as a window when it has a '.' (window.pane), and otherwise
+/// as what the command looks for: a pane is named as given, a window and a session without the '='.
+fn missing(target: Option<&str>, kind: Lookup) -> String {
+    let t = target.unwrap_or("");
+    let name = session_name(t);
+    if target.is_none() || t.contains(':') {
+        return format!("can't find session: {name}\n");
+    }
+    match (t.chars().next(), t.split_once('.')) {
+        (Some('$'), _) => format!("can't find session: {t}\n"),
+        (Some('@'), _) => format!("can't find window: {t}\n"),
+        (Some('%'), _) => format!("can't find pane: {t}\n"),
+        (_, Some((window, _))) => format!("can't find window: {}\n", window.strip_prefix('=').unwrap_or(window)),
+        _ => match kind {
+            Lookup::Pane => format!("can't find pane: {t}\n"),
+            Lookup::Window => format!("can't find window: {name}\n"),
+            Lookup::Session => format!("can't find session: {name}\n"),
+        },
+    }
+}
+
 impl Engine {
     /// An engine with no sessions, on a kqueue of its own.
     ///
@@ -694,19 +717,11 @@ impl<B: Backend> Engine<B> {
         self.find_as(target, Lookup::Session)
     }
 
-    /// As [`Engine::find`], for a command whose -t tmux looks up as `kind`, with tmux's error: a target
-    /// with no ':' is looked up as a pane or window first, so tmux names that ("can't find pane: x",
-    /// the target as given; "can't find window: x", without its '='). With a ':' it is the session part
-    /// that failed ("can't find session: x"). Measured with tmux 3.7c.
+    /// As [`Engine::find`], for a command whose -t tmux looks up as `kind`, with tmux's error
+    /// ([`missing`]).
     fn find_as(&self, target: Option<&str>, kind: Lookup) -> Result<usize, CmdError> {
         let name = session_name(target.unwrap_or(""));
-        self.names.find(name, &self.slots).ok_or_else(|| {
-            CmdError::new(match (kind, target) {
-                (Lookup::Pane, Some(t)) if !t.contains(':') => format!("can't find pane: {t}\n"),
-                (Lookup::Window, Some(t)) if !t.contains(':') => format!("can't find window: {name}\n"),
-                _ => format!("can't find session: {name}\n"),
-            })
-        })
+        self.names.find(name, &self.slots).ok_or_else(|| CmdError::new(missing(target, kind)))
     }
 
     /// Session `slot`, which must be there.

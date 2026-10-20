@@ -51,9 +51,10 @@ zeropty의 사용자에게 보이는 변경을 모두 여기에 적어요.
 - `display-message`의 `-t`가 없는 세션을 가리키면 이제 tmux처럼 세션 변수를 비운 포맷을 출력하고 종료 코드 0이에요(전에는
   종료 코드 1로 실패). 세션이 있는지 확인하려면 `has-session`을 쓰세요. 다른 명령은 tmux처럼 여전히 종료 코드 1로
   실패해요.
-- 없는 `-t` 대상에 대한 오류 문구를 명령마다 tmux와 같게 맞췄어요. `:`가 없는 대상이면 `can't find pane: x`(`capture-pane`,
-  `send-keys`, `pipe-pane`, `paste-buffer`), `can't find window: x`(`resize-window`), `set-environment`는
-  `no such session: x`예요. 종료 코드는 그대로(1)예요.
+- 없는 `-t` 대상에 대한 오류 문구를 tmux와 같게 맞췄어요. `:`가 없을 때 이름만 쓰면 `can't find pane: x`(`capture-pane`,
+  `send-keys`, `pipe-pane`, `paste-buffer`, `resize-pane`)나 `can't find window: x`(`resize-window`), id는 `$`·`@`·`%`에
+  따라 세션·창·pane 오류, `x.0`은 `can't find window: x`예요. `set-environment`는 `no such session: `과 받은 대상
+  그대로예요. 종료 코드는 그대로(1)예요.
 
 ## [0.1.0] - 2026-10-20
 

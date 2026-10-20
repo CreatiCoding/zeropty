@@ -56,7 +56,8 @@ impl Drop for Server {
 
 /// A target naming no session, command by command, as tmux 3.x answers it (measured with tmux 3.7c, a
 /// server running): display-message prints its format with the session's variables empty and exits 0;
-/// every other command fails with exit 1 and "can't find session: <name>".
+/// every other command fails with exit 1 ("can't find session: <name>" for the =name forms used here;
+/// other forms in missing_target_errors_are_worded_as_tmux_words_them).
 #[test]
 fn missing_targets_answer_as_tmux_does() {
     let s = Server::new("missing");
@@ -1001,6 +1002,19 @@ fn missing_target_errors_are_worded_as_tmux_words_them() {
         (&["kill-session"], "=nope", session.clone()),
         (&["has-session"], "nope", session.clone()),
         (&["rename-session", "other"], "nope", session.clone()),
+        (&["resize-pane", "-x", "10"], "nope", pane("nope")),
+        (&["resize-pane", "-x", "10"], "=nope", pane("=nope")),
+        // Ids and window.pane, whatever the command looks for.
+        (&["capture-pane", "-p"], "$99", "can't find session: $99\n".to_owned()),
+        (&["resize-window", "-x", "10"], "$99", "can't find session: $99\n".to_owned()),
+        (&["capture-pane", "-p"], "@99", "can't find window: @99\n".to_owned()),
+        (&["kill-session"], "@99", "can't find window: @99\n".to_owned()),
+        (&["resize-window", "-x", "10"], "%99", "can't find pane: %99\n".to_owned()),
+        (&["kill-session"], "%99", "can't find pane: %99\n".to_owned()),
+        (&["capture-pane", "-p"], "nope.0", "can't find window: nope\n".to_owned()),
+        (&["send-keys"], "=nope.0", "can't find window: nope\n".to_owned()),
+        (&["kill-session"], "nope.", "can't find window: nope\n".to_owned()),
+        (&["set-environment", "A", "B"], "nope.0", "no such session: nope.0\n".to_owned()),
     ] {
         let (name, rest) = cmd.split_first().unwrap();
         let o = s.run(&[&[*name, "-t", t][..], rest].concat());

@@ -58,9 +58,11 @@ release; polish that draft into entries written in English, and add the same ent
 - `display-message` with `-t` naming a session that does not exist now prints the format with the session's
   variables empty and exits 0, as tmux does, instead of failing with exit 1. To test whether a session exists, use
   `has-session`. Every other command still fails with exit 1, as in tmux.
-- A missing `-t` target is now reported in tmux's words for each command: `can't find pane: x` (`capture-pane`,
-  `send-keys`, `pipe-pane`, `paste-buffer`) and `can't find window: x` (`resize-window`) for a target with no `:`,
-  and `no such session: x` for `set-environment`. Exit codes are unchanged (1).
+- A missing `-t` target is now reported in tmux's words. Without a `:`, a bare name gives `can't find pane: x`
+  (`capture-pane`, `send-keys`, `pipe-pane`, `paste-buffer`, `resize-pane`) or `can't find window: x`
+  (`resize-window`), an id gives the session, window or pane error for `$`, `@` or `%`, and `x.0` gives
+  `can't find window: x`; `set-environment` gives `no such session: ` and the target as given. Exit codes are
+  unchanged (1).
 
 ## [0.1.0] - 2026-10-20
 

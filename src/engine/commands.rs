@@ -381,7 +381,8 @@ impl<B: Backend> Engine<B> {
     /// program gets SIGWINCH), also once attached terminals leave.
     fn resize(&mut self, c: Call) -> Outcome {
         let a = &c.args;
-        let slot = self.find_as(a.get('t'), Lookup::Window)?;
+        let kind = if matches!(c.name, "resize-pane" | "resizep") { Lookup::Pane } else { Lookup::Window };
+        let slot = self.find_as(a.get('t'), kind)?;
         let s = self.slots.get(slot).unwrap();
         let num = |flag: char, cur: u16| -> Result<u16, CmdError> {
             a.get(flag).map_or(Ok(cur), |v| v.parse::<u16>().ok().filter(|&n| n > 0).ok_or_else(|| CmdError::new(format!("resize: -{flag} invalid: {v}\n"))))
