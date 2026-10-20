@@ -178,8 +178,8 @@ export function setVersion(root, version, { date, changelog = true } = {}) {
     return put(t, define('ZEROPTY_VERSION_STRING'), `"${version}"`, 'zeropty.h')
   })
   for (const c of f.clients) edit(c, (t) => put(t, CLIENT_VERSION, version, path.relative(root, c)))
-  // The compare link starts at the previous version's tag once it exists; before that (0.1.0 is not tagged
-  // yet) at whatever the [Unreleased] link starts from, a commit, so no link points at a missing tag.
+  // The compare link starts at the previous version's tag; when that has no tag, at whatever the
+  // [Unreleased] link starts from, a commit, so no link points at a missing tag.
   if (changelog) edit(f.changelog, (t) => releaseChangelog(t, version, date, hasTag(root, `v${previous}`) ? previous : null))
   // Every edit is computed before any file is written: a failure leaves the tree as it was.
   for (const [file, text] of edits) writeFileSync(file, text)

@@ -65,7 +65,7 @@ We do not use the git-cliff output as the CHANGELOG verbatim; a person rewrites 
 
 `bump` does not touch the Korean copy [ko/CHANGELOG.md](ko/CHANGELOG.md); when you polish the release section (step 4 below), apply the same heading and entries there by hand.
 
-The links at the bottom of the CHANGELOG point **only to tags that exist**. If the previous version has a tag, they use `compare/vA...vB`; if not, they start from the commit where the `[Unreleased]` link starts (currently the 0.1.0 commit `c612089`). A link to a tag that does not exist makes `node --test scripts/test` fail, except the tag of the version being released (the release PR links it; the tag comes after the merge).
+The links at the bottom of the CHANGELOG point **only to tags that exist**. If the previous version has a tag, they use `compare/vA...vB`; for a version whose predecessor has no tag, they start from the commit the `[Unreleased]` link starts from. A link to a tag that does not exist makes `node --test scripts/test` fail, except the tag of the version being released (the release PR links it; the tag comes after the merge).
 
 ## Commands
 
@@ -124,7 +124,7 @@ node --test scripts/test/*.test.mjs         # tests for the tools themselves (in
    ```
    Before pushing, check that the tag matches the version with `node scripts/release.mjs check --tag v0.2.0` (on a tagged HEAD, `scripts/check.sh` runs this check too). If you create a GitHub Release, paste the CHANGELOG's `## [0.2.0]` section into its body as is.
 
-> 0.1.0 is the state of the first public commit (`c612089`), and it has no tag yet. When the maintainer publishes it, the first tag goes **on that commit** (`git tag -a v0.1.0 c612089 -m "zeropty 0.1.0"`). Until then, `next` and `notes` compute from the beginning of the repository (the first commit is not in the Conventional Commits format, so it is left out), and the CHANGELOG links point to that commit. After tagging, you may change the `[Unreleased]` link to `compare/v0.1.0...HEAD`; the next `bump` changes it for you anyway.
+> 0.1.0 is the first public commit (`c612089`), tagged `v0.1.0`; 0.1.1 was the first release made with these tools. `next` and `notes` compute from the latest tag.
 
 ## Formatting
 

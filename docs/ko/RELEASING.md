@@ -65,7 +65,7 @@ CHANGELOG를 git-cliff 출력 그대로 쓰지 않고, 초안을 사람이 사�
 
 `bump`는 한국어 사본 [CHANGELOG.md](CHANGELOG.md)를 건드리지 않아요. 릴리스 섹션을 다듬을 때(아래 4단계) 같은 제목과 항목을 그곳에도 손으로 옮겨요.
 
-CHANGELOG 맨 아래 링크는 **있는 태그만** 가리켜요. 이전 버전의 태그가 있으면 `compare/vA...vB`, 아직 없으면 `[Unreleased]` 링크가 시작하는 커밋에서 시작해요(지금은 0.1.0 커밋 `c612089`). 없는 태그를 가리키는 링크가 생기면 `node --test scripts/test`가 실패해요. 단, 지금 릴리스하는 버전의 태그는 예외예요(릴리스 PR이 그 링크를 넣고, 태그는 머지 뒤에 달아요).
+CHANGELOG 맨 아래 링크는 **있는 태그만** 가리켜요. 이전 버전의 태그가 있으면 `compare/vA...vB`, 이전 버전에 태그가 없으면 `[Unreleased]` 링크가 시작하는 커밋에서 시작해요. 없는 태그를 가리키는 링크가 생기면 `node --test scripts/test`가 실패해요. 단, 지금 릴리스하는 버전의 태그는 예외예요(릴리스 PR이 그 링크를 넣고, 태그는 머지 뒤에 달아요).
 
 ## 명령
 
@@ -124,7 +124,7 @@ node --test scripts/test/*.test.mjs         # 도구 자체의 테스트 (git-cl
    ```
    push하기 전에 `node scripts/release.mjs check --tag v0.2.0`으로 태그와 버전이 같은지 확인해요(태그가 달린 HEAD에서는 `scripts/check.sh`도 이 검사를 해요). GitHub Release를 만든다면 본문에 CHANGELOG의 `## [0.2.0]` 섹션을 그대로 붙여요.
 
-> 0.1.0은 첫 공개 커밋(`c612089`)의 상태이고 아직 태그가 없어요. 관리자가 공개할 때 **그 커밋에** 첫 태그를 달아요(`git tag -a v0.1.0 c612089 -m "zeropty 0.1.0"`). 그 전까지 `next`·`notes`는 저장소의 처음부터 계산하고(첫 커밋은 Conventional Commits 형식이 아니어서 빠져요), CHANGELOG 링크는 그 커밋을 가리켜요. 태그를 단 뒤에는 `[Unreleased]` 링크를 `compare/v0.1.0...HEAD`로 바꿔도 되고, 다음 `bump`가 알아서 바꿔요.
+> 0.1.0은 첫 공개 커밋(`c612089`)이고 `v0.1.0` 태그가 달려 있어요. 0.1.1이 이 도구로 만든 첫 릴리스예요. `next`·`notes`는 마지막 태그부터 계산해요.
 
 ## 포맷
 
