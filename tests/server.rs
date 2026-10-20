@@ -716,6 +716,61 @@ fn terminal_programs_through_zeropty_tty() {
     }
 }
 
+/// Only the session's own pipe and socket are a terminal to a program run through zeropty-tty: its
+/// stdout piped on or redirected to a file, or its stdin from /dev/null, is not, and its mode changes
+/// (raw mode) never land in that output. Outside a session nothing is a terminal (the shim is inherited
+/// by children through DYLD_INSERT_LIBRARIES, so this is a program the session's program started).
+#[test]
+fn zeropty_tty_answers_only_for_the_session_fds() {
+    let s = Server::new("ttyid");
+    let lib = shim(&s);
+    let tty = concat!(env!("CARGO_MANIFEST_DIR"), "/zeropty-tty");
+    // Raw mode on stdin (an OSC to the session when it is the terminal), then which of 0-2 are terminals.
+    let src = s.dir.join("probe.c");
+    std::fs::write(
+        &src,
+        r#"#include <stdio.h>
+#include <termios.h>
+#include <unistd.h>
+int main(void) {
+  struct termios t;
+  if (tcgetattr(0, &t) == 0) { t.c_lflag &= ~(ICANON | ECHO); tcsetattr(0, TCSANOW, &t); }
+  printf("tty=%d%d%d\n", isatty(0), isatty(1), isatty(2));
+  return 0;
+}
+"#,
+    )
+    .unwrap();
+    let probe = s.dir.join("probe");
+    assert!(Command::new("clang").arg("-o").arg(&probe).arg(&src).status().unwrap().success());
+    let run = format!("ZEROPTY_SHIM={} ZEROPTY_CACHE={} {tty} {}", lib.display(), s.dir.display(), probe.display());
+    let file = s.dir.join("out.txt");
+    s.ok(&[
+        "new-session",
+        "-d",
+        "-s",
+        "t",
+        "-x",
+        "40",
+        "-y",
+        "8",
+        &format!("{run} | od -c | grep -c 033; {run} </dev/null; {run} >{}; echo DONE; exec sleep 100", file.display()),
+    ]);
+    let screen = s.wait_capture(&["capture-pane", "-p", "-t", "=t:"], |o| o.contains("DONE"));
+    // Piped on: no OSC in the pipe (0 lines with ESC). From /dev/null: stdin is no terminal, so no raw mode.
+    assert!(screen.starts_with("0\ntty=011\nDONE\n"), "{screen:?}");
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), "tty=101\n");
+    let outside = Command::new(tty)
+        .arg(&probe)
+        .env("ZEROPTY_SHIM", &lib)
+        .env("ZEROPTY_CACHE", &s.dir)
+        .env_remove("ZEROPTY_TTY_ID")
+        .stdin(std::process::Stdio::null())
+        .output()
+        .unwrap();
+    assert_eq!(String::from_utf8_lossy(&outside.stdout), "tty=000\n");
+}
+
 /// The line discipline a PTY applies to keys, as tmux's sessions have it: Enter ends a line, C-c
 /// interrupts, BSpace/C-w/C-u edit the line, C-d ends input, typing echoes; and raw mode (from the
 /// shim, or printed by the program itself) passes keys as they are.

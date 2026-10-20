@@ -68,7 +68,7 @@ zeropty            # usage: zeropty serve | <tmux command> ...  (표준 에러, 
 
 프로그램이 끝나면 세션도 끝나요(tmux의 `remain-on-exit` 꺼짐과 같아요).
 
-세션 안의 프로그램이 받는 환경: `TERM=xterm-256color`, `COLUMNS`/`LINES`, `ZEROPTY_SESSION`(세션 이름), `ZEROPTY_COLS`/`ZEROPTY_ROWS`, `ZEROPTY_SIZE_FILE`(shim이 읽는 창 크기 파일). `TMUX`, `TMUX_PANE`은 지워요(tmux 안에서 서버를 띄웠어도 세션은 tmux 안이 아니에요).
+세션 안의 프로그램이 받는 환경: `TERM=xterm-256color`, `COLUMNS`/`LINES`, `ZEROPTY_SESSION`(세션 이름), `ZEROPTY_COLS`/`ZEROPTY_ROWS`, `ZEROPTY_SIZE_FILE`(shim이 읽는 창 크기 파일), `ZEROPTY_TTY_ID`(어느 파일이 세션의 터미널인지, shim용). `TMUX`, `TMUX_PANE`은 지워요(tmux 안에서 서버를 띄웠어도 세션은 tmux 안이 아니에요).
 
 ### 키 보내기
 
@@ -202,6 +202,7 @@ zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"
 ```
 
 - shim(`dist/shim.dylib`)이 `isatty`, `tcgetattr`, 창 크기(`TIOCGWINSZ`), `tcgetpgrp`, `/dev/tty`에 터미널처럼 답해요. `DYLD_INSERT_LIBRARIES`로 넣어요.
+- 터미널로 치는 건 세션 자신의 입력 파이프와 출력 소켓뿐이에요(어느 fd 번호에 있든). stdout을 파이프로 넘기거나(`zeropty-tty prog | cat`) 파일로 돌린 프로그램, stdin이 `/dev/null`인 프로그램은 거기서 터미널을 보지 못해요(tmux와 같아요). 모드 변경 신호도 그 출력에 섞이지 않아요. 자식 프로세스도 `DYLD_INSERT_LIBRARIES`를 물려받지만 같은 규칙을 따르고, 세션 밖(`ZEROPTY_TTY_ID` 없음)에서는 shim이 아무것도 터미널로 답하지 않아요.
 - macOS는 `/usr/bin` 같은 SIP 보호 바이너리와 hardened runtime 서명 바이너리에 shim을 넣지 못하게 해요. 그래서 `zeropty-tty`는 이런 프로그램을 서명만 바꾼 사본(`~/.zeropty/tty/`)으로 실행하고, 원본이 바뀌면 다시 만들어요.
 - 사본에는 원본의 권한이 없어서 `top`, `ps`는 안 돼요. `/usr/bin/env`를 거치는 스크립트는 SIP가 shim을 지워요. 인터프리터를 직접 `zeropty-tty`로 띄워요.
 - `dist/claude-zeropty`는 `zeropty-tty claude`를 하는 작은 래퍼예요. 다른 claude를 쓰려면 `ZEROPTY_CLAUDE_REAL`로 경로를 줘요.

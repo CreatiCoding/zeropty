@@ -49,6 +49,10 @@ release; polish that draft into entries written in English, and add the same ent
 ### Fixed
 
 - The CLI no longer panics when the reader closes the pipe early (`zeropty capture-pane -p ... | head -1`).
+- `zeropty-tty`: the shim treated any program's fds 0-2 as a terminal, so a program whose stdout was piped or
+  redirected got `\e]zeropty-tty;N\a` mode signals mixed into that output, a program reading `/dev/null` as stdin
+  failed (kqueue `EINVAL`), and children inherited the effect. Now only the session's own pipe and socket count, named
+  by the server in the new `ZEROPTY_TTY_ID` variable, and mode signals go only to the session's output.
 
 ## [0.1.0] - 2026-10-20
 

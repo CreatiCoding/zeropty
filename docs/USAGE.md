@@ -68,7 +68,7 @@ Names in parentheses are the same aliases tmux uses. `<value>` after an option m
 
 When the program exits, the session ends too (the same as tmux with `remain-on-exit` off).
 
-Environment the program in a session receives: `TERM=xterm-256color`, `COLUMNS`/`LINES`, `ZEROPTY_SESSION` (the session name), `ZEROPTY_COLS`/`ZEROPTY_ROWS`, and `ZEROPTY_SIZE_FILE` (the window size file the shim reads). `TMUX` and `TMUX_PANE` are removed (even if the server was started inside tmux, the session is not inside tmux).
+Environment the program in a session receives: `TERM=xterm-256color`, `COLUMNS`/`LINES`, `ZEROPTY_SESSION` (the session name), `ZEROPTY_COLS`/`ZEROPTY_ROWS`, `ZEROPTY_SIZE_FILE` (the window size file the shim reads), and `ZEROPTY_TTY_ID` (which files are the session's terminal, for the shim). `TMUX` and `TMUX_PANE` are removed (even if the server was started inside tmux, the session is not inside tmux).
 
 ### Sending keys
 
@@ -202,6 +202,7 @@ zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"
 ```
 
 - The shim (`dist/shim.dylib`) answers `isatty`, `tcgetattr`, the window size (`TIOCGWINSZ`), `tcgetpgrp` and `/dev/tty` as a terminal would. It is injected with `DYLD_INSERT_LIBRARIES`.
+- Only the session's own input pipe and output socket count as the terminal, whatever fd number they sit on. A program whose stdout is piped on (`zeropty-tty prog | cat`) or redirected to a file, or whose stdin is `/dev/null`, sees no terminal there, just as under tmux, and its mode changes never land in that output. Children inherit `DYLD_INSERT_LIBRARIES`, and the same rule applies to them; outside a session (no `ZEROPTY_TTY_ID`) the shim answers nothing.
 - macOS does not let the shim into SIP-protected binaries such as those in `/usr/bin`, or into binaries signed with the hardened runtime. So `zeropty-tty` runs such programs from a copy with only the signature changed (`~/.zeropty/tty/`), and rebuilds the copy when the original changes.
 - The copy does not carry the original's privileges, so `top` and `ps` do not work. For scripts that go through `/usr/bin/env`, SIP strips the shim; launch the interpreter directly with `zeropty-tty`.
 - `dist/claude-zeropty` is a small wrapper that runs `zeropty-tty claude`. To use a different claude, give its path in `ZEROPTY_CLAUDE_REAL`.
