@@ -15,30 +15,34 @@ case $PROG in
   *) PROG=$(command -v "$PROG") || { echo "zeropty-tty: $PROG: not found" >&2; exit 127; } ;;
 esac
 REAL=$(realpath "$PROG")
-RUN=$REAL
+# Run by the name it was given (a link's, not its target's): ps and pgrep look for that name.
+RUN=$PROG
 copy=no
 case $REAL in
   /usr/local/*) ;;
   /usr/*|/bin/*|/sbin/*|/System/*) copy=yes ;;
 esac
 CACHE=${ZEROPTY_CACHE:-$HOME/.zeropty}/tty
-# Under the name it was run by, not its target's (claude's is claude.exe): ps and pgrep look for that
-# name, and some programs go by it (/usr/bin/python3 asks xcode-select for the tool it names). The
-# directory still follows the target, so each name of one program gets its own copy beside the others.
+# A copy, too, goes by the name it was run by, not its target's (claude's is claude.exe): ps and pgrep
+# look for that name, and some programs go by it (/usr/bin/python3 asks xcode-select for the tool it
+# names). The directory follows the target, so each name of one program gets its own copy there; the
+# stamps saying which original a copy was made from live apart, so no name can be another's stamp.
 DIR=$CACHE/$(printf %s "$REAL" | shasum | cut -c1-12)
-COPY=$DIR/$(basename "$PROG")
+NAME=$(basename "$PROG")
+COPY=$DIR/bin/$NAME
+STAMP=$DIR/src/$NAME
 SRC="$REAL $(stat -f '%m %z' "$REAL")"
-if [ $copy = no ] && [ "$(cat "$COPY.src" 2>/dev/null)" != "$SRC" ]; then
+if [ $copy = no ] && [ "$(cat "$STAMP" 2>/dev/null)" != "$SRC" ]; then
   # The hardened runtime shows in the signature's flags; checked once per version of the program.
   codesign -dv "$REAL" 2>&1 | grep -q 'flags=.*runtime' && copy=yes
 fi
-[ -x "$COPY" ] && [ "$(cat "$COPY.src" 2>/dev/null)" = "$SRC" ] && copy=yes
+[ -x "$COPY" ] && [ "$(cat "$STAMP" 2>/dev/null)" = "$SRC" ] && copy=yes
 if [ $copy = yes ]; then
-  if [ ! -x "$COPY" ] || [ "$(cat "$COPY.src" 2>/dev/null)" != "$SRC" ]; then
-    mkdir -p "$DIR"
+  if [ ! -x "$COPY" ] || [ "$(cat "$STAMP" 2>/dev/null)" != "$SRC" ]; then
+    mkdir -p "$DIR/bin" "$DIR/src"
     # Built next to the final path and renamed, so concurrent sessions never see a half-written binary.
-    TMP=$COPY.$$
-    cp "$REAL" "$TMP" && codesign --force -s - "$TMP" 2>/dev/null && mv -f "$TMP" "$COPY" && echo "$SRC" > "$COPY.src"
+    TMP=$DIR/tmp.$$
+    cp "$REAL" "$TMP" && codesign --force -s - "$TMP" 2>/dev/null && mv -f "$TMP" "$COPY" && echo "$SRC" > "$STAMP"
   fi
   RUN=$COPY
 fi

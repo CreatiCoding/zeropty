@@ -54,7 +54,7 @@ release; polish that draft into entries written in English, and add the same ent
   failed (kqueue `EINVAL`), and children inherited the effect. Now only the session's own pipe and socket count, named
   by the server in the new `ZEROPTY_TTY_ID` variable, and mode signals go only to the session's output.
 - `zeropty-tty`: the signed copy took the name of the link's target (`claude` ran as `claude.exe`), so `ps` and
-  `pgrep claude` did not find it. The copy now keeps the name the program was run by.
+  `pgrep claude` did not find it. A program, copied or not, now runs under the name it was run by.
 
 ## [0.1.0] - 2026-10-20
 
