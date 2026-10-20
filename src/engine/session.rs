@@ -486,14 +486,17 @@ impl Sess {
         self.trim_extra();
     }
 
-    /// End of input for the program (C-d on an empty line): a pipe has no way to say it but closing, so
-    /// it is for good, where a tty's EOF is one read's. Programs that stop at it (cat, a shell) are alike.
+    /// End of input for the program (C-d on an empty line): shutting the socket's input is for good,
+    /// where a tty's EOF is one read's. Programs that stop at it (cat, a shell) are alike. Its output
+    /// still flows: `out` is the same socket.
     fn close_input(&mut self) {
         if self.extra.as_ref().is_some_and(|x| !x.pending.is_empty()) {
             self.extra().eof = true;
             return;
         }
-        self.stdin = None;
+        if let Some(stdin) = self.stdin.take() {
+            fd::shut_input(stdin.as_fd());
+        }
     }
 
     /// Keys for the program, through the line discipline a PTY would apply (see super::ldisc); true when
@@ -598,7 +601,7 @@ mod tests {
     /// Output read goes to the screen and is forwarded to viewers; wait-panes see their text.
     #[test]
     fn output_reaches_screen_viewers_and_waits() {
-        let (r, w) = crate::sys::fd::output_channel().unwrap();
+        let (r, w) = crate::sys::fd::terminal_channel().unwrap();
         crate::sys::fd::set_nonblocking(r.as_raw_fd()).unwrap();
         let mut s = session(Some(r));
         let x = s.extra();

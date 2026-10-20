@@ -17,6 +17,14 @@ release; polish that draft into entries written in English, and add the same ent
 
 ## [Unreleased]
 
+### Fixed
+
+- `zeropty-tty`: `/dev/tty` opened for reading and writing (`fzf` with its stdin piped in) could read keys but every
+  write failed with `EBADF`, so fzf drew no list and took no pick. A session's terminal is now one socket, as a PTY is
+  one file: stdin, stdout and stderr are that socket (stdin was a pipe), and `/dev/tty` in any mode is it. `C-d` still
+  ends input for good, and output keeps flowing after it. Sessions started by an older server and kept by
+  `restart-server` keep their input pipe.
+
 ## [0.1.1] - 2026-10-20
 
 ### Fixed

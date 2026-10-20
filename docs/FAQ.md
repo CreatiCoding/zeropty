@@ -106,7 +106,7 @@ An embedded engine's sessions end with the app. Before the app exits, hand them 
 
 ## A program behaves differently because it is "not a terminal"
 
-A session is a pipe, not a PTY, so `isatty()` is false. Start the program through `zeropty-tty`:
+A session's terminal is a socket, not a PTY, so `isatty()` is false. Start the program through `zeropty-tty`:
 
 ```sh
 zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"
@@ -132,7 +132,7 @@ The usual flow, starting a long-running program such as a shell (`sh`, `zsh`) or
 
 ## Input stops arriving after I send `C-d`
 
-A pipe has no way to signal "EOF once" the way a PTY does, so `C-d` on an empty line closes the input. After that, nothing more can be sent to that session. Unless you mean to end the program, send `C-c` or the program's own quit command instead of `C-d`.
+The session's socket has no way to signal "EOF once" the way a PTY does, so `C-d` on an empty line shuts the input. After that, nothing more can be sent to that session. Unless you mean to end the program, send `C-c` or the program's own quit command instead of `C-d`.
 
 ## `-t =work:` behaves oddly in zsh
 

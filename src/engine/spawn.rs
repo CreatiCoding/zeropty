@@ -1,31 +1,32 @@
-//! Starting programs: a session's (through /bin/sh, its output into a socket pair, the environment a
+//! Starting programs: a session's (through /bin/sh, its terminal a socket pair, the environment a
 //! program under tmux would see), and a pipe-pane command's. Each leads its own process group, so
 //! signals for it (C-c, kill-session) reach whatever it started.
 //!
 //! The OS side of super::backend::SystemPrograms: the engine reaches these only through `Programs`.
 
 use super::backend::{Spawn, Spawned};
-use crate::sys::{fd, process};
+use crate::sys::fd;
 use std::os::fd::{AsFd as _, AsRawFd as _, OwnedFd};
 use std::os::unix::process::CommandExt as _;
 
 /// Starts `p`; the error is the reply's text.
 pub(super) fn session(p: &Spawn<'_>) -> Result<Spawned, String> {
-    // stdout and stderr share one channel, as they share one terminal under tmux.
-    let (reader, writer) = fd::output_channel().map_err(|e| format!("socketpair: {e}\n"))?;
-    let writer2 = writer.try_clone().map_err(|e| format!("socketpair: {e}\n"))?;
-    let (input, stdin) = fd::pipe().map_err(|e| format!("pipe: {e}\n"))?;
-    // Which fds are the session's terminal, for the shim (zeropty-tty): only these two files, wherever a
-    // program has them (fd 0-2, a dup, an inherited fd). A program whose stdout is redirected to a file
-    // or a pipe then sees no terminal there, as under tmux.
-    let tty_id = format!("{},{}", file_id(&input).map_err(|e| format!("spawn: {e}\n"))?, file_id(&writer).map_err(|e| format!("spawn: {e}\n"))?);
+    // stdin, stdout and stderr are one terminal, as under tmux: one socket, which zeropty reads the
+    // output from and writes the keys into (`reader` and `stdin` are its end).
+    let (reader, theirs) = fd::terminal_channel().map_err(|e| format!("socketpair: {e}\n"))?;
+    let clone = |f: &OwnedFd| f.try_clone().map_err(|e| format!("socketpair: {e}\n"));
+    let (stdin, out, err) = (clone(&reader)?, clone(&theirs)?, clone(&theirs)?);
+    // Which file is the session's terminal, for the shim (zeropty-tty): only this one, wherever a
+    // program has it (fd 0-2, a dup, an inherited fd). A program whose stdout is redirected to a file or a
+    // pipe then sees no terminal there, as under tmux.
+    let tty_id = file_id(&theirs).map_err(|e| format!("spawn: {e}\n"))?;
     let mut cmd = std::process::Command::new("/bin/sh");
     cmd.arg("-c")
         .arg(p.command)
         .current_dir(p.dir)
-        .stdin(input)
-        .stdout(writer)
-        .stderr(writer2)
+        .stdin(theirs)
+        .stdout(out)
+        .stderr(err)
         .env("TERM", "xterm-256color")
         .env("ZEROPTY_COLS", p.cols.to_string())
         .env("ZEROPTY_ROWS", p.rows.to_string())
@@ -49,16 +50,13 @@ pub(super) fn session(p: &Spawn<'_>) -> Result<Spawned, String> {
             cmd.env(k, v);
         }
     }
+    // Non-blocking is the file's, not the fd's: `stdin` (a dup of `reader`) is non-blocking too, and the
+    // program's end, another file, is not.
     fd::set_nonblocking(reader.as_raw_fd()).map_err(|e| format!("spawn: {e}\n"))?;
     let child = fd::spawn(&mut cmd).map_err(|e| format!("spawn: {e}\n"))?;
-    // `cmd` holds the write ends; dropping it here leaves only the child's, so EOF arrives when it exits.
+    // `cmd` holds the program's end; dropping it here leaves only the child's, so EOF arrives when it exits.
     drop(cmd);
     let pid = child.id() as i32;
-    if let Err(e) = fd::set_nonblocking(stdin.as_raw_fd()) {
-        // Its input would block the engine: no session. Its group goes as kill-session's would.
-        process::signal_group(pid, libc::SIGKILL);
-        return Err(format!("spawn: {e}\n"));
-    }
     // The Child handle is not needed: exit comes from kqueue and waitpid reaps.
     drop(child);
     Ok(Spawned { pid, stdin, out: reader })

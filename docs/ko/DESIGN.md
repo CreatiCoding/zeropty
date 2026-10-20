@@ -41,18 +41,18 @@ flowchart LR
   clients -->|"Unix 소켓 (~/.zeropty/mux.sock)"| srv
   srv --> eng
   emb -->|"함수 호출 (Node send-keys p50 0.04~0.06ms)"| eng
-  eng -->|"stdin: 파이프"| sessions
-  sessions -->|"stdout+stderr: socketpair"| eng
+  eng -->|"stdin: socketpair"| sessions
+  sessions -->|"stdout+stderr: 같은 socketpair"| eng
 ```
 
-- **세션**은 `/bin/sh -c 명령`으로 띄운 프로세스 그룹이에요. 입력은 파이프, 출력은 socketpair 하나(stdout과 stderr를 같이, 터미널처럼)예요.
-- **터미널이 필요한 프로그램**은 `zeropty-tty`가 `DYLD_INSERT_LIBRARIES`로 shim을 넣어서 파이프를 터미널로 보이게 해요.
+- **세션**은 `/bin/sh -c 명령`으로 띄운 프로세스 그룹이에요. 터미널은 socketpair 하나예요. stdin, stdout, stderr가 모두 그 한쪽 끝이에요(tmux에서 PTY 하나인 것처럼).
+- **터미널이 필요한 프로그램**은 `zeropty-tty`가 `DYLD_INSERT_LIBRARIES`로 shim을 넣어서 소켓을 터미널로 보이게 해요.
 - **플러그인**은 세션 이벤트를 듣고 명령을 더해요. 소켓으로 붙는 별도 프로세스, `plugin-run`으로 띄운 C 라이브러리, 호스트 프로세스 안의 콜백 모두 같은 등록부를 거쳐요([PLUGINS.md](PLUGINS.md)).
 - **엔진**은 kqueue 하나로 모든 세션의 출력, 프로세스 종료, 타이머를 기다려요. 호스트가 자기 fd를 같은 kqueue에 올려 두면(`Engine::watch`, 태그에 `HOST_TAG`) 이벤트 루프도 하나로 끝나요.
 
 ## 1. PTY 대신 파이프
 
-tmux는 창마다 PTY를 하나씩 열어서 macOS의 PTY 한도(기본 511개, 최대 999개)에 걸려요. zeropty는 세션을 파이프로 연결해서 한도가 없어요. claude에는 `shim.dylib`을 넣어 터미널로 보이게 해요(`claude-zeropty` 래퍼). `isatty`, `tcgetattr`, `ioctl(TIOCGWINSZ)` 등을 가로채요.
+tmux는 창마다 PTY를 하나씩 열어서 macOS의 PTY 한도(기본 511개, 최대 999개)에 걸려요. zeropty는 세션을 socketpair로 연결해서 한도가 없어요. claude에는 `shim.dylib`을 넣어 터미널로 보이게 해요(`claude-zeropty` 래퍼). `isatty`, `tcgetattr`, `ioctl(TIOCGWINSZ)` 등을 가로채요.
 
 PTY가 해 주던 일(Enter를 줄바꿈으로, `C-c`를 시그널로, 줄 편집, 에코)은 엔진이 키를 보낼 때 흉내 내요. 같은 키를 tmux와 대조했어요([사용법: 라인 디시플린](USAGE.md#키-입력과-라인-디시플린)).
 

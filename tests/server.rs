@@ -821,6 +821,41 @@ int main(void) {
     assert_eq!(String::from_utf8_lossy(&outside.stdout), "tty=000\n");
 }
 
+/// /dev/tty opened read-write, as fzf does with its stdin piped in, both draws and reads keys: the
+/// session's terminal is one socket, so the stand-in the shim opens can do both (it was the input pipe,
+/// and every write failed with EBADF: fzf showed no list and took no pick).
+#[test]
+fn dev_tty_is_read_and_written() {
+    let s = Server::new("devtty");
+    let lib = shim(&s);
+    let tty = concat!(env!("CARGO_MANIFEST_DIR"), "/zeropty-tty");
+    let src = s.dir.join("rw.c");
+    std::fs::write(
+        &src,
+        r#"#include <fcntl.h>
+#include <stdio.h>
+#include <unistd.h>
+int main(void) {
+  int fd = open("/dev/tty", O_RDWR);
+  if (fd < 0) { perror("open"); return 1; }
+  if (write(fd, "DRAWN\n", 6) != 6) { perror("write"); return 1; }
+  char b[16]; ssize_t n = read(fd, b, sizeof b);
+  printf("read=%.*s", n > 0 ? (int)n : 0, b);
+  return 0;
+}
+"#,
+    )
+    .unwrap();
+    let rw = s.dir.join("rw");
+    assert!(Command::new("clang").arg("-o").arg(&rw).arg(&src).status().unwrap().success());
+    let run = format!("ZEROPTY_SHIM={} ZEROPTY_CACHE={} {tty} {}", lib.display(), s.dir.display(), rw.display());
+    s.ok(&["new-session", "-d", "-s", "t", "-x", "40", "-y", "6", &format!("true | {run}; echo EXIT=$?; exec sleep 100")]);
+    s.wait_capture(&["capture-pane", "-p", "-t", "=t:"], |o| o.starts_with("DRAWN\n"));
+    s.ok(&["send-keys", "-t", "=t:", "key", "Enter"]);
+    let screen = s.wait_capture(&["capture-pane", "-p", "-t", "=t:"], |o| o.contains("EXIT="));
+    assert!(screen.starts_with("DRAWN\nkey\nread=key\nEXIT=0\n"), "{screen:?}");
+}
+
 /// zeropty-tty names its signed copy after the name the program was run by, not the link's target
 /// (claude is a link to claude.exe), so ps and pgrep find it under that name. Each name of one program
 /// gets its own copy, and no name can stand for another's stamp (a link named "mytrue.src").
