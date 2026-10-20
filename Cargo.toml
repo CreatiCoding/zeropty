@@ -36,7 +36,7 @@ members = [".", "bindings/c", "bindings/node"]
 # One version for every crate, the C header (ZEROPTY_VERSION_*), the Node clients and `zeropty --version`.
 # Change it only with `node scripts/release.mjs bump ...` (docs/RELEASING.md); tests/version.rs checks they agree.
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 # MSRV: napi 3 needs 1.88. scripts/check.sh checks the workspace on exactly this toolchain (docs/VERSIONING.md).
 rust-version = "1.88"
 

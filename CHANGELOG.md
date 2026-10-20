@@ -17,38 +17,10 @@ release; polish that draft into entries written in English, and add the same ent
 
 ## [Unreleased]
 
-### Added
-
-- A plugin system ([docs/PLUGINS.md](docs/PLUGINS.md)): plugins receive session create, exit, rename and output events and
-  add new commands. The Rust `Plugin` trait (`API_VERSION` 1), `plugin-attach` over the socket (any language, out of
-  process), C callbacks with `zeropty_add_plugin`, dylib plugins with `zeropty plugin-run`/`zeropty_load_plugin`, an
-  opt-in autostart directory `ZEROPTY_PLUGIN_DIR`, and a status check with `list-plugins`. With no plugins there is no
-  cost, and a plugin that panics, hangs or is slow cannot hold up the engine.
-- Command calls that do not wait: C `zeropty_command_start`, `zeropty_call_poll`, `zeropty_call_due_ms`,
-  `zeropty_call_free`, and Node `Engine.commandStart`.
-
-- `zeropty --version`: the same output as `zeropty -V` (`zeropty 0.1.0`). The zsh function, the bash builtin and
-  `client/zeropty.mjs` also answer it by running the program, as they do for `-V`.
-- The format variable `#{version}`: the version of the running server (or embedded engine). A `display-message -p` that
-  uses only this variable works without a session (`zeropty display -p '#{version}'`).
-- C ABI: `ZEROPTY_VERSION_MAJOR`, `_MINOR`, `_PATCH`, `_PRERELEASE`, `_IS_PRERELEASE`, `_STRING` and `_NUMBER` in
-  `zeropty.h`, and `zeropty_version()`, which returns the version of the linked library. `ZEROPTY_VERSION_NUMBER` does not
-  include the prerelease, so `0.2.0-rc.1` and `0.2.0` have the same value; tell them apart with
-  `ZEROPTY_VERSION_IS_PRERELEASE`.
-- Node: `version()` in `zeropty.node` and `client/embedded.mjs`, and `VERSION` in `client/zeropty.mjs` and
-  `client/embedded.mjs`.
-- The versioning policy `docs/VERSIONING.md`: the compatibility surface whose changes count as breaking (the CLI's
-  arguments, output and exit codes, the socket protocol, the session record, the C ABI, the Node API, environment
-  variables, `dist/` names) and the MSRV (Rust 1.88). Before 1.0, a MINOR release may break this surface, and such
-  changes are announced as `**BREAKING**` entries.
-- `zeropty --help` (`-h`, `help`) prints the list of commands and options, and `zeropty help <command>` prints that
-  command's usage and a link to its documentation. It answers without a server.
-- Documentation: a reworked Korean README, a documentation index (`docs/README.md`), a FAQ, runnable examples
-  (`examples/`), and rustdoc with examples for every public Rust item.
+## [0.1.1] - 2026-10-20
 
 ### Fixed
 
-- The CLI no longer panics when the reader closes the pipe early (`zeropty capture-pane -p ... | head -1`).
 - `zeropty-tty`: the shim treated any program's fds 0-2 as a terminal, so a program whose stdout was piped or
   redirected got `\e]zeropty-tty;N\a` mode signals mixed into that output, a program reading `/dev/null` as stdin
   failed (kqueue `EINVAL`), and children inherited the effect. Now only the session's own pipe and socket count, named
@@ -107,6 +79,36 @@ the interfaces in docs/VERSIONING.md.
   are at 10x or better, and 3 are not there yet (memory with 400 idle sessions on the standalone server at 6.2x, and
   `send-keys` against tmux control mode at 8~10x embedded and 2.2~2.8x over the socket). The reasons are in that
   document.
+- A plugin system ([docs/PLUGINS.md](docs/PLUGINS.md)): plugins receive session create, exit, rename and output events and
+  add new commands. The Rust `Plugin` trait (`API_VERSION` 1), `plugin-attach` over the socket (any language, out of
+  process), C callbacks with `zeropty_add_plugin`, dylib plugins with `zeropty plugin-run`/`zeropty_load_plugin`, an
+  opt-in autostart directory `ZEROPTY_PLUGIN_DIR`, and a status check with `list-plugins`. With no plugins there is no
+  cost, and a plugin that panics, hangs or is slow cannot hold up the engine.
+- Command calls that do not wait: C `zeropty_command_start`, `zeropty_call_poll`, `zeropty_call_due_ms`,
+  `zeropty_call_free`, and Node `Engine.commandStart`.
+- `zeropty --version`: the same output as `zeropty -V` (`zeropty 0.1.0`). The zsh function, the bash builtin and
+  `client/zeropty.mjs` also answer it by running the program, as they do for `-V`.
+- The format variable `#{version}`: the version of the running server (or embedded engine). A `display-message -p` that
+  uses only this variable works without a session (`zeropty display -p '#{version}'`).
+- C ABI: `ZEROPTY_VERSION_MAJOR`, `_MINOR`, `_PATCH`, `_PRERELEASE`, `_IS_PRERELEASE`, `_STRING` and `_NUMBER` in
+  `zeropty.h`, and `zeropty_version()`, which returns the version of the linked library. `ZEROPTY_VERSION_NUMBER` does not
+  include the prerelease, so `0.2.0-rc.1` and `0.2.0` have the same value; tell them apart with
+  `ZEROPTY_VERSION_IS_PRERELEASE`.
+- Node: `version()` in `zeropty.node` and `client/embedded.mjs`, and `VERSION` in `client/zeropty.mjs` and
+  `client/embedded.mjs`.
+- The versioning policy `docs/VERSIONING.md`: the compatibility surface whose changes count as breaking (the CLI's
+  arguments, output and exit codes, the socket protocol, the session record, the C ABI, the Node API, environment
+  variables, `dist/` names) and the MSRV (Rust 1.88). Before 1.0, a MINOR release may break this surface, and such
+  changes are announced as `**BREAKING**` entries.
+- `zeropty --help` (`-h`, `help`) prints the list of commands and options, and `zeropty help <command>` prints that
+  command's usage and a link to its documentation. It answers without a server.
+- Documentation: a reworked Korean README, a documentation index (`docs/README.md`), a FAQ, runnable examples
+  (`examples/`), and rustdoc with examples for every public Rust item.
 
-[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/ddd8811b1cff59992d96ddc5cad522e1a0568254...HEAD
-[0.1.0]: https://github.com/CreatiCoding/zeropty/tree/ddd8811b1cff59992d96ddc5cad522e1a0568254
+### Fixed
+
+- The CLI no longer panics when the reader closes the pipe early (`zeropty capture-pane -p ... | head -1`).
+
+[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/CreatiCoding/zeropty/compare/c612089b29c802ab5118f1904c67b4671f53ceca...v0.1.1
+[0.1.0]: https://github.com/CreatiCoding/zeropty/tree/c612089b29c802ab5118f1904c67b4671f53ceca
