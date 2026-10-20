@@ -45,7 +45,7 @@ zeropty kill-session -t '=work:'
 ```sh
 zeropty --help     # list of commands (exit code 0)
 zeropty help send-keys   # one command: usage, what it does, doc link (exit code 2 for an unknown command)
-zeropty -V         # zeropty 0.1.0 (--version does the same)
+zeropty -V         # zeropty X.Y.Z (--version does the same)
 zeropty            # usage: zeropty serve | <tmux command> ...  (standard error, exit code 2)
 ```
 
