@@ -87,7 +87,7 @@ The screen is 6 rows (`-y 6`), so 4 empty rows follow (left out above). For the 
 
 To watch it yourself, attach with `zeropty attach -t demo` and detach with `Ctrl-b d`. When you are done, `zeropty kill-server`. The same flow in Node, C and Rust is in the [examples](docs/README.md#examples).
 
-The server keeps the environment of the process that started it (the first `new-session`), as tmux's does: later sessions get that environment, not the one of the shell running each `new-session`. Pass a variable with `new-session -e VAR=value`, or set it for every new session with `set-environment -g` ([environment](docs/USAGE.md#environment)).
+The server keeps the environment of the process that started it (the first command that starts it, usually `new-session`), as tmux's does: later sessions get that environment, not the one of the shell running each `new-session`. Pass a variable with `new-session -e VAR=value`, or set it for every new session with `set-environment -g` ([environment](docs/USAGE.md#environment)).
 
 ## Benchmarks
 

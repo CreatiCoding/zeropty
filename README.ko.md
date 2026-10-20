@@ -87,7 +87,7 @@ done: 42
 
 사람이 직접 보고 싶으면 `zeropty attach -t demo`로 붙고 `Ctrl-b d`로 떼요. 다 썼으면 `zeropty kill-server`. 같은 흐름을 Node, C, Rust로 한 [예제](docs/ko/README.md#예제)도 있어요.
 
-서버는 자신을 띄운 프로세스(첫 `new-session`)의 환경을 그대로 가져요(tmux와 같아요). 그래서 이후 세션은 `new-session`을 실행한 셸의 환경이 아니라 그 환경을 받아요. 변수를 넘기려면 `new-session -e VAR=value`, 새 세션 모두에 주려면 `set-environment -g`를 쓰세요([환경](docs/ko/USAGE.md#환경)).
+서버는 자신을 띄운 프로세스(서버를 띄우는 첫 명령, 보통 `new-session`)의 환경을 그대로 가져요(tmux와 같아요). 그래서 이후 세션은 `new-session`을 실행한 셸의 환경이 아니라 그 환경을 받아요. 변수를 넘기려면 `new-session -e VAR=value`, 새 세션 모두에 주려면 `set-environment -g`를 쓰세요([환경](docs/ko/USAGE.md#환경)).
 
 ## 벤치마크
 
