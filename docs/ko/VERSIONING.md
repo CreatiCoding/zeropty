@@ -17,7 +17,7 @@ zeropty는 [Semantic Versioning 2.0.0](https://semver.org/lang/ko/)을 따라요
 | 어디서 | 방법 | 결과 |
 |---|---|---|
 | CLI | `zeropty --version` 또는 `zeropty -V` | `zeropty 0.1.0` (CLI 프로그램 자신) |
-| 실행 중인 서버 | `zeropty display-message -p '#{version}'` (tmux와 같은 포맷 변수. `#{version}`이 있고 세션 변수가 없는 포맷만 세션 없이 답하고, 다른 포맷은 세션이 없으면 전처럼 종료 코드 1이에요) | `0.1.0` |
+| 실행 중인 서버 | `zeropty display-message -p '#{version}'` (tmux와 같은 포맷 변수. `#{version}`이 있고 세션 변수가 없는 포맷만 세션 없이 답하고, `-t` 없이 세션도 없으면 다른 포맷은 전처럼 종료 코드 1이에요) | `0.1.0` |
 | C ABI | `zeropty_version()` (런타임), `ZEROPTY_VERSION_STRING`·`_MAJOR`·`_MINOR`·`_PATCH`·`_PRERELEASE`·`_IS_PRERELEASE`·`_NUMBER` (컴파일 타임) | `"0.1.0"`. `ZEROPTY_VERSION_NUMBER`는 `MAJOR*1000000 + MINOR*1000 + PATCH`라서 **프리릴리스를 담지 않아요**: `0.2.0-rc.1`과 `0.2.0`이 같은 값이에요. 구별은 `ZEROPTY_VERSION_PRERELEASE`(`"rc.1"`, 정식은 `""`)나 `#if ZEROPTY_VERSION_IS_PRERELEASE`로 해요 |
 | Node (임베디드) | `version()` (`zeropty.node`, `client/embedded.mjs`) | `'0.1.0'` |
 | Node (클라이언트 모듈) | `VERSION` (`client/zeropty.mjs`, `client/embedded.mjs`) | `'0.1.0'` |
@@ -134,6 +134,7 @@ zeropty는 [Semantic Versioning 2.0.0](https://semver.org/lang/ko/)을 따라요
 | `capture-pane`에 `-C` 플래그 추가 | 기능 추가 | `feat(cli): support capture-pane -C` |
 | `wait-pane` 시간 초과 종료 코드를 1에서 2로 | 깨는 변경 | `fix(cli)!: exit 2 when wait-pane times out` |
 | 세션 없을 때 실패(1)하던 `display -p '#{version}'`이 서버 버전을 출력(0). 다른 포맷은 여전히 1 | 기능 추가 (전에 오류였던 입력만 새로 동작해요. 성공하던 입력의 결과는 그대로예요) | `feat(cli): add the #{version} format variable` |
+| 실패(1)하던 `display -p -t =gone: '...'`이 tmux처럼 세션 변수를 비운 포맷을 출력(0) | 버그 수정 (오류였던 입력이 tmux처럼 동작해요. 성공하던 것은 그대로예요) | `fix(cli): answer display-message on a missing target as tmux does` |
 | 이미 성공하던 명령의 종료 코드나 출력 형식이 바뀜 | 깨는 변경 | `feat(cli)!: ...` |
 | C ABI에 `zeropty_command_len()` 추가 | 기능 추가 | `feat(c-abi): add zeropty_command_len` |
 | `zeropty_open` 인자 추가 | 깨는 변경 (대신 새 함수 추가를 권해요) | `feat(c-abi)!: ...` |

@@ -174,7 +174,7 @@ tmux에는 없는 zeropty 명령이에요. 에이전트가 끝났는지, 어느 
 | `history_size`, `history_limit` | 스크롤백 줄 수와 한도 |
 | `version` | 답하는 서버(또는 임베디드 엔진)의 zeropty 버전 |
 
-tmux와 같은 세션에서 대조했어요. `#{version}`만 쓰는 포맷은 세션 없이도 돼요(`zeropty display -p '#{version}'`는 실행 중인 서버의 버전, `zeropty -V`는 CLI 자신의 버전). 없는 변수는 tmux처럼 빈 문자열이고, 조건식(`#{?...}`)과 수식어(`#{t:...}`)는 안 돼요.
+tmux와 같은 세션에서 대조했어요. `#{version}`만 쓰는 포맷은 세션 없이도 돼요(`zeropty display -p '#{version}'`는 실행 중인 서버의 버전, `zeropty -V`는 CLI 자신의 버전). `-t`가 없는 세션을 가리키면 `display-message`는 tmux처럼 세션 변수를 비운 포맷을 출력하고 종료 코드 0이에요. 세션이 있는지 확인하려면 `has-session`을 쓰세요. 없는 변수는 tmux처럼 빈 문자열이고, 조건식(`#{?...}`)과 수식어(`#{t:...}`)는 안 돼요.
 
 ## 종료 코드
 

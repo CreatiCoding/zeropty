@@ -49,6 +49,9 @@ release; polish that draft into entries written in English, and add the same ent
 ### Fixed
 
 - The CLI no longer panics when the reader closes the pipe early (`zeropty capture-pane -p ... | head -1`).
+- `display-message` with `-t` naming a session that does not exist now prints the format with the session's
+  variables empty and exits 0, as tmux does, instead of failing with exit 1. To test whether a session exists, use
+  `has-session`. Every other command still fails with exit 1 and `can't find session: <name>`, as in tmux.
 
 ## [0.1.0] - 2026-10-20
 

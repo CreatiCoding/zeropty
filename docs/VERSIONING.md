@@ -17,7 +17,7 @@ How to check the version at run time:
 | Where | How | Result |
 |---|---|---|
 | CLI | `zeropty --version` or `zeropty -V` | `zeropty 0.1.0` (the CLI program itself) |
-| Running server | `zeropty display-message -p '#{version}'` (the same format variable as tmux. Only a format that contains `#{version}` and no session variables answers without a session; any other format still exits with code 1 when there is no session, as before) | `0.1.0` |
+| Running server | `zeropty display-message -p '#{version}'` (the same format variable as tmux. Only a format that contains `#{version}` and no session variables answers without a session; with no `-t` and no session, any other format still exits with code 1, as before) | `0.1.0` |
 | C ABI | `zeropty_version()` (run time), `ZEROPTY_VERSION_STRING`, `_MAJOR`, `_MINOR`, `_PATCH`, `_PRERELEASE`, `_IS_PRERELEASE`, `_NUMBER` (compile time) | `"0.1.0"`. `ZEROPTY_VERSION_NUMBER` is `MAJOR*1000000 + MINOR*1000 + PATCH`, so it **does not include the prerelease**: `0.2.0-rc.1` and `0.2.0` have the same value. Tell them apart with `ZEROPTY_VERSION_PRERELEASE` (`"rc.1"`, `""` for a final release) or `#if ZEROPTY_VERSION_IS_PRERELEASE` |
 | Node (embedded) | `version()` (`zeropty.node`, `client/embedded.mjs`) | `'0.1.0'` |
 | Node (client modules) | `VERSION` (`client/zeropty.mjs`, `client/embedded.mjs`) | `'0.1.0'` |
@@ -134,6 +134,7 @@ A new function or export only adds a line to the baseline, so it is not a breaki
 | Add a `-C` flag to `capture-pane` | New feature | `feat(cli): support capture-pane -C` |
 | Change the `wait-pane` timeout exit code from 1 to 2 | Breaking change | `fix(cli)!: exit 2 when wait-pane times out` |
 | `display -p '#{version}'`, which failed (1) without a session, now prints the server version (0); other formats still give 1 | New feature (only input that used to be an error now works; the results of input that already succeeded are unchanged) | `feat(cli): add the #{version} format variable` |
+| `display -p -t =gone: '...'`, which failed (1), now prints the format with the session's variables empty (0), as tmux does | Bug fix (input that used to be an error now works as in tmux; nothing that succeeded changes) | `fix(cli): answer display-message on a missing target as tmux does` |
 | The exit code or output format of a command that already succeeded changes | Breaking change | `feat(cli)!: ...` |
 | Add `zeropty_command_len()` to the C ABI | New feature | `feat(c-abi): add zeropty_command_len` |
 | Add an argument to `zeropty_open` | Breaking change (adding a new function is recommended instead) | `feat(c-abi)!: ...` |

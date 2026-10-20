@@ -174,7 +174,7 @@ Used by `list-sessions -F`, `new-session -P -F` and `display-message`.
 | `history_size`, `history_limit` | Number of scrollback lines and the limit |
 | `version` | zeropty version of the answering server (or embedded engine) |
 
-These were checked against tmux on the same sessions. A format that uses only `#{version}` works without a session (`zeropty display -p '#{version}'` gives the running server's version; `zeropty -V` gives the CLI's own version). Unknown variables become an empty string, as in tmux, and conditionals (`#{?...}`) and modifiers (`#{t:...}`) are not supported.
+These were checked against tmux on the same sessions. A format that uses only `#{version}` works without a session (`zeropty display -p '#{version}'` gives the running server's version; `zeropty -V` gives the CLI's own version). When `-t` names a session that does not exist, `display-message` prints the format with the session's variables empty and exits 0, as tmux does; to test whether a session exists, use `has-session`. Unknown variables become an empty string, as in tmux, and conditionals (`#{?...}`) and modifiers (`#{t:...}`) are not supported.
 
 ## Exit codes
 

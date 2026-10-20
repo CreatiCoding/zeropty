@@ -54,6 +54,38 @@ impl Drop for Server {
     }
 }
 
+/// A target naming no session, command by command, as tmux 3.x answers it (measured with tmux 3.7c, a
+/// server running): display-message prints its format with the session's variables empty and exits 0;
+/// every other command fails with exit 1 and "can't find session: <name>".
+#[test]
+fn missing_targets_answer_as_tmux_does() {
+    let s = Server::new("missing");
+    s.ok(&["new-session", "-d", "-s", "keep", "exec sleep 100"]);
+    for t in ["=nope:", "=nope", "nope", "nope:0"] {
+        let o = s.run(&["display-message", "-p", "-t", t, "v=#{version} s=#{session_name} lit"]);
+        let got = (o.status.code(), String::from_utf8_lossy(&o.stdout).into_owned(), String::from_utf8_lossy(&o.stderr).into_owned());
+        assert_eq!(got, (Some(0), format!("v={} s= lit\n", env!("CARGO_PKG_VERSION")), String::new()), "display-message -t {t}");
+    }
+    // Without -p too (a session here has no status line, so it prints either way).
+    assert_eq!(s.ok(&["display-message", "-t", "=nope:", "hello"]), "hello\n");
+    for cmd in [
+        &["capture-pane", "-p", "-t", "=nope:"][..],
+        &["send-keys", "-t", "=nope:", "x"],
+        &["kill-session", "-t", "=nope"],
+        &["has-session", "-t", "=nope"],
+        &["rename-session", "-t", "=nope", "other"],
+        &["resize-window", "-t", "=nope:", "-x", "10"],
+        &["pipe-pane", "-t", "=nope:", "cat"],
+        &["paste-buffer", "-t", "=nope:"],
+        &["wait-pane", "-t", "=nope:", "-q", "10"],
+    ] {
+        let o = s.run(cmd);
+        let got = (o.status.code(), String::from_utf8_lossy(&o.stdout).into_owned(), String::from_utf8_lossy(&o.stderr).into_owned());
+        assert_eq!(got, (Some(1), String::new(), "can't find session: nope\n".to_owned()), "{cmd:?}");
+    }
+    assert!(s.run(&["has-session", "-t", "=keep"]).status.success(), "the session still there was not touched");
+}
+
 #[test]
 fn sessions_keys_and_screen() {
     let s = Server::new("keys");

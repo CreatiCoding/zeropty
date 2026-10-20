@@ -25,15 +25,20 @@ pub(super) fn reads_screen(fmt: &str) -> bool {
 }
 
 /// Whether `fmt` asks for the server's own variable (#{version}) and for no session's: only such a
-/// format is answered without a session. Any other format (plain text, "", a session variable)
-/// still fails with "can't find session" as before, keeping display-message's exit codes.
+/// format is answered when there is no session and no -t. Any other format (plain text, "", a session
+/// variable) then still fails with "can't find session", keeping display-message's exit codes.
 pub(super) fn only_server_vars(fmt: &str) -> bool {
     fmt.contains("#{version}") && fmt.split("#{").skip(1).all(|v| v.starts_with("version}"))
 }
 
+/// `fmt` filled in with no session: the server's variables, every other one empty.
+pub(super) fn without_session(fmt: &str) -> String {
+    expand(fmt, |v| if v == "version" { super::VERSION.to_string() } else { String::new() })
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{expand, only_server_vars, reads_screen};
+    use super::{expand, only_server_vars, reads_screen, without_session};
 
     #[test]
     fn server_vars_alone_need_no_session() {
@@ -42,6 +47,12 @@ mod tests {
         assert!(!only_server_vars("#{version} #{session_name}"));
         assert!(!only_server_vars("plain"));
         assert!(!only_server_vars(""));
+    }
+
+    #[test]
+    fn without_a_session_only_the_server_vars_are_filled() {
+        assert_eq!(without_session("v=#{version} s=#{session_name} lit"), format!("v={} s= lit", crate::engine::VERSION));
+        assert_eq!(without_session(""), "");
     }
 
     #[test]
