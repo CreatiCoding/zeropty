@@ -68,7 +68,7 @@ zeropty            # usage: zeropty serve | <tmux command> ...  (표준 에러, 
 
 프로그램이 끝나면 세션도 끝나요(tmux의 `remain-on-exit` 꺼짐과 같아요).
 
-세션 안의 프로그램이 받는 환경: `TERM=xterm-256color`, `COLUMNS`/`LINES`, `ZEROPTY_SESSION`(세션 이름), `ZEROPTY_COLS`/`ZEROPTY_ROWS`, `ZEROPTY_SIZE_FILE`(shim이 읽는 창 크기 파일), `ZEROPTY_TTY_ID`(어느 파일이 세션의 터미널인지, shim용). `TMUX`, `TMUX_PANE`은 지워요(tmux 안에서 서버를 띄웠어도 세션은 tmux 안이 아니에요).
+서버는 자신을 띄운 프로세스(첫 `new-session`이나 `zeropty serve`)의 환경을 그대로 가져요(tmux와 같아요). 세션은 `new-session`을 실행한 셸의 환경이 아니라 그 환경에 `-e`와 `set-environment -g`를 더한 것을 받아요. 세션 안의 프로그램이 받는 환경: `TERM=xterm-256color`, `COLUMNS`/`LINES`, `ZEROPTY_SESSION`(세션 이름), `ZEROPTY_COLS`/`ZEROPTY_ROWS`, `ZEROPTY_SIZE_FILE`(shim이 읽는 창 크기 파일), `ZEROPTY_TTY_ID`(어느 파일이 세션의 터미널인지, shim용). `TMUX`, `TMUX_PANE`은 지워요(tmux 안에서 서버를 띄웠어도 세션은 tmux 안이 아니에요).
 
 ### 키 보내기
 

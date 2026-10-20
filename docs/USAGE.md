@@ -68,7 +68,7 @@ Names in parentheses are the same aliases tmux uses. `<value>` after an option m
 
 When the program exits, the session ends too (the same as tmux with `remain-on-exit` off).
 
-Environment the program in a session receives: `TERM=xterm-256color`, `COLUMNS`/`LINES`, `ZEROPTY_SESSION` (the session name), `ZEROPTY_COLS`/`ZEROPTY_ROWS`, `ZEROPTY_SIZE_FILE` (the window size file the shim reads), and `ZEROPTY_TTY_ID` (which files are the session's terminal, for the shim). `TMUX` and `TMUX_PANE` are removed (even if the server was started inside tmux, the session is not inside tmux).
+The server keeps the environment of the process that started it (the first `new-session`, or `zeropty serve`), as tmux does: a session gets that environment, not the one of the shell running `new-session`, plus `-e` and `set-environment -g`. Environment the program in a session receives: `TERM=xterm-256color`, `COLUMNS`/`LINES`, `ZEROPTY_SESSION` (the session name), `ZEROPTY_COLS`/`ZEROPTY_ROWS`, `ZEROPTY_SIZE_FILE` (the window size file the shim reads), and `ZEROPTY_TTY_ID` (which files are the session's terminal, for the shim). `TMUX` and `TMUX_PANE` are removed (even if the server was started inside tmux, the session is not inside tmux).
 
 ### Sending keys
 
