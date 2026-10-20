@@ -122,7 +122,7 @@ node --test scripts/test/*.test.mjs         # 도구 자체의 테스트 (git-cl
    git tag -a v0.2.0 -m "zeropty 0.2.0"
    git push origin v0.2.0
    ```
-   push하기 전에 `node scripts/release.mjs check --tag v0.2.0`으로 태그와 버전이 같은지 확인해요(태그가 달린 HEAD에서는 `scripts/check.sh`도 이 검사를 해요). GitHub Release를 만든다면 본문에 CHANGELOG의 `## [0.2.0]` 섹션을 그대로 붙여요.
+   push하기 전에 `node scripts/release.mjs check --tag v0.2.0`으로 태그와 버전이 같은지 확인해요(태그가 달린 HEAD에서는 `scripts/check.sh`도 이 검사를 해요). GitHub Release를 만든다면 본문에 CHANGELOG의 `## [0.2.0]` 섹션을 붙이되, 상대 링크는 `https://github.com/CreatiCoding/zeropty/blob/v0.2.0/<경로>`로 바꿔요(릴리스 본문에서는 `/releases/` 아래로 풀려서 깨져요).
 
 > 0.1.0은 첫 공개 커밋(`c612089`)이고 `v0.1.0` 태그가 달려 있어요. 0.1.1이 이 도구로 만든 첫 릴리스예요. `next`·`notes`는 마지막 태그부터 계산해요.
 

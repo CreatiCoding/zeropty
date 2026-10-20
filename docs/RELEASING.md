@@ -122,7 +122,7 @@ node --test scripts/test/*.test.mjs         # tests for the tools themselves (in
    git tag -a v0.2.0 -m "zeropty 0.2.0"
    git push origin v0.2.0
    ```
-   Before pushing, check that the tag matches the version with `node scripts/release.mjs check --tag v0.2.0` (on a tagged HEAD, `scripts/check.sh` runs this check too). If you create a GitHub Release, paste the CHANGELOG's `## [0.2.0]` section into its body as is.
+   Before pushing, check that the tag matches the version with `node scripts/release.mjs check --tag v0.2.0` (on a tagged HEAD, `scripts/check.sh` runs this check too). If you create a GitHub Release, paste the CHANGELOG's `## [0.2.0]` section into its body, rewriting relative links to `https://github.com/CreatiCoding/zeropty/blob/v0.2.0/<path>` (a release body resolves them under `/releases/`, where they break).
 
 > 0.1.0 is the first public commit (`c612089`), tagged `v0.1.0`; 0.1.1 was the first release made with these tools. `next` and `notes` compute from the latest tag.
 
