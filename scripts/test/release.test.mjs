@@ -76,6 +76,9 @@ describe('versions', () => {
 
   test('setVersion moves every place, and check sees a missed one', () => {
     const dir = copy()
+    // An entry to release, whatever the repository's own [Unreleased] holds (right after a release it is empty).
+    const log = path.join(dir, 'CHANGELOG.md')
+    writeFileSync(log, readFileSync(log, 'utf8').replace('## [Unreleased]\n', '## [Unreleased]\n\n### Fixed\n\n- a fix\n'))
     const changed = setVersion(dir, '0.2.0-rc.1', { date: '2027-01-02' })
     assert.deepEqual(changed.sort(), ['CHANGELOG.md', 'Cargo.lock', 'Cargo.toml', 'bindings/c/include/zeropty.h', 'client/embedded.mjs', 'client/zeropty.mjs'])
     assert.deepEqual(check(dir), [])
@@ -174,8 +177,10 @@ describe('changelog', () => {
   })
   test('the repository links no tag that does not exist', () => {
     const text = readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8')
+    // Except the version being released: its release PR links it, and the tag comes after the merge.
+    const releasing = `v${versions(ROOT)['Cargo.toml [workspace.package]']}`
     for (const [, tag] of text.matchAll(/^\[[^\]]+\]: \S+?(?:\/tag\/|\/compare\/|\.\.\.)(v\d[^.\s]*\.\d+\.\d+[^.\s]*)/gm)) {
-      assert.ok(hasTag(ROOT, tag), `CHANGELOG.md links ${tag}, which is not a tag`)
+      assert.ok(tag === releasing || hasTag(ROOT, tag), `CHANGELOG.md links ${tag}, which is not a tag`)
     }
   })
   test('[Unreleased] section text', () => {
