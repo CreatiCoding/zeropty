@@ -17,6 +17,14 @@ release; polish that draft into entries written in English, and add the same ent
 
 ## [Unreleased]
 
+### Fixed
+
+- `zeropty-tty`: a passphrase typed at `ssh`, `ssh-keygen`, `ssh-add` or any program using `readpassphrase` or
+  `getpass` was echoed onto the session's screen, and so stayed in `capture-pane` output and the scrollback. libc
+  turns echo off there with its own internal calls, which the shim did not reach; the shim now handles these two
+  functions itself on the session's terminal. This covers a program the shim is in, such as `zeropty-tty ssh-keygen`;
+  `/usr/bin` programs typed at a shell in the session still run without the shim. Outside a session nothing changes.
+
 ## [0.1.3] - 2026-10-21
 
 ### Added

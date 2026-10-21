@@ -15,6 +15,13 @@ zeropty의 사용자에게 보이는 변경을 모두 여기에 적어요.
 
 ## [Unreleased]
 
+### Fixed
+
+- `zeropty-tty`: `ssh`, `ssh-keygen`, `ssh-add` 등 `readpassphrase`나 `getpass`를 쓰는 프로그램에 친 암호가 세션 화면에
+  보였고, 그래서 `capture-pane` 결과와 스크롤백에도 남았어요. libc가 거기서 에코를 자기 내부 호출로 끄는데 shim이 그
+  호출에 닿지 못했기 때문이에요. 이제 세션 터미널에서는 shim이 이 두 함수를 직접 처리해요. `zeropty-tty ssh-keygen`처럼 shim이 들어간
+  프로그램에 해당하고, 세션 안 셸에서 친 `/usr/bin` 프로그램은 여전히 shim 없이 돌아요. 세션 밖에서는 바뀐 게 없어요.
+
 ## [0.1.3] - 2026-10-21
 
 ### Added

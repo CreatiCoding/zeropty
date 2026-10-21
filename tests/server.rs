@@ -856,6 +856,44 @@ int main(void) {
     assert!(screen.starts_with("DRAWN\nkey\nread=key\nEXIT=0\n"), "{screen:?}");
 }
 
+/// libc's readpassphrase (ssh, ssh-keygen, ssh-add) and getpass turn echo off with libc's own tcsetattr,
+/// which interposing does not reach, so the passphrase was echoed onto the screen. The shim takes them
+/// over on the session's terminal: nothing typed shows, and the program still gets it.
+#[test]
+fn passphrases_are_not_echoed() {
+    let s = Server::new("passphrase");
+    let lib = shim(&s);
+    let tty = concat!(env!("CARGO_MANIFEST_DIR"), "/zeropty-tty");
+    let src = s.dir.join("pw.c");
+    std::fs::write(
+        &src,
+        r#"#include <readpassphrase.h>
+#include <stdio.h>
+#include <unistd.h>
+int main(void) {
+  char b[32];
+  char *r = readpassphrase("rpp: ", b, sizeof b, 0);
+  printf("rpp=%s\n", r ? r : "(null)");
+  fflush(stdout);
+  r = getpass("getpass: ");
+  printf("getpass=%s\n", r ? r : "(null)");
+  return 0;
+}
+"#,
+    )
+    .unwrap();
+    let pw = s.dir.join("pw");
+    assert!(Command::new("clang").arg("-o").arg(&pw).arg(&src).status().unwrap().success());
+    let run = format!("ZEROPTY_SHIM={} ZEROPTY_CACHE={} {tty} {}", lib.display(), s.dir.display(), pw.display());
+    s.ok(&["new-session", "-d", "-s", "t", "-x", "40", "-y", "6", &format!("{run}; echo EXIT=$?; exec sleep 100")]);
+    s.wait_capture(&["capture-pane", "-p", "-t", "=t:"], |o| o.starts_with("rpp:"));
+    s.ok(&["send-keys", "-t", "=t:", "hush1", "Enter"]);
+    s.wait_capture(&["capture-pane", "-p", "-t", "=t:"], |o| o.contains("getpass:"));
+    s.ok(&["send-keys", "-t", "=t:", "hush2", "Enter"]);
+    let screen = s.wait_capture(&["capture-pane", "-p", "-t", "=t:"], |o| o.contains("EXIT="));
+    assert!(screen.starts_with("rpp:\nrpp=hush1\ngetpass:\ngetpass=hush2\nEXIT=0\n"), "{screen:?}");
+}
+
 /// zeropty-tty names its signed copy after the name the program was run by, not the link's target
 /// (claude is a link to claude.exe), so ps and pgrep find it under that name. Each name of one program
 /// gets its own copy, and no name can stand for another's stamp (a link named "mytrue.src").
