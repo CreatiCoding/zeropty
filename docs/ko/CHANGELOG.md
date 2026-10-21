@@ -15,6 +15,13 @@ zeropty의 사용자에게 보이는 변경을 모두 여기에 적어요.
 
 ## [Unreleased]
 
+### Added
+
+- 이제 릴리스마다 미리 빌드한 macOS 묶음 `zeropty-<버전>-darwin-universal.tar.gz`(Apple silicon·Intel)와
+  `SHA256SUMS`가 붙어서, Rust 없이 설치할 수 있어요. 받고, `shasum -a 256 -c SHA256SUMS`로 확인하고, 풀어서 그 폴더에서
+  실행하면 돼요. `zeropty`, `shim.dylib`, `zeropty-tty`, `claude-zeropty`와 라이선스가 들어 있고 ad-hoc 서명돼
+  있어요. 임베딩 라이브러리와 bash builtin은 여전히 `./build.sh`로 만들어요([README](../../README.ko.md#설치)).
+
 ## [0.1.2] - 2026-10-20
 
 ### Fixed

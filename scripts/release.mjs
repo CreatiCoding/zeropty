@@ -7,6 +7,7 @@
 //   node scripts/release.mjs check [--tag vX.Y.Z]   every place agrees (and with the tag, when given)
 //   node scripts/release.mjs next                   the bump the commits since the last tag call for
 //   node scripts/release.mjs notes                  [Unreleased] drafted from those commits (git-cliff)
+//   node scripts/release.mjs release-notes [X.Y.Z]  the GitHub Release body, from CHANGELOG.md's ## [X.Y.Z]
 //   node scripts/release.mjs bump <major|minor|patch|auto|X.Y.Z[-pre]> [--date YYYY-MM-DD] [--dry-run]
 //                                 [--generate] [--allow-dirty]
 //
@@ -160,6 +161,26 @@ export function releaseChangelog(text, version, date, previous) {
   return out
 }
 
+/**
+ * The GitHub Release body for `version`: its CHANGELOG section with each wrapped entry and paragraph on one
+ * line (a release body keeps line breaks; no code blocks or tables there to keep), relative links made absolute at the tag (a release body resolves them
+ * under /releases/, where they break), and links to the full diff and the CHANGELOGs.
+ */
+export function releaseNotes(text, version) {
+  const m = new RegExp(`^## \\[${escape(version)}\\][^\\n]*\\n([\\s\\S]*?)(?=^## \\[|^\\[[^\\]]+\\]: |(?![\\s\\S]))`, 'm').exec(text)
+  if (!m) throw new Error(`CHANGELOG.md: no ## [${version}]`)
+  const l = new RegExp(`^\\[${escape(version)}\\]: ((\\S+)/(?:compare|releases/tag)/\\S+)$`, 'm').exec(text)
+  if (!l) throw new Error(`CHANGELOG.md: no [${version}] link`)
+  const [, link, repo] = l
+  const blob = `${repo}/blob/v${version}`
+  const body = m[1]
+    .trim()
+    // Not a blank line, a heading or another entry: the line continues the one before it.
+    .replace(/(\S)\n(?!\n|#|- ) */g, '$1 ')
+    .replace(/\]\((?![a-z]+:|#)([^)]+)\)/g, `](${blob}/$1)`)
+  return `${body}\n\n---\n\n**Full changes:** ${link}\n\n[CHANGELOG](${blob}/CHANGELOG.md) · [한국어](${blob}/docs/ko/CHANGELOG.md) · [Versioning](${blob}/docs/VERSIONING.md)\n`
+}
+
 /** Writes `version` everywhere (CHANGELOG.md too, unless changelog is false). Returns the files changed. */
 export function setVersion(root, version, { date, changelog = true } = {}) {
   const v = parseVersion(version)
@@ -268,6 +289,11 @@ function main(argv) {
     return 0
   }
 
+  if (cmd === 'release-notes') {
+    process.stdout.write(releaseNotes(readFileSync(files(ROOT).changelog, 'utf8'), rest[0] ?? current))
+    return 0
+  }
+
   if (cmd === 'bump') {
     const dry = has('--dry-run')
     const generate = has('--generate')
@@ -324,7 +350,7 @@ next (by hand; this script never commits, tags or pushes):
     return 0
   }
 
-  console.error('usage: release.mjs check [--tag vX.Y.Z] | next | notes | bump <major|minor|patch|auto|X.Y.Z> [...]')
+  console.error('usage: release.mjs check [--tag vX.Y.Z] | next | notes | release-notes [X.Y.Z] | bump <major|minor|patch|auto|X.Y.Z> [...]')
   return 2
 }
 

@@ -17,6 +17,13 @@ release; polish that draft into entries written in English, and add the same ent
 
 ## [Unreleased]
 
+### Added
+
+- Each release now carries a prebuilt macOS archive, `zeropty-<version>-darwin-universal.tar.gz` (Apple silicon and
+  Intel), and `SHA256SUMS`, so zeropty installs without Rust: download, `shasum -a 256 -c SHA256SUMS`, unpack, and
+  run from the folder. It holds `zeropty`, `shim.dylib`, `zeropty-tty`, `claude-zeropty` and the licenses, signed
+  ad hoc. The embedding libraries and the bash builtin still come from `./build.sh` ([README](README.md#install)).
+
 ## [0.1.2] - 2026-10-20
 
 ### Fixed

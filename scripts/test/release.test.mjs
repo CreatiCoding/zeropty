@@ -6,7 +6,7 @@ import path from 'node:path'
 import { after, describe, test } from 'node:test'
 import { bumpFor, parse, sectionsFor, userVisible } from '../lib/conventional.mjs'
 import { changelogProblems, sections, unreleased } from '../check-commits.mjs'
-import { ROOT, check, compareVersions, hasTag, nextVersion, releaseChangelog, setVersion, versions } from '../release.mjs'
+import { ROOT, check, compareVersions, hasTag, nextVersion, releaseChangelog, releaseNotes, setVersion, versions } from '../release.mjs'
 
 const COPIED = ['Cargo.toml', 'Cargo.lock', 'bindings/c/Cargo.toml', 'bindings/node/Cargo.toml', 'bindings/c/include/zeropty.h', 'client/zeropty.mjs', 'client/embedded.mjs', 'CHANGELOG.md']
 const tmp = []
@@ -182,6 +182,30 @@ describe('changelog', () => {
     for (const [, tag] of text.matchAll(/^\[[^\]]+\]: \S+?(?:\/tag\/|\/compare\/|\.\.\.)(v\d[^.\s]*\.\d+\.\d+[^.\s]*)/gm)) {
       assert.ok(tag === releasing || hasTag(ROOT, tag), `CHANGELOG.md links ${tag}, which is not a tag`)
     }
+  })
+  test('release notes: one line per entry and paragraph, links absolute at the tag', () => {
+    const text = log.replace(
+      '- first\n',
+      'Intro that\nwraps.\n\n- first, see [Usage](docs/USAGE.md#x),\n  [tmux](https://tmux.org) and [below](#y)\n- second\n',
+    )
+    const blob = 'https://github.com/o/r/blob/v0.1.0'
+    assert.equal(
+      releaseNotes(text, '0.1.0'),
+      `### Added
+
+Intro that wraps.
+
+- first, see [Usage](${blob}/docs/USAGE.md#x), [tmux](https://tmux.org) and [below](#y)
+- second
+
+---
+
+**Full changes:** https://github.com/o/r/releases/tag/v0.1.0
+
+[CHANGELOG](${blob}/CHANGELOG.md) · [한국어](${blob}/docs/ko/CHANGELOG.md) · [Versioning](${blob}/docs/VERSIONING.md)
+`,
+    )
+    assert.throws(() => releaseNotes(text, '0.9.0'), /no ## \[0\.9\.0\]/)
   })
   test('[Unreleased] section text', () => {
     assert.equal(unreleased(log), '### Fixed\n\n- a fix')

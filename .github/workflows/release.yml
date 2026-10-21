@@ -1,0 +1,49 @@
+# Attaches the prebuilt macOS archive and SHA256SUMS to the GitHub Release of each vX.Y.Z tag
+# (docs/RELEASING.md). Creates the release from the CHANGELOG when the tag has none yet. A pull request
+# that changes the packaging builds and smoke-tests the archive without publishing it.
+# This is the only hosted job: every other check runs on a Mac before the push (scripts/check.sh).
+name: release
+
+on:
+  push:
+    tags: ['v[0-9]*']
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - scripts/package.sh
+      - shim/**
+      - zeropty-tty
+      - claude-zeropty
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust targets
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+      - name: The tag is the version
+        if: github.ref_type == 'tag'
+        run: node scripts/release.mjs check --tag "$GITHUB_REF_NAME"
+      - name: Pack and smoke-test
+        run: scripts/package.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: |
+            dist/release/*.tar.gz
+            dist/release/SHA256SUMS
+      - name: Attach to the release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            node scripts/release.mjs release-notes "${tag#v}" >"$RUNNER_TEMP/notes.md"
+            gh release create "$tag" --verify-tag --title "zeropty ${tag#v}" --notes-file "$RUNNER_TEMP/notes.md"
+          fi
+          gh release upload "$tag" dist/release/*.tar.gz dist/release/SHA256SUMS --clobber
