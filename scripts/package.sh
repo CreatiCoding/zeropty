@@ -59,8 +59,17 @@ test "$("$z" -V)" = "zeropty $version" || fail "-V: $("$z" -V)"
 if arch -x86_64 /usr/bin/true 2>/dev/null; then
 	test "$(arch -x86_64 "$z" -V)" = "zeropty $version" || fail "x86_64 -V: $(arch -x86_64 "$z" -V)"
 fi
-"$z" new-session -d -s smoke "$tmp/$name/zeropty-tty sh -c 'if [ -t 0 ]; then echo TTY-YES; else echo TTY-NO; fi; exec cat'"
-"$z" wait-pane -t '=smoke:' -m TTY- -T 10000 >/dev/null || fail "the session printed nothing"
-"$z" capture-pane -p -t '=smoke:' | grep -qx TTY-YES || fail "zeropty-tty: no terminal: $("$z" capture-pane -p -t '=smoke:')"
+# Not sh: macOS drops DYLD_INSERT_LIBRARIES for its own binaries, so the shim needs a program of ours.
+printf '#include <stdio.h>\n#include <unistd.h>\nint main(void) { puts(isatty(0) ? "TTY-YES" : "TTY-NO"); fflush(stdout); pause(); }\n' >"$tmp/probe.c"
+cc -o "$tmp/probe" "$tmp/probe.c"
+# Run bare, the probe sees no terminal; through zeropty-tty, the shim (found next to it) answers isatty.
+for run in "raw:$tmp/probe:TTY-NO" "tty:$tmp/$name/zeropty-tty $tmp/probe:TTY-YES"; do
+	s=${run%%:*} want=${run##*:} cmd=${run#*:}
+	cmd=${cmd%:*}
+	"$z" new-session -d -s "$s" "$cmd"
+	"$z" wait-pane -t "=$s:" -m TTY- -T 10000 >/dev/null || fail "$s: no output: [$("$z" capture-pane -p -t "=$s:" 2>&1)] $("$z" ls 2>&1)"
+	got=$("$z" capture-pane -p -t "=$s:" | grep TTY- || true)
+	test "$got" = "$want" || fail "$s: $got, not $want"
+done
 echo "packed: $out/$name.tar.gz"
 cat "$out/SHA256SUMS"
