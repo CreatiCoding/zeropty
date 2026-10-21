@@ -169,7 +169,7 @@ BREAKING CHANGE: zeropty_open(const char *) is now zeropty_open(const zeropty_op
 ## Pull Request
 
 1. 브랜치를 만들어 작업해요(`main`에 바로 올리지 않아요, force-push 금지).
-2. `scripts/check.sh`를 돌려 모두 통과하는지 확인해요. 저장소에 호스팅 CI는 없고, 이 스크립트가 main에 들어가기 전의 모든 검사예요. 관리자도 병합 전에 같은 스크립트를 돌려요. `git config core.hooksPath .githooks`를 해 두면 `.githooks/pre-push`가 push할 때마다 이 스크립트를 돌려요(`ZEROPTY_PRE_PUSH=quick`이면 `--quick`).
+2. `scripts/check.sh`를 돌려 모두 통과하는지 확인해요. 저장소에 호스팅 CI는 없고, 이 스크립트가 main에 들어가기 전의 모든 검사예요(호스팅 작업은 릴리스 묶음을 만드는 `.github/workflows/release.yml` 하나뿐이고, 묶음 관련 파일을 바꾸는 pull request에서도 돌아요). 관리자도 병합 전에 같은 스크립트를 돌려요. `git config core.hooksPath .githooks`를 해 두면 `.githooks/pre-push`가 push할 때마다 이 스크립트를 돌려요(`ZEROPTY_PRE_PUSH=quick`이면 `--quick`).
 
    ```sh
    scripts/check.sh            # 모든 검사 (몇 분 걸려요. 첫 MSRV 검사는 처음부터 컴파일해요)

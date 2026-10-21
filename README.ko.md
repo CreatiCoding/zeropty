@@ -189,15 +189,30 @@ cc -dynamiclib -Ibindings/c/include -o ~/.zeropty/plugins/tally.dylib examples/p
 
 ## 설치
 
-**CLI와 서버만 필요하면 한 줄이에요.** `sh`, `python3`, 빌드 명령처럼 터미널이 없어도 되는 프로그램을 돌리기에는 이걸로 충분해요.
+**릴리스에서 받기: Rust가 필요 없어요.** 0.1.3부터 [릴리스](https://github.com/CreatiCoding/zeropty/releases)마다 모든 맥(Apple silicon·Intel)용 묶음 하나와 그 `SHA256SUMS`가 붙어 있어요. 묶음 안에는 폴더 하나가 있고, 그 안에 `zeropty`, `shim.dylib`, `zeropty-tty`, `claude-zeropty`와 라이선스가 들어 있어요.
+
+```sh
+v=0.1.3   # 최신 버전은: v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/CreatiCoding/zeropty/releases/latest | sed 's|.*/v||')
+curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/zeropty-$v-darwin-universal.tar.gz"
+curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/SHA256SUMS"
+shasum -a 256 -c SHA256SUMS                 # zeropty-0.1.3-darwin-universal.tar.gz: OK
+tar -xzf "zeropty-$v-darwin-universal.tar.gz"
+export PATH="$PWD/zeropty-$v-darwin-universal:$PATH"   # 계속 쓰려면 ~/.zshrc에 넣어요
+zeropty -V
+```
+
+- 폴더는 어디에 풀어도 동작해요. `zeropty-tty`가 자기 옆의 `shim.dylib`를 찾아요. `zeropty-tty`만 다른 곳에 심볼릭 링크하지 말고 폴더를 PATH에 넣거나, `ZEROPTY_SHIM`으로 shim을 가리켜 주세요.
+- 스크립트에서 버전을 고정하려면 `v`와 그 릴리스 `SHA256SUMS`의 묶음 해시를 코드에 박고, 풀기 전에 비교하세요.
+
+**Rust가 있고 CLI와 서버만 필요하면 한 줄이에요.** `sh`, `python3`, 빌드 명령처럼 터미널이 없어도 되는 프로그램을 돌리기에는 이걸로 충분해요.
 
 ```sh
 cargo install --git https://github.com/CreatiCoding/zeropty   # ~/.cargo/bin/zeropty
 ```
 
-Rust가 없으면 먼저 `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`로 설치해요([rustup](https://rustup.rs)). 미리 빌드한 macOS 바이너리(GitHub Releases)와 Homebrew tap은 아직 없어요. 생기면 이 절 맨 위에 한 줄 설치로 올릴게요.
+Rust가 없으면 먼저 `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`로 설치해요([rustup](https://rustup.rs)). Homebrew tap은 아직 없어요.
 
-**전부 쓰려면 소스에서 빌드해요.** claude·vim처럼 터미널이 필요한 프로그램용 shim과 `claude-zeropty`, C·Node 임베딩, bash builtin은 `cargo install`로는 설치되지 않아요([왜요?](docs/ko/FAQ.md#cargo-install로-설치하면-무엇이-빠지나요)). 빌드는 [1분 시작](#1분-시작)의 `git clone` + `./build.sh` 그대로예요(macOS, Rust stable, Xcode Command Line Tools). 계속 쓰려면 `dist/`를 PATH에 넣어 두세요.
+**C·Node 임베딩과 bash builtin까지 전부 쓰려면 소스에서 빌드해요.** 릴리스 묶음에는 이것들이 없고, `cargo install`로는 claude·vim처럼 터미널이 필요한 프로그램용 shim과 `claude-zeropty`, 임베딩, builtin이 모두 설치되지 않아요([왜요?](docs/ko/FAQ.md#cargo-install로-설치하면-무엇이-빠지나요)). 빌드는 [1분 시작](#1분-시작)의 `git clone` + `./build.sh` 그대로예요(macOS, Rust stable, Xcode Command Line Tools). 계속 쓰려면 `dist/`를 PATH에 넣어 두세요.
 
 ```sh
 echo "export PATH=\"$PWD/dist:\$PATH\"" >> ~/.zshrc   # zeropty 폴더 안에서
@@ -287,7 +302,7 @@ zeropty는 **프로그램을 띄워 두고 다루는 일**에 집중해요. 창 
 cargo test --release
 ```
 
-호스팅 CI 없이 `scripts/check.sh`가 모든 검사를 돌려요. 빌드, 테스트(doctest 포함), 예제 6개, `cargo doc -D warnings`, `clippy -D warnings`, `cargo fmt --check`, MSRV(Rust 1.88) 확인, 공개 API 기준선, 커밋 메시지·변경 기록 확인이 들어 있어요. `git config core.hooksPath .githooks`를 해 두면 push할 때마다 `.githooks/pre-push`가 이 스크립트를 돌려요. 자세한 단계는 [기여 안내](docs/ko/CONTRIBUTING.md#pull-request)에 있어요.
+호스팅 CI 없이 `scripts/check.sh`가 모든 검사를 돌려요(호스팅 작업은 릴리스 묶음 빌드 하나뿐이에요). 빌드, 테스트(doctest 포함), 예제 6개, `cargo doc -D warnings`, `clippy -D warnings`, `cargo fmt --check`, MSRV(Rust 1.88) 확인, 공개 API 기준선, 커밋 메시지·변경 기록 확인이 들어 있어요. `git config core.hooksPath .githooks`를 해 두면 push할 때마다 `.githooks/pre-push`가 이 스크립트를 돌려요. 자세한 단계는 [기여 안내](docs/ko/CONTRIBUTING.md#pull-request)에 있어요.
 
 화면은 `vt100` crate와 대조하고(녹화한 claude 세션 + 무작위 입력), 서버·임베디드·세션 옮기기는 `cat`, `printf` 같은 평범한 프로그램으로 확인해요. claude 없이 돌아가요.
 

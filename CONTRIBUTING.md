@@ -169,7 +169,7 @@ How to reproduce: [Benchmarks: reproducing the measurements](docs/BENCHMARKS.md#
 ## Pull requests
 
 1. Work on a branch (do not push straight to `main`; no force-push).
-2. Run `scripts/check.sh` and make sure everything passes. The repository has no hosted CI: this script is every check that runs before something lands on main, and the maintainer runs the same script before merging. With `git config core.hooksPath .githooks`, `.githooks/pre-push` runs this script on every push (`--quick` with `ZEROPTY_PRE_PUSH=quick`).
+2. Run `scripts/check.sh` and make sure everything passes. The repository has no hosted CI: this script is every check that runs before something lands on main (the one hosted job, `.github/workflows/release.yml`, builds the release archive and also runs on pull requests that change the packaging), and the maintainer runs the same script before merging. With `git config core.hooksPath .githooks`, `.githooks/pre-push` runs this script on every push (`--quick` with `ZEROPTY_PRE_PUSH=quick`).
 
    ```sh
    scripts/check.sh            # every check (takes a few minutes; the first MSRV check compiles from scratch)

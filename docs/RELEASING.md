@@ -16,6 +16,8 @@ release PR: node scripts/release.mjs bump <level>  ──▶ changes the version
                                                        moves [Unreleased] to ## [X.Y.Z] - date
                                      │
                                      ▼  after the merge, the maintainer tags vX.Y.Z (release.mjs check --tag compares the tag with the version)
+tag pushed: .github/workflows/release.yml ──▶ builds and smoke-tests the macOS archive and attaches it and
+                                              SHA256SUMS to the GitHub Release (created from the CHANGELOG)
 ```
 
 - **Commits are the source of the change history.** Every commit uses the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format (checked by `scripts/check.sh` and `.githooks/commit-msg`), and its type decides the release level.
@@ -74,10 +76,12 @@ node scripts/release.mjs check              # whether the version agrees everywh
 node scripts/release.mjs check --tag v0.2.0 # and whether the tag matches that version (also run by scripts/check.sh on a tagged HEAD)
 node scripts/release.mjs next               # the next version, computed from the commits since the last tag
 node scripts/release.mjs notes              # the [Unreleased] draft (git-cliff, fetched with npx if missing)
+node scripts/release.mjs release-notes 0.2.0 # the GitHub Release body, from CHANGELOG.md's ## [0.2.0]
 node scripts/release.mjs bump minor --dry-run
 node scripts/release.mjs bump <major|minor|patch|auto|X.Y.Z[-pre]> [--date YYYY-MM-DD] [--generate]
 node scripts/check-commits.mjs --range origin/main..HEAD --changelog   # only the commit and changelog check of scripts/check.sh (including the section comparison)
 scripts/smoke-version.sh                    # whether the CLI, server, C and Node versions in dist/ agree (the version smoke tests step of scripts/check.sh)
+scripts/package.sh                          # the release archive and SHA256SUMS in dist/release/, smoke-tested unpacked (needs rustup target add aarch64-apple-darwin x86_64-apple-darwin)
 rustup run 1.88.0 cargo check --workspace --all-targets --locked   # MSRV (the MSRV step of scripts/check.sh)
 node scripts/check-api.mjs                  # whether the C ABI and Node exports in dist/ (./build.sh) match api/*.txt
 node scripts/check-api.mjs --base origin/main   # whether lines removed from the baseline are marked as breaking (PR check)
@@ -122,7 +126,12 @@ node --test scripts/test/*.test.mjs         # tests for the tools themselves (in
    git tag -a v0.2.0 -m "zeropty 0.2.0"
    git push origin v0.2.0
    ```
-   Before pushing, check that the tag matches the version with `node scripts/release.mjs check --tag v0.2.0` (on a tagged HEAD, `scripts/check.sh` runs this check too). If you create a GitHub Release, paste the CHANGELOG's `## [0.2.0]` section into its body, rewriting relative links to `https://github.com/CreatiCoding/zeropty/blob/v0.2.0/<path>` (a release body resolves them under `/releases/`, where they break).
+   Before pushing, check that the tag matches the version with `node scripts/release.mjs check --tag v0.2.0` (on a tagged HEAD, `scripts/check.sh` runs this check too).
+8. **The tag publishes the release.** `.github/workflows/release.yml` (a macOS runner) checks the tag against the version, runs `scripts/package.sh`, and attaches its two files to the release:
+   - `zeropty-0.2.0-darwin-universal.tar.gz`: one folder, `zeropty-0.2.0-darwin-universal/`, holding `zeropty` (arm64 + x86_64, `lipo`), `shim.dylib` (arm64, arm64e, x86_64), `zeropty-tty`, `claude-zeropty`, `LICENSE-APACHE` and `LICENSE-MIT`, with their execute bits. `zeropty` and `shim.dylib` are signed ad hoc (`codesign -s -`); Developer ID signing and notarization may come later.
+   - `SHA256SUMS`: `shasum -a 256` of the archive. Whoever pins a version pins this hash.
+
+   If the tag has no release yet, the workflow creates it with `node scripts/release.mjs release-notes 0.2.0` as the body (the CHANGELOG section, one line per entry, relative links made absolute at the tag); a release you created first keeps its body. Check the run under Actions, then download the two files and run `shasum -a 256 -c SHA256SUMS`. If the run fails, fix the cause and re-run it: it replaces the files (`--clobber`). The embedding libraries and the bash builtin are not in the archive; they come from `./build.sh`.
 
 > 0.1.0 is the first public commit (`c612089`), tagged `v0.1.0`; 0.1.1 was the first release made with these tools. `next` and `notes` compute from the latest tag.
 

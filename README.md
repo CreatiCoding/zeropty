@@ -189,15 +189,30 @@ cc -dynamiclib -Ibindings/c/include -o ~/.zeropty/plugins/tally.dylib examples/p
 
 ## Install
 
-**If you need only the CLI and the server, it is one line.** That is enough to run programs that need no terminal, such as `sh`, `python3` and build commands.
+**Download a release: no Rust needed.** Each [release](https://github.com/CreatiCoding/zeropty/releases) since 0.1.3 carries one archive for every Mac (Apple silicon and Intel) and its `SHA256SUMS`. The archive holds one folder: `zeropty`, `shim.dylib`, `zeropty-tty`, `claude-zeropty` and the licenses.
+
+```sh
+v=0.1.3   # or the latest: v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/CreatiCoding/zeropty/releases/latest | sed 's|.*/v||')
+curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/zeropty-$v-darwin-universal.tar.gz"
+curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/SHA256SUMS"
+shasum -a 256 -c SHA256SUMS                 # zeropty-0.1.3-darwin-universal.tar.gz: OK
+tar -xzf "zeropty-$v-darwin-universal.tar.gz"
+export PATH="$PWD/zeropty-$v-darwin-universal:$PATH"   # add it to ~/.zshrc to keep it
+zeropty -V
+```
+
+- The folder works wherever you unpack it: `zeropty-tty` finds `shim.dylib` next to itself. Put the folder on your PATH rather than symlinking `zeropty-tty` elsewhere, or point `ZEROPTY_SHIM` at the shim.
+- To pin a version in a script, fix `v` and the archive's hash from that release's `SHA256SUMS`, and compare before unpacking.
+
+**If you need only the CLI and the server and have Rust, it is one line.** That is enough to run programs that need no terminal, such as `sh`, `python3` and build commands.
 
 ```sh
 cargo install --git https://github.com/CreatiCoding/zeropty   # ~/.cargo/bin/zeropty
 ```
 
-If you have no Rust, install it first with `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh` ([rustup](https://rustup.rs)). There are no prebuilt macOS binaries (GitHub Releases) or Homebrew tap yet; when there are, a one-line install will go at the top of this section.
+If you have no Rust, install it first with `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh` ([rustup](https://rustup.rs)). There is no Homebrew tap yet.
 
-**For everything, build from source.** The shim for programs that need a terminal (claude, vim), `claude-zeropty`, C and Node embedding, and the bash builtin are not installed by `cargo install` ([why?](docs/FAQ.md#what-is-missing-when-i-install-with-cargo-install)). Building is the `git clone` + `./build.sh` of [Quick start](#quick-start) (macOS, Rust stable, Xcode Command Line Tools). To keep using it, put `dist/` on your PATH:
+**For everything, including C and Node embedding and the bash builtin, build from source.** The release archive does not carry those, and `cargo install` installs none of the shim for programs that need a terminal (claude, vim), `claude-zeropty`, embedding or the builtin ([why?](docs/FAQ.md#what-is-missing-when-i-install-with-cargo-install)). Building is the `git clone` + `./build.sh` of [Quick start](#quick-start) (macOS, Rust stable, Xcode Command Line Tools). To keep using it, put `dist/` on your PATH:
 
 ```sh
 echo "export PATH=\"$PWD/dist:\$PATH\"" >> ~/.zshrc   # from inside the zeropty folder
@@ -288,7 +303,7 @@ Bug reports, measurements and code are all welcome. [Contributing](CONTRIBUTING.
 cargo test --release
 ```
 
-There is no hosted CI: `scripts/check.sh` runs every check. It covers the build, tests (including doctests), the 6 examples, `cargo doc -D warnings`, `clippy -D warnings`, `cargo fmt --check`, the MSRV (Rust 1.88), the public API baseline, links between the docs, and commit messages and the changelog. After `git config core.hooksPath .githooks`, `.githooks/pre-push` runs it on every push. The steps are described in [Contributing](CONTRIBUTING.md#pull-requests).
+There is no hosted CI: `scripts/check.sh` runs every check (the one hosted job builds the release archive). It covers the build, tests (including doctests), the 6 examples, `cargo doc -D warnings`, `clippy -D warnings`, `cargo fmt --check`, the MSRV (Rust 1.88), the public API baseline, links between the docs, and commit messages and the changelog. After `git config core.hooksPath .githooks`, `.githooks/pre-push` runs it on every push. The steps are described in [Contributing](CONTRIBUTING.md#pull-requests).
 
 Screens are compared with the `vt100` crate (recorded claude sessions plus random input), and the server, embedding and session moves are checked with ordinary programs such as `cat` and `printf`. None of it needs claude.
 
