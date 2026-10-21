@@ -203,6 +203,12 @@ pub trait Programs: 'static {
     /// Sends signal `sig` (libc's numbering) to process group `pgid`; a group already gone is ignored.
     fn signal_group(&self, pgid: i32, sig: i32);
 
+    /// Whether process group `pgid` is `root`'s or a descendant's (a job a shell in the session runs).
+    /// Not known (the default): C-c and the like then go to the session's program, as before.
+    fn group_under(&self, _pgid: i32, _root: i32) -> bool {
+        false
+    }
+
     /// Reaps `pid` if it exited, without waiting.
     fn reap(&self, pid: i32);
 
@@ -246,6 +252,10 @@ impl Programs for SystemPrograms {
     #[inline]
     fn signal_group(&self, pgid: i32, sig: i32) {
         process::signal_group(pgid, sig)
+    }
+
+    fn group_under(&self, pgid: i32, root: i32) -> bool {
+        process::group_under(pgid, root)
     }
 
     #[inline]
@@ -417,6 +427,8 @@ pub(crate) mod fake {
     pub(crate) struct FakePrograms {
         pub(crate) started: RefCell<Vec<FakeProgram>>,
         pub(crate) signals: RefCell<Vec<(i32, i32)>>,
+        /// (job's group, session's program): the jobs that are under a session.
+        pub(crate) groups: RefCell<Vec<(i32, i32)>>,
         pub(crate) reaped: RefCell<Vec<i32>>,
         pub(crate) sizes: RefCell<Vec<(PathBuf, u16, u16)>>,
         pub(crate) removed: RefCell<Vec<PathBuf>>,
@@ -463,6 +475,10 @@ pub(crate) mod fake {
 
         fn signal_group(&self, pgid: i32, sig: i32) {
             self.signals.borrow_mut().push((pgid, sig))
+        }
+
+        fn group_under(&self, pgid: i32, root: i32) -> bool {
+            self.groups.borrow().contains(&(pgid, root))
         }
 
         fn reap(&self, pid: i32) {

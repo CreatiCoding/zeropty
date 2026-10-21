@@ -894,6 +894,51 @@ int main(void) {
     assert!(screen.starts_with("rpp:\nrpp=hush1\ngetpass:\ngetpass=hush2\nEXIT=0\n"), "{screen:?}");
 }
 
+/// A shell with job control runs each job in its own process group and gives it the terminal
+/// (tcsetpgrp): C-c goes to the job, as a tty's foreground group, not to the shell. It went to the
+/// session's program (the shell), so zsh's `sleep 30` could not be stopped and the shell got it instead.
+#[test]
+fn ctrl_c_reaches_a_shells_foreground_job() {
+    let s = Server::new("fgjob");
+    let lib = shim(&s);
+    let tty = concat!(env!("CARGO_MANIFEST_DIR"), "/zeropty-tty");
+    let src = s.dir.join("job.c");
+    std::fs::write(
+        &src,
+        r#"#include <signal.h>
+#include <stdio.h>
+#include <sys/wait.h>
+#include <unistd.h>
+int main(void) {
+  pid_t c = fork();
+  if (c == 0) {
+    setpgid(0, 0);
+    execl("/bin/sleep", "sleep", "30", (char *)0);
+    _exit(127);
+  }
+  setpgid(c, c);
+  tcsetpgrp(0, c);
+  printf("RUNNING\n");
+  fflush(stdout);
+  int st;
+  waitpid(c, &st, 0);
+  tcsetpgrp(0, getpgrp());
+  printf("JOB=%s\n", WIFSIGNALED(st) && WTERMSIG(st) == SIGINT ? "SIGINT" : "other");
+  return 0;
+}
+"#,
+    )
+    .unwrap();
+    let job = s.dir.join("job");
+    assert!(Command::new("clang").arg("-o").arg(&job).arg(&src).status().unwrap().success());
+    let run = format!("ZEROPTY_SHIM={} ZEROPTY_CACHE={} {tty} {}", lib.display(), s.dir.display(), job.display());
+    s.ok(&["new-session", "-d", "-s", "j", "-x", "40", "-y", "6", &format!("{run}; echo EXIT=$?; exec sleep 100")]);
+    s.wait_capture(&["capture-pane", "-p", "-t", "=j:"], |o| o.contains("RUNNING"));
+    s.ok(&["send-keys", "-t", "=j:", "C-c"]);
+    let screen = s.wait_capture(&["capture-pane", "-p", "-t", "=j:"], |o| o.contains("EXIT="));
+    assert!(screen.contains("RUNNING\n^CJOB=SIGINT\nEXIT=0\n"), "{screen:?}");
+}
+
 /// zeropty-tty names its signed copy after the name the program was run by, not the link's target
 /// (claude is a link to claude.exe), so ps and pgrep find it under that name. Each name of one program
 /// gets its own copy, and no name can stand for another's stamp (a link named "mytrue.src").

@@ -201,7 +201,7 @@ tmux와 같은 세션에서 대조했어요. `#{version}`만 쓰는 포맷은 �
 zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"
 ```
 
-- shim(`dist/shim.dylib`)이 `isatty`, `tcgetattr`, 창 크기(`TIOCGWINSZ`), `tcgetpgrp`, `/dev/tty`에 터미널처럼 답해요. `DYLD_INSERT_LIBRARIES`로 넣어요.
+- shim(`dist/shim.dylib`)이 `isatty`, `tcgetattr`, 창 크기(`TIOCGWINSZ`), `tcgetpgrp`, `tcsetpgrp`, `/dev/tty`에 터미널처럼 답해요. `DYLD_INSERT_LIBRARIES`로 넣어요.
 - 암호 입력(`readpassphrase`, `getpass`: `ssh`, `ssh-keygen`, `ssh-add`)은 친 내용을 화면에도 스크롤백에도 보여 주지 않아요. libc는 거기서 에코를 자기 내부 호출로 끄는데 shim이 그 호출에 닿지 못해서, 세션 터미널에서는 shim이 이 두 함수를 직접 처리해요. 세션 밖에서는 libc의 함수가 그대로 돌아요. 치는 도중 C-c를 누르면 에코를 되돌린 뒤 예전처럼 프로그램이 끝나요. shim이 들어간 프로그램에서만 그래요: `zeropty-tty ssh-keygen`처럼 띄웠거나, shim이 든 셸에서 띄운 직접 만든 프로그램이요. `ssh`와 그 도구는 `/usr/bin`에 있어서, 세션 안 셸에서 치면 shim 없이 돌고(다음 항목) 여전히 보여요. 이럴 땐 `zeropty-tty`로 띄워요.
 - 터미널로 치는 건 세션 자신의 소켓뿐이에요(어느 fd 번호에 있든). stdin, stdout, stderr가 모두 그 소켓 하나예요(tmux에서 PTY 하나인 것처럼). 읽기, 쓰기, 읽기+쓰기 어느 모드로 연 `/dev/tty`도 그 소켓이라서, 그걸로 키를 읽고 화면을 그리는 프로그램(stdin을 파이프로 받은 `fzf`)도 돌아요. stdout을 파이프로 넘기거나(`zeropty-tty prog | cat`) 파일로 돌린 프로그램, stdin이 `/dev/null`인 프로그램은 거기서 터미널을 보지 못해요(tmux와 같아요). 모드 변경 신호도 그 출력에 섞이지 않아요. 자식 프로세스도 `DYLD_INSERT_LIBRARIES`를 물려받지만 같은 규칙을 따르고, 세션 밖에서는 shim이 아무것도 터미널로 답하지 않아요. 예전 서버가 시작해서 `restart-server`로 이어진 세션은 입력이 아직 파이프예요. shim이 그 파이프와 소켓을 찾고(`ZEROPTY_TTY_ID`에서, 그게 없으면 프로그램이 시작할 때 가진 fd에서), 거기서 읽기로 연 `/dev/tty`는 그 파이프라서 쓸 수 없어요.
 - macOS는 `/usr/bin` 같은 SIP 보호 바이너리와 hardened runtime 서명 바이너리에 shim을 넣지 못하게 해요. 그래서 `zeropty-tty`는 이런 프로그램을 서명만 바꾼 사본(`~/.zeropty/tty/`)으로 실행하고, 원본이 바뀌면 다시 만들어요. 사본이든 아니든 프로그램은 실행할 때 쓴 이름으로 돌아요(`claude.exe`를 가리키는 `claude` 링크는 `claude`로 실행돼요). 그래서 `ps`, `pgrep`에서 그 이름으로 찾을 수 있어요.
@@ -213,7 +213,7 @@ zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"
 키는 PTY처럼 라인 디시플린을 거쳐요. 새 세션은 새 PTY와 같은 cooked 모드예요.
 
 - Enter가 줄바꿈이 돼서 `read`가 끝나요.
-- `C-c`, `C-\`, `C-z`는 프로세스 그룹에 시그널로 가요.
+- `C-c`, `C-\`, `C-z`는 프로세스 그룹에 시그널로 가요. 세션의 그룹이거나, job control이 있는 셸(zsh, `bash -i`)이 터미널을 넘겨준 작업의 그룹이에요. 셸의 `tcsetpgrp`는 shim을 거쳐 zeropty에 전달되므로 셸은 shim과 함께 돌아야 해요(`zeropty-tty zsh`). 작업 자체는 `/usr/bin` 프로그램을 포함해 어떤 프로그램이든 돼요. 세션 프로그램 아래의 프로세스 그룹만 받아들여요.
 - 줄 단위로 모으면서 `BSpace`, `C-u`, `C-w`, `C-v`로 편집하고, 빈 줄의 `C-d`는 입력 끝(EOF)이에요.
 - 입력한 글자가 화면에 에코돼요. 그래서 `send-keys -l 'echo hi'`를 보내면 화면에 `echo hi`가 먼저 보여요. `wait-pane -m`으로 결과를 기다릴 때는 입력한 줄에 없는 글자를 고르세요.
 - 프로그램이 raw 모드로 바꾸면(claude, vim, python REPL: shim이 알려요) 키가 그대로 가요.

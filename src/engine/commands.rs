@@ -749,6 +749,22 @@ mod tests {
         assert_eq!(typed(&mut input), b"ab\n");
         assert_eq!(run(&mut e, &["send-keys", "-t", "n", "C-c"]), ok(""));
         assert_eq!(programs(&e).signals_to(pid), [libc::SIGINT]);
+        // A shell's job leads its own group: C-c goes there once the shell gives it the terminal, if
+        // the group is under the session (any program can print the sequence), and back after.
+        let job = pid - 1000;
+        let foreground = |output: &mut std::os::unix::net::UnixStream, e: &mut crate::engine::testing::Test, pgid: i32| {
+            output.write_all(format!("\x1b]zeropty-pgrp;{pgid}\x07").as_bytes()).unwrap();
+            run(e, &["capture-pane", "-p", "-t", "n"]);
+        };
+        foreground(&mut output, &mut e, job);
+        assert_eq!(run(&mut e, &["send-keys", "-t", "n", "C-c"]), ok(""));
+        assert_eq!(programs(&e).signals_to(pid), [libc::SIGINT, libc::SIGINT], "not under the session");
+        programs(&e).groups.borrow_mut().push((job, pid));
+        assert_eq!(run(&mut e, &["send-keys", "-t", "n", "C-c", "C-z"]), ok(""));
+        assert_eq!(programs(&e).signals_to(job), [libc::SIGINT, libc::SIGTSTP]);
+        foreground(&mut output, &mut e, pid);
+        assert_eq!(run(&mut e, &["send-keys", "-t", "n", "C-c"]), ok(""));
+        assert_eq!(programs(&e).signals_to(pid), [libc::SIGINT; 3], "the shell took it back");
         let slot = e.find(Some("n")).unwrap();
         let tag = e.key(slot).udata();
         e.handle(&[crate::engine::Event::new(crate::engine::Kind::Exited, pid, tag)], &mut Vec::new());

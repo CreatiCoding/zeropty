@@ -28,17 +28,42 @@ pub(crate) fn reap(pid: i32) {
     unsafe { libc::waitpid(pid, &mut status, libc::WNOHANG) };
 }
 
-/// The name of process `pid` (its command, at most 16 bytes, as ps and tmux show it); empty if unknown.
-pub(crate) fn name(pid: i32) -> String {
+/// What `ps` shows of process `pid`, or None if there is no such process.
+fn bsd_info(pid: i32) -> Option<libc::proc_bsdinfo> {
     // SAFETY: proc_bsdinfo is plain data; all-zero is a valid value.
     let mut info: libc::proc_bsdinfo = unsafe { std::mem::zeroed() };
     let size = std::mem::size_of_val(&info) as i32;
     // SAFETY: proc_pidinfo writes at most `size` bytes into `info`, which has exactly that size.
-    if unsafe { libc::proc_pidinfo(pid, libc::PROC_PIDTBSDINFO, 0, (&mut info as *mut libc::proc_bsdinfo).cast(), size) } != size {
-        return String::new();
-    }
+    let n = unsafe { libc::proc_pidinfo(pid, libc::PROC_PIDTBSDINFO, 0, (&mut info as *mut libc::proc_bsdinfo).cast(), size) };
+    (n == size).then_some(info)
+}
+
+/// The name of process `pid` (its command, at most 16 bytes, as ps and tmux show it); empty if unknown.
+pub(crate) fn name(pid: i32) -> String {
+    let Some(info) = bsd_info(pid) else { return String::new() };
     let comm: Vec<u8> = info.pbi_comm.iter().take_while(|&&c| c != 0).map(|&c| c as u8).collect();
     String::from_utf8_lossy(&comm).into_owned()
+}
+
+/// Whether process group `pgid` is led by `root` or by a process descended from it. A group whose
+/// leader is gone is not: it cannot be told from a stranger's that took the number.
+pub(crate) fn group_under(pgid: i32, root: i32) -> bool {
+    let mut pid = pgid;
+    match bsd_info(pid) {
+        Some(i) if i.pbi_pgid as i32 == pgid => {}
+        _ => return false,
+    }
+    // Parents up to the session's program, or to launchd; a bound on the depth, in case of a cycle.
+    for _ in 0..256 {
+        if pid == root {
+            return true;
+        }
+        match bsd_info(pid) {
+            Some(i) if i.pbi_ppid as i32 > 1 => pid = i.pbi_ppid as i32,
+            _ => return false,
+        }
+    }
+    false
 }
 
 /// The working directory of process `pid`; empty if unknown.
@@ -83,5 +108,20 @@ mod tests {
         assert_eq!(super::name(-5), "", "no such process");
         let (a, _b) = crate::sys::fd::socket_pair().unwrap();
         assert!(super::peer_is_same_user(&a));
+    }
+
+    #[test]
+    fn tells_a_descendants_group() {
+        use std::os::unix::process::CommandExt as _;
+        let me = std::process::id() as i32;
+        let mut child = std::process::Command::new("/bin/sleep").arg("5").process_group(0).spawn().unwrap();
+        let job = child.id() as i32;
+        assert!(super::group_under(job, me), "a child leading its own group");
+        assert!(super::group_under(job, job), "the program's own group");
+        assert!(!super::group_under(job, job + 1_000_000), "not under a stranger");
+        assert!(!super::group_under(-5, me), "no such group");
+        child.kill().unwrap();
+        child.wait().unwrap();
+        assert!(!super::group_under(job, me), "gone");
     }
 }

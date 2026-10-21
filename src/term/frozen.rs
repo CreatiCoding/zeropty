@@ -5,7 +5,8 @@
 //!
 //! - The screen (`save_screen`): rows u16, cols u16, scrollback limit (var), modes u8, pen and saved pen
 //!   (`Attrs::encode`), the palette as attribute sets, the main grid then the alternate one
-//!   (`Grid::save_to`), then the tty modes u8 (absent from an older zeropty's: read as 0).
+//!   (`Grid::save_to`), then the tty modes u8 and the foreground process group (var), each absent from
+//!   an older zeropty's: read as 0.
 //! - Deep (in the cold store, see `cold`): `field(screen)`, then the scrollback as a count and a field per
 //!   row.
 //! - Portable (`export`): PORTABLE, the combined characters the cells use as (id, text) pairs, `field
@@ -232,6 +233,7 @@ impl Term {
         s.alt.save_to(&mut o);
         // Last, so a screen from an zeropty before it reads as none (Term::thaw).
         o.u8(s.tty);
+        o.var(s.fg as usize);
         o.0
     }
 
@@ -369,6 +371,7 @@ impl Term {
         s.grid.restore(&mut i);
         s.alt.restore(&mut i);
         s.tty = if i.at_end() { 0 } else { i.u8() };
+        s.fg = if i.at_end() { 0 } else { i.var() as i32 };
         let rest = f.rest.take().map(|r| *r).unwrap_or_default();
         s.grid.scrollback = rest.scrollback;
         // A kept parser was mid-sequence or mid-character; it goes byte by byte until it is back in ground.
@@ -410,6 +413,7 @@ mod tests {
     #[test]
     fn freeze_deepen_thaw_round_trip() {
         let mut t = busy();
+        t.process(b"\x1b]zeropty-pgrp;4242\x07");
         let before = dump(&t);
         let mut f = Term::thaw(t.freeze()).freeze();
         assert_eq!(dump(&f.peek()), before, "peek of a plain frozen screen");
@@ -419,6 +423,7 @@ mod tests {
         assert!(f.is_deep());
         t = Term::thaw(f);
         assert_eq!(dump(&t), before);
+        assert_eq!(t.foreground(), 4242, "a shell's job is still the terminal's");
         let mut fresh = busy();
         t.process(b"more\n\x1b[1mbold");
         fresh.process(b"more\n\x1b[1mbold");
