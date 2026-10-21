@@ -189,7 +189,7 @@ cc -dynamiclib -Ibindings/c/include -o ~/.zeropty/plugins/tally.dylib examples/p
 
 ## Install
 
-**Download a release: no Rust needed.** Each [release](https://github.com/CreatiCoding/zeropty/releases) since 0.1.3 carries one archive for every Mac (Apple silicon and Intel) and its `SHA256SUMS`. The archive holds one folder: `zeropty`, `shim.dylib`, `zeropty-tty`, `claude-zeropty` and the licenses.
+**Download a release: no Rust needed.** Each [release](https://github.com/CreatiCoding/zeropty/releases) since 0.1.3 carries one archive for every Mac (Apple silicon and Intel, macOS 11 or later; tested on macOS 15 and 26) and its `SHA256SUMS`. The archive holds one folder: `zeropty`, `shim.dylib`, `zeropty-tty`, `claude-zeropty` and the licenses.
 
 ```sh
 v=0.1.3   # or the latest: v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/CreatiCoding/zeropty/releases/latest | sed 's|.*/v||')
@@ -201,7 +201,7 @@ export PATH="$PWD/zeropty-$v-darwin-universal:$PATH"   # add it to ~/.zshrc to k
 zeropty -V
 ```
 
-- The folder works wherever you unpack it: `zeropty-tty` finds `shim.dylib` next to itself. Put the folder on your PATH rather than symlinking `zeropty-tty` elsewhere, or point `ZEROPTY_SHIM` at the shim.
+- The folder works wherever you unpack it: `zeropty-tty` finds `shim.dylib` next to itself. Put the folder on your PATH rather than symlinking `zeropty-tty` or `claude-zeropty` elsewhere, or point `ZEROPTY_SHIM` at the shim.
 - To pin a version in a script, fix `v` and the archive's hash from that release's `SHA256SUMS`, and compare before unpacking.
 - **Gatekeeper:** the files are signed ad hoc, not notarized. `curl` adds no quarantine mark, so the steps above run as they are. A browser download is marked, `tar` passes the mark on to every unpacked file, and macOS then refuses `zeropty` with a dialog (the command waits on it). Clear the mark before the first run: `xattr -dr com.apple.quarantine zeropty-$v-darwin-universal`.
 

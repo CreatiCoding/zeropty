@@ -131,7 +131,10 @@ node --test scripts/test/*.test.mjs         # tests for the tools themselves (in
    - `zeropty-0.2.0-darwin-universal.tar.gz`: one folder, `zeropty-0.2.0-darwin-universal/`, holding `zeropty` (arm64 + x86_64, `lipo`), `shim.dylib` (arm64, arm64e, x86_64), `zeropty-tty`, `claude-zeropty`, `LICENSE-APACHE` and `LICENSE-MIT`, with their execute bits. `zeropty` and `shim.dylib` are signed ad hoc (`codesign -s -`); Developer ID signing and notarization may come later.
    - `SHA256SUMS`: `shasum -a 256` of the archive. Whoever pins a version pins this hash.
 
-   If the tag has no release yet, the workflow creates it with `node scripts/release.mjs release-notes 0.2.0` as the body (the CHANGELOG section, one line per entry, relative links made absolute at the tag); a release you created first keeps its body. Check the run under Actions, then download the two files and run `shasum -a 256 -c SHA256SUMS`. If the run fails, fix the cause and re-run it: it replaces the files (`--clobber`). The embedding libraries and the bash builtin are not in the archive; they come from `./build.sh`.
+   If the tag has no release yet, the workflow creates it with `node scripts/release.mjs release-notes 0.2.0` as the body (the CHANGELOG section, one line per entry, relative links made absolute at the tag); a tag with a pre-release part (`v0.2.0-rc.1`) becomes a prerelease, never "Latest". A release you created before the workflow got there (about a minute after the push) keeps its body. Check the run under Actions, then download the two files and run `shasum -a 256 -c SHA256SUMS`. Both binaries load on macOS 11 and later (`package.sh` checks each slice's minimum).
+   - The workflow never replaces files already on a release: a rebuild is not byte-identical, and a new hash would break whoever pinned the old one. To replace them on purpose, delete them from the release, then re-run.
+   - A re-run builds the tagged commit again, so it helps only with a failure outside the repository (a runner or network problem). A fix to the packaging needs a new commit and the next PATCH release.
+   - The embedding libraries and the bash builtin are not in the archive; they come from `./build.sh`.
 
 > 0.1.0 is the first public commit (`c612089`), tagged `v0.1.0`; 0.1.1 was the first release made with these tools. `next` and `notes` compute from the latest tag.
 

@@ -186,7 +186,7 @@ describe('changelog', () => {
   test('release notes: one line per entry and paragraph, links absolute at the tag', () => {
     const text = log.replace(
       '- first\n',
-      'Intro that\nwraps.\n\n- first, see [Usage](docs/USAGE.md#x),\n  [tmux](https://tmux.org) and [below](#y)\n- second\n',
+      'Intro that\nwraps.\n\n- first, see [Usage](docs/USAGE.md#x),\n  [tmux](https://tmux.org) and [below](#y)\n  - nested\n    wrapped\n- second\n* star\n1. one\n',
     )
     const blob = 'https://github.com/o/r/blob/v0.1.0'
     assert.equal(
@@ -196,7 +196,10 @@ describe('changelog', () => {
 Intro that wraps.
 
 - first, see [Usage](${blob}/docs/USAGE.md#x), [tmux](https://tmux.org) and [below](#y)
+  - nested wrapped
 - second
+* star
+1. one
 
 ---
 

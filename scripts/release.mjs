@@ -175,8 +175,9 @@ export function releaseNotes(text, version) {
   const blob = `${repo}/blob/v${version}`
   const body = m[1]
     .trim()
-    // Not a blank line, a heading or another entry: the line continues the one before it.
-    .replace(/(\S)\n(?!\n|#|- ) */g, '$1 ')
+    // Not a blank line, a heading, a list item (nested too) or a link definition: the line continues the
+    // one before it.
+    .replace(/(\S)\n(?!\n|#| *(?:[-*+]|\d+[.)]) |\[[^\]]+\]: ) */g, '$1 ')
     .replace(/\]\((?![a-z]+:|#)([^)]+)\)/g, `](${blob}/$1)`)
   return `${body}\n\n---\n\n**Full changes:** ${link}\n\n[CHANGELOG](${blob}/CHANGELOG.md) · [한국어](${blob}/docs/ko/CHANGELOG.md) · [Versioning](${blob}/docs/VERSIONING.md)\n`
 }

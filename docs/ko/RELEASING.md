@@ -131,7 +131,10 @@ node --test scripts/test/*.test.mjs         # 도구 자체의 테스트 (git-cl
    - `zeropty-0.2.0-darwin-universal.tar.gz`: 폴더 `zeropty-0.2.0-darwin-universal/` 하나에 `zeropty`(arm64 + x86_64, `lipo`), `shim.dylib`(arm64, arm64e, x86_64), `zeropty-tty`, `claude-zeropty`, `LICENSE-APACHE`, `LICENSE-MIT`가 실행 권한 그대로 들어 있어요. `zeropty`와 `shim.dylib`는 ad-hoc 서명(`codesign -s -`)이에요. Developer ID 서명과 공증은 나중에 더할 수 있어요.
    - `SHA256SUMS`: 묶음의 `shasum -a 256`. 버전을 고정하는 쪽은 이 해시를 고정해요.
 
-   태그에 릴리스가 아직 없으면 워크플로가 `node scripts/release.mjs release-notes 0.2.0`을 본문으로 만들어요(CHANGELOG 섹션을 항목당 한 줄로, 상대 링크는 태그 기준 절대 링크로). 먼저 만든 릴리스가 있으면 본문은 그대로 둬요. Actions에서 실행 결과를 보고, 두 파일을 받아 `shasum -a 256 -c SHA256SUMS`를 돌려 확인해요. 실패하면 원인을 고치고 다시 돌리면 파일을 바꿔 올려요(`--clobber`). 임베딩 라이브러리와 bash builtin은 묶음에 없고 `./build.sh`로 만들어요.
+   태그에 릴리스가 아직 없으면 워크플로가 `node scripts/release.mjs release-notes 0.2.0`을 본문으로 만들어요(CHANGELOG 섹션을 항목당 한 줄로, 상대 링크는 태그 기준 절대 링크로). 프리릴리스 부분이 있는 태그(`v0.2.0-rc.1`)는 프리릴리스가 되고 "Latest"가 되지 않아요. 워크플로가 닿기 전(push 후 1분쯤)에 손으로 만든 릴리스는 본문을 그대로 둬요. Actions에서 실행 결과를 보고, 두 파일을 받아 `shasum -a 256 -c SHA256SUMS`를 돌려 확인해요. 두 바이너리는 macOS 11 이상에서 로드돼요(`package.sh`가 슬라이스마다 최소 버전을 확인해요).
+   - 워크플로는 릴리스에 이미 있는 파일을 바꾸지 않아요. 다시 빌드하면 바이트가 같지 않아서, 해시가 바뀌면 이전 해시를 고정한 쪽이 깨지기 때문이에요. 일부러 바꾸려면 릴리스에서 파일을 지운 뒤 다시 돌려요.
+   - 다시 돌리면 태그가 가리키는 커밋을 그대로 다시 빌드해요. 그래서 저장소 밖의 실패(runner, 네트워크)에만 도움이 되고, 묶음 쪽을 고친 내용은 새 커밋과 다음 PATCH 릴리스로 내보내야 해요.
+   - 임베딩 라이브러리와 bash builtin은 묶음에 없고 `./build.sh`로 만들어요.
 
 > 0.1.0은 첫 공개 커밋(`c612089`)이고 `v0.1.0` 태그가 달려 있어요. 0.1.1이 이 도구로 만든 첫 릴리스예요. `next`·`notes`는 마지막 태그부터 계산해요.
 
