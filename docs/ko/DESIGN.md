@@ -52,7 +52,7 @@ flowchart LR
 
 ## 1. PTY 대신 소켓
 
-tmux는 창마다 PTY를 하나씩 열어서 macOS의 PTY 한도(기본 511개, 최대 999개)에 걸려요. zeropty는 세션을 socketpair로 연결해서 한도가 없어요. claude에는 `shim.dylib`을 넣어 터미널로 보이게 해요(`claude-zeropty` 래퍼). `isatty`, `tcgetattr`, `ioctl(TIOCGWINSZ)`, `readpassphrase` 등을 가로채요.
+tmux는 창마다 PTY를 하나씩 열어서 macOS의 PTY 한도(기본 511개, 최대 999개)에 걸려요. zeropty는 세션을 socketpair로 연결해서 한도가 없어요. claude에는 `shim.dylib`을 넣어 터미널로 보이게 해요(`claude-zeropty` 래퍼). `isatty`, `tcgetattr`, `ioctl(TIOCGWINSZ)`, `readpassphrase`, `getpass` 등을 가로채요.
 
 PTY가 해 주던 일(Enter를 줄바꿈으로, `C-c`를 시그널로, 줄 편집, 에코)은 엔진이 키를 보낼 때 흉내 내요. 같은 키를 tmux와 대조했어요([사용법: 라인 디시플린](USAGE.md#키-입력과-라인-디시플린)).
 

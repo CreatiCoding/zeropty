@@ -2,6 +2,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <poll.h>
 #include <pwd.h>
 #include <readpassphrase.h>
 #include <signal.h>
@@ -15,6 +16,7 @@
 #include <sys/ttydefaults.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 
 #define INTERPOSE(n, o) \
@@ -177,9 +179,10 @@ static int my_open(const char *path, int flags, ...) {
 // session's screen (and its scrollback). On the session's terminal they are done here, with the calls
 // above; anywhere else libc's own run as before.
 
-// The session's terminal for a passphrase: a /dev/tty stand-in (or stdin with RPP_STDIN), or -1.
+// The session's terminal for a passphrase (a /dev/tty stand-in), or -1. With RPP_STDIN libc leaves echo
+// alone, so its own readpassphrase already does what it would on a terminal.
 static int passphrase_tty(int flags) {
-  if (flags & RPP_STDIN) return ours(0) ? 0 : -1;
+  if (flags & RPP_STDIN) return -1;
   int fd = my_open("/dev/tty", O_RDWR | O_CLOEXEC);
   if (fd >= 0 && !ours(fd)) { close(fd); fd = -1; }
   return fd;
@@ -204,11 +207,20 @@ static char *read_passphrase(int fd, const char *prompt, char *buf, size_t size,
     t = old;
     if (!(flags & RPP_ECHO_ON)) t.c_lflag &= ~(ECHO | ECHONL);
     my_tcsetattr(fd, TCSAFLUSH, &t);
-    if (!(flags & RPP_STDIN)) (void)!write(fd, prompt, strlen(prompt));
+    // TCSAFLUSH: keys typed ahead are dropped, not taken as the passphrase.
+    char drop[256];
+    while (recv(fd, drop, sizeof drop, MSG_DONTWAIT) > 0) {}
+    // Written to the session's socket: in a session from an older server, fd is the input pipe.
+    int w = out_fd();
+    if (w < 0) w = fd;
+    (void)!write(w, prompt, strlen(prompt));
     size_t i = 0;
     ssize_t n;
     char c;
-    while ((n = read(fd, &c, 1)) == 1 && c != '\n' && c != '\r') {
+    // The program may have made the terminal non-blocking (the socket's flags are shared): wait for keys.
+    while ((n = read(fd, &c, 1)) == 1 || (n < 0 && errno == EAGAIN && poll(&(struct pollfd){ fd, POLLIN, 0 }, 1, -1) >= 0)) {
+      if (n < 0) continue;
+      if (c == '\n' || c == '\r') break;
       if (i + 1 >= size) continue;
       if (flags & RPP_SEVENBIT) c &= 0x7f;
       if (isalpha((unsigned char)c) && (flags & RPP_FORCELOWER)) c = (char)tolower((unsigned char)c);
@@ -217,7 +229,7 @@ static char *read_passphrase(int fd, const char *prompt, char *buf, size_t size,
     }
     buf[i] = 0;
     int e = errno;
-    if (!(t.c_lflag & ECHO)) (void)!write((flags & RPP_STDIN) ? 2 : fd, "\n", 1);
+    if (!(t.c_lflag & ECHO)) (void)!write(w, "\n", 1);
     my_tcsetattr(fd, TCSAFLUSH, &old);
     int again = 0;
     for (int k = 0; k < NS; k++) sigaction(sigs[k], &old_sa[k], NULL);
@@ -242,18 +254,21 @@ static char *my_readpassphrase(const char *prompt, char *buf, size_t size, int f
   if (fd < 0) return readpassphrase(prompt, buf, size, flags);
   char *r = read_passphrase(fd, prompt, buf, size, flags);
   int e = errno;
-  if (fd != 0) close(fd);
+  close(fd);
   errno = e;
   return r;
 }
 
+// As libc's getpass: a failed read gives "", not NULL.
 static char *my_getpass(const char *prompt) {
   static char buf[_PASSWORD_LEN + 1];
   int fd = passphrase_tty(0);
   if (fd < 0) return getpass(prompt);
-  char *r = read_passphrase(fd, prompt, buf, sizeof buf, RPP_ECHO_OFF);
+  if (!read_passphrase(fd, prompt, buf, sizeof buf, RPP_ECHO_OFF)) buf[0] = 0;
+  int e = errno;
   close(fd);
-  return r;
+  errno = e;
+  return buf;
 }
 
 INTERPOSE(my_open, open);
