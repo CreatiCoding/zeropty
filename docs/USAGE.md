@@ -213,7 +213,7 @@ zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"
 Keys pass through a line discipline, just as with a PTY. A new session starts in cooked mode, the same as a fresh PTY.
 
 - Enter becomes a newline, so `read` returns.
-- `C-c`, `C-\` and `C-z` go to the process group as signals: the session's, or the job a shell with job control (zsh, `bash -i`) gave the terminal to. The shell's `tcsetpgrp` reaches zeropty through the shim, so the shell must run with it (`zeropty-tty zsh`); the job itself may be any program, `/usr/bin` included. Only a process group under the session's program is taken.
+- `C-c`, `C-\` and `C-z` go to the process group as signals: the session's, or the job a shell with job control (zsh, `bash -i`) gave the terminal to. The shell's `tcsetpgrp` reaches zeropty through the shim, so the shell must run with it (`zeropty-tty zsh`); the job itself may be any program, `/usr/bin` included. Only a process group with a member under the session's program is taken.
 - Input is collected line by line and can be edited with `BSpace`, `C-u`, `C-w` and `C-v`; `C-d` on an empty line is end of input (EOF).
 - Typed characters are echoed to the screen. So if you send `send-keys -l 'echo hi'`, `echo hi` appears on screen first. When waiting for a result with `wait-pane -m`, pick text that is not in the line you typed.
 - When a program switches to raw mode (claude, vim, the python REPL: the shim reports it), keys pass through unchanged.

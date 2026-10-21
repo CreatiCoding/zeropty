@@ -138,21 +138,19 @@ static int my_tcsetattr(int fd, int act, const struct termios *t) {
   return 0;
 }
 
-// A shell with job control gives the terminal to each job's process group (tcsetpgrp) and takes it back
-// when the job stops or ends. A job leads its own group, so C-c sent to the session's program reached
-// the shell and not the job: the server is told the group instead (an OSC, in the output stream like
-// the modes above), and sends C-c, C-\ and C-z there.
+// A shell with job control gives the terminal to each job's process group (tcsetpgrp, which is this
+// ioctl) and takes it back when the job stops or ends. A job leads its own group, so C-c sent to the
+// session's program reached the shell and not the job: the server is told the group instead (an OSC,
+// in the output stream like the modes above), and sends C-c, C-\ and C-z there.
 static int set_pgrp(pid_t pgrp) {
+  if (pgrp <= 0) { errno = EINVAL; return -1; }
   int out = out_fd();
-  if (out >= 0 && pgrp > 0) {
+  if (out >= 0) {
     char m[40]; int n = snprintf(m, sizeof m, "\033]zeropty-pgrp;%d\007", (int)pgrp);
     (void)!write(out, m, n);
   }
   return 0;
 }
-
-// libc's tcsetpgrp makes the ioctl from inside libc, which interposing does not reach (zsh calls it).
-static int my_tcsetpgrp(int fd, pid_t pgrp) { return ours(fd) ? set_pgrp(pgrp) : tcsetpgrp(fd, pgrp); }
 
 static int my_ioctl(int fd, unsigned long req, ...) {
   va_list ap; va_start(ap, req); void *arg = va_arg(ap, void *); va_end(ap);
@@ -294,4 +292,3 @@ INTERPOSE(my_isatty, isatty);
 INTERPOSE(my_tcgetattr, tcgetattr);
 INTERPOSE(my_tcsetattr, tcsetattr);
 INTERPOSE(my_ioctl, ioctl);
-INTERPOSE(my_tcsetpgrp, tcsetpgrp);

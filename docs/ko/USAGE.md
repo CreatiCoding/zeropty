@@ -213,7 +213,7 @@ zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"
 키는 PTY처럼 라인 디시플린을 거쳐요. 새 세션은 새 PTY와 같은 cooked 모드예요.
 
 - Enter가 줄바꿈이 돼서 `read`가 끝나요.
-- `C-c`, `C-\`, `C-z`는 프로세스 그룹에 시그널로 가요. 세션의 그룹이거나, job control이 있는 셸(zsh, `bash -i`)이 터미널을 넘겨준 작업의 그룹이에요. 셸의 `tcsetpgrp`는 shim을 거쳐 zeropty에 전달되므로 셸은 shim과 함께 돌아야 해요(`zeropty-tty zsh`). 작업 자체는 `/usr/bin` 프로그램을 포함해 어떤 프로그램이든 돼요. 세션 프로그램 아래의 프로세스 그룹만 받아들여요.
+- `C-c`, `C-\`, `C-z`는 프로세스 그룹에 시그널로 가요. 세션의 그룹이거나, job control이 있는 셸(zsh, `bash -i`)이 터미널을 넘겨준 작업의 그룹이에요. 셸의 `tcsetpgrp`는 shim을 거쳐 zeropty에 전달되므로 셸은 shim과 함께 돌아야 해요(`zeropty-tty zsh`). 작업 자체는 `/usr/bin` 프로그램을 포함해 어떤 프로그램이든 돼요. 세션 프로그램 아래에 멤버가 있는 프로세스 그룹만 받아들여요.
 - 줄 단위로 모으면서 `BSpace`, `C-u`, `C-w`, `C-v`로 편집하고, 빈 줄의 `C-d`는 입력 끝(EOF)이에요.
 - 입력한 글자가 화면에 에코돼요. 그래서 `send-keys -l 'echo hi'`를 보내면 화면에 `echo hi`가 먼저 보여요. `wait-pane -m`으로 결과를 기다릴 때는 입력한 줄에 없는 글자를 고르세요.
 - 프로그램이 raw 모드로 바꾸면(claude, vim, python REPL: shim이 알려요) 키가 그대로 가요.

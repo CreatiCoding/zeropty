@@ -45,14 +45,25 @@ pub(crate) fn name(pid: i32) -> String {
     String::from_utf8_lossy(&comm).into_owned()
 }
 
-/// Whether process group `pgid` is led by `root` or by a process descended from it. A group whose
-/// leader is gone is not: it cannot be told from a stranger's that took the number.
+/// Whether a live member of process group `pgid` is `root` or descends from it. Any member, not just
+/// the leader: a pipeline's leader is its first command, often gone while the rest run (`true | sleep`).
+/// A group with no member under `root` is not taken: a stranger's may have reused the number.
 pub(crate) fn group_under(pgid: i32, root: i32) -> bool {
-    let mut pid = pgid;
-    match bsd_info(pid) {
-        Some(i) if i.pbi_pgid as i32 == pgid => {}
-        _ => return false,
+    // PROC_PGRP_ONLY in <libproc.h>; libc does not name it.
+    const PROC_PGRP_ONLY: u32 = 2;
+    if pgid <= 0 {
+        return false;
     }
+    let mut pids = [0i32; 64];
+    let size = std::mem::size_of_val(&pids) as i32;
+    // SAFETY: proc_listpids writes at most `size` bytes of pids into `pids`, which has exactly that size.
+    let n = unsafe { libc::proc_listpids(PROC_PGRP_ONLY, pgid as u32, pids.as_mut_ptr().cast(), size) };
+    let n = (n.max(0) as usize / std::mem::size_of::<i32>()).min(pids.len());
+    pids[..n].iter().any(|&p| p > 0 && descends(p, root))
+}
+
+/// Whether process `pid` is `root` or descends from it.
+fn descends(mut pid: i32, root: i32) -> bool {
     // Parents up to the session's program, or to launchd; a bound on the depth, in case of a cycle.
     for _ in 0..256 {
         if pid == root {
@@ -123,5 +134,17 @@ mod tests {
         child.kill().unwrap();
         child.wait().unwrap();
         assert!(!super::group_under(job, me), "gone");
+        // A pipeline whose first command (the group's leader) ended: the rest still count.
+        let mut sh = std::process::Command::new("/bin/sh").args(["-c", "sleep 5 & exit 0"]).process_group(0).spawn().unwrap();
+        let group = sh.id() as i32;
+        sh.wait().unwrap();
+        assert!(!super::group_under(group, me), "the sleep was reparented away from us");
+        let mut first = std::process::Command::new("/usr/bin/true").process_group(0).spawn().unwrap();
+        let group = first.id() as i32;
+        let mut rest = std::process::Command::new("/bin/sleep").arg("5").process_group(group).spawn().unwrap();
+        first.wait().unwrap();
+        assert!(super::group_under(group, me), "a member outlives the leader");
+        rest.kill().unwrap();
+        rest.wait().unwrap();
     }
 }

@@ -22,7 +22,8 @@ release; polish that draft into entries written in English, and add the same ent
 - `C-c`, `C-\` and `C-z` typed at a job in a shell with job control (zsh, `bash -i`) run through `zeropty-tty` went to
   the shell, not the job: `sleep 30` could not be stopped. A job leads its own process group, and the shell's
   `tcsetpgrp` was swallowed by the shim. The shim now reports it, and zeropty signals that group as a tty does its
-  foreground group, so `C-z` and `fg` work too. Only a process group under the session's program is taken.
+  foreground group, so `C-z` and `fg` work too, pipelines included. Only a process group with a member under the
+  session's program is taken. A shell started before the upgrade keeps the old shim: start it again.
 
 ## [0.1.4] - 2026-10-21
 
