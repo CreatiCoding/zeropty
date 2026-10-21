@@ -87,6 +87,8 @@ pub(super) struct Sess {
     pub(super) bracketed_paste: bool,
     /// The tty's input modes (crate::term::TTY_*), readable without unpacking a frozen screen.
     pub(super) tty: u8,
+    /// The process group a shell in it gave the terminal to (crate::term::Term::foreground), likewise.
+    pub(super) fg: i32,
     /// When it was made, in seconds since 1970 (#{session_created}).
     pub(super) created: u32,
     pub(super) rows: u16,
@@ -277,6 +279,7 @@ impl Sess {
             app_cursor,
             bracketed_paste,
             tty: s.term.tty(),
+            fg: s.term.foreground(),
             created: s.created,
             rows: s.size.0,
             cols: s.size.1,
@@ -446,10 +449,11 @@ impl Sess {
         // Caught up: what this read unpacked is packed again, so a busy screen holds unpacked only the
         // rows being parsed (it held tens of KB while claude redrew a long answer).
         t.pack_live();
-        let ((a, b), tty) = (t.modes(), t.tty());
+        let ((a, b), tty, fg) = (t.modes(), t.tty(), t.foreground());
         self.app_cursor = a;
         self.bracketed_paste = b;
         self.tty = tty;
+        self.fg = fg;
     }
 
     fn close_out(&mut self) {
@@ -517,7 +521,7 @@ impl Sess {
         for (at, sig) in typed.signals {
             self.write(poller, udata, &typed.out[from..at])?;
             from = at;
-            programs.signal_group(self.pid, sig);
+            programs.signal_group(self.foreground(programs), sig);
         }
         self.write(poller, udata, &typed.out[from..])?;
         if typed.eof {
@@ -529,6 +533,14 @@ impl Sess {
         }
         self.trim_extra();
         Ok(echoed)
+    }
+
+    /// The process group C-c, C-\ and C-z signal, as a tty's foreground group: the job a shell in the
+    /// session gave the terminal to (it leads its own group, so signalling the program's missed it), else
+    /// the program's. A group the output names is taken only when it is the program's or a descendant's:
+    /// any program can print the sequence, and one gone since may have its number reused.
+    fn foreground(&self, programs: &impl Programs) -> i32 {
+        if self.fg > 0 && self.fg != self.pid && programs.group_under(self.fg, self.pid) { self.fg } else { self.pid }
     }
 
     /// Writes the line typed while the tty was canonical, if any, to the program.

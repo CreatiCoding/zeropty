@@ -138,6 +138,20 @@ static int my_tcsetattr(int fd, int act, const struct termios *t) {
   return 0;
 }
 
+// A shell with job control gives the terminal to each job's process group (tcsetpgrp, which is this
+// ioctl) and takes it back when the job stops or ends. A job leads its own group, so C-c sent to the
+// session's program reached the shell and not the job: the server is told the group instead (an OSC,
+// in the output stream like the modes above), and sends C-c, C-\ and C-z there.
+static int set_pgrp(pid_t pgrp) {
+  if (pgrp <= 0) { errno = EINVAL; return -1; }
+  int out = out_fd();
+  if (out >= 0) {
+    char m[40]; int n = snprintf(m, sizeof m, "\033]zeropty-pgrp;%d\007", (int)pgrp);
+    (void)!write(out, m, n);
+  }
+  return 0;
+}
+
 static int my_ioctl(int fd, unsigned long req, ...) {
   va_list ap; va_start(ap, req); void *arg = va_arg(ap, void *); va_end(ap);
   if (ours(fd)) {
@@ -150,7 +164,7 @@ static int my_ioctl(int fd, unsigned long req, ...) {
     // The program is the terminal's foreground process group: libedit (python's REPL, sftp ...) turns
     // line editing off, prompt and all, when tcgetpgrp fails.
     if (req == TIOCGPGRP) { *(pid_t *)arg = getpgrp(); return 0; }
-    if (req == TIOCSPGRP) return 0;
+    if (req == TIOCSPGRP) return set_pgrp(*(pid_t *)arg);
     if (req == TIOCGETA) return my_tcgetattr(fd, arg);
     if (req == TIOCSETA || req == TIOCSETAW || req == TIOCSETAF) return my_tcsetattr(fd, 0, arg);
   }

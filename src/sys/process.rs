@@ -28,17 +28,53 @@ pub(crate) fn reap(pid: i32) {
     unsafe { libc::waitpid(pid, &mut status, libc::WNOHANG) };
 }
 
-/// The name of process `pid` (its command, at most 16 bytes, as ps and tmux show it); empty if unknown.
-pub(crate) fn name(pid: i32) -> String {
+/// What `ps` shows of process `pid`, or None if there is no such process.
+fn bsd_info(pid: i32) -> Option<libc::proc_bsdinfo> {
     // SAFETY: proc_bsdinfo is plain data; all-zero is a valid value.
     let mut info: libc::proc_bsdinfo = unsafe { std::mem::zeroed() };
     let size = std::mem::size_of_val(&info) as i32;
     // SAFETY: proc_pidinfo writes at most `size` bytes into `info`, which has exactly that size.
-    if unsafe { libc::proc_pidinfo(pid, libc::PROC_PIDTBSDINFO, 0, (&mut info as *mut libc::proc_bsdinfo).cast(), size) } != size {
-        return String::new();
-    }
+    let n = unsafe { libc::proc_pidinfo(pid, libc::PROC_PIDTBSDINFO, 0, (&mut info as *mut libc::proc_bsdinfo).cast(), size) };
+    (n == size).then_some(info)
+}
+
+/// The name of process `pid` (its command, at most 16 bytes, as ps and tmux show it); empty if unknown.
+pub(crate) fn name(pid: i32) -> String {
+    let Some(info) = bsd_info(pid) else { return String::new() };
     let comm: Vec<u8> = info.pbi_comm.iter().take_while(|&&c| c != 0).map(|&c| c as u8).collect();
     String::from_utf8_lossy(&comm).into_owned()
+}
+
+/// Whether a live member of process group `pgid` is `root` or descends from it. Any member, not just
+/// the leader: a pipeline's leader is its first command, often gone while the rest run (`true | sleep`).
+/// A group with no member under `root` is not taken: a stranger's may have reused the number.
+pub(crate) fn group_under(pgid: i32, root: i32) -> bool {
+    // PROC_PGRP_ONLY in <libproc.h>; libc does not name it.
+    const PROC_PGRP_ONLY: u32 = 2;
+    if pgid <= 0 {
+        return false;
+    }
+    let mut pids = [0i32; 64];
+    let size = std::mem::size_of_val(&pids) as i32;
+    // SAFETY: proc_listpids writes at most `size` bytes of pids into `pids`, which has exactly that size.
+    let n = unsafe { libc::proc_listpids(PROC_PGRP_ONLY, pgid as u32, pids.as_mut_ptr().cast(), size) };
+    let n = (n.max(0) as usize / std::mem::size_of::<i32>()).min(pids.len());
+    pids[..n].iter().any(|&p| p > 0 && descends(p, root))
+}
+
+/// Whether process `pid` is `root` or descends from it.
+fn descends(mut pid: i32, root: i32) -> bool {
+    // Parents up to the session's program, or to launchd; a bound on the depth, in case of a cycle.
+    for _ in 0..256 {
+        if pid == root {
+            return true;
+        }
+        match bsd_info(pid) {
+            Some(i) if i.pbi_ppid as i32 > 1 => pid = i.pbi_ppid as i32,
+            _ => return false,
+        }
+    }
+    false
 }
 
 /// The working directory of process `pid`; empty if unknown.
@@ -83,5 +119,32 @@ mod tests {
         assert_eq!(super::name(-5), "", "no such process");
         let (a, _b) = crate::sys::fd::socket_pair().unwrap();
         assert!(super::peer_is_same_user(&a));
+    }
+
+    #[test]
+    fn tells_a_descendants_group() {
+        use std::os::unix::process::CommandExt as _;
+        let me = std::process::id() as i32;
+        let mut child = std::process::Command::new("/bin/sleep").arg("5").process_group(0).spawn().unwrap();
+        let job = child.id() as i32;
+        assert!(super::group_under(job, me), "a child leading its own group");
+        assert!(super::group_under(job, job), "the program's own group");
+        assert!(!super::group_under(job, job + 1_000_000), "not under a stranger");
+        assert!(!super::group_under(-5, me), "no such group");
+        child.kill().unwrap();
+        child.wait().unwrap();
+        assert!(!super::group_under(job, me), "gone");
+        // A pipeline whose first command (the group's leader) ended: the rest still count.
+        let mut sh = std::process::Command::new("/bin/sh").args(["-c", "sleep 5 & exit 0"]).process_group(0).spawn().unwrap();
+        let group = sh.id() as i32;
+        sh.wait().unwrap();
+        assert!(!super::group_under(group, me), "the sleep was reparented away from us");
+        let mut first = std::process::Command::new("/usr/bin/true").process_group(0).spawn().unwrap();
+        let group = first.id() as i32;
+        let mut rest = std::process::Command::new("/bin/sleep").arg("5").process_group(group).spawn().unwrap();
+        first.wait().unwrap();
+        assert!(super::group_under(group, me), "a member outlives the leader");
+        rest.kill().unwrap();
+        rest.wait().unwrap();
     }
 }

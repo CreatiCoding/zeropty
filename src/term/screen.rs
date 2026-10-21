@@ -51,6 +51,8 @@ pub struct Screen {
     pub(super) modes: u8,
     /// TTY_* flags.
     pub(super) tty: u8,
+    /// The process group a shell gave the terminal to (tcsetpgrp, as the shim reports it); 0: none.
+    pub(super) fg: i32,
     pub(super) palette: Palette,
     /// palette id of `attrs`
     pub(super) cur: u16,
@@ -83,6 +85,7 @@ impl Screen {
             saved_attrs: Attrs::default(),
             modes: 0,
             tty: 0,
+            fg: 0,
             palette: Palette::new(),
             cur: 0,
             cb: CB_NONE,

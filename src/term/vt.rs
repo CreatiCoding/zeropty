@@ -74,6 +74,12 @@ impl vte::Perform for Screen {
         {
             self.tty = f & TTY_COOKED;
         }
+        // From the shim: a shell gave the terminal to a job's process group (tcsetpgrp).
+        if let [b"zeropty-pgrp", pgid] = params
+            && let Some(p) = std::str::from_utf8(pgid).ok().and_then(|p| p.parse::<i32>().ok()).filter(|&p| p > 0)
+        {
+            self.fg = p;
+        }
     }
 
     fn csi_dispatch(&mut self, params: &vte::Params, intermediates: &[u8], _ignore: bool, c: char) {

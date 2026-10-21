@@ -397,6 +397,19 @@ impl Term {
         self.screen.tty = flags
     }
 
+    /// The process group a shell in the program gave the terminal to (a job it runs), as the shim
+    /// reports it; 0 if none was.
+    ///
+    /// ```
+    /// let mut t = zeropty::term::Term::new(1, 10, 0);
+    /// assert_eq!(t.foreground(), 0);
+    /// t.process(b"\x1b]zeropty-pgrp;4242\x07"); // what zeropty-tty reports for tcsetpgrp(fd, 4242)
+    /// assert_eq!(t.foreground(), 4242);
+    /// ```
+    pub fn foreground(&self) -> i32 {
+        self.screen.fg
+    }
+
     /// Bytes held for cells and scrollback; not exact allocator usage.
     ///
     /// ```
