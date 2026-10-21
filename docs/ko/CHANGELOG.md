@@ -15,6 +15,8 @@ zeropty의 사용자에게 보이는 변경을 모두 여기에 적어요.
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-10-21
+
 ### Fixed
 
 - `zeropty-tty`: `ssh`, `ssh-keygen`, `ssh-add` 등 `readpassphrase`나 `getpass`를 쓰는 프로그램에 친 암호가 세션 화면에
@@ -124,7 +126,8 @@ hardened runtime으로 서명된 프로그램은 shim을 못 읽어서 `zeropty-
 
 - 출력을 읽는 쪽이 파이프를 일찍 닫아도(`zeropty capture-pane -p ... | head -1`) CLI가 패닉하지 않아요.
 
-[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/CreatiCoding/zeropty/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/CreatiCoding/zeropty/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/CreatiCoding/zeropty/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/CreatiCoding/zeropty/compare/v0.1.0...v0.1.1
