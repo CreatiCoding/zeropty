@@ -12,7 +12,7 @@ for i in {1..$N}; do
   if (( i % 333 == 0 )); then c="cat $RAW; printf '\\n MARKER-ASK %d\\n' $i; exec sleep 100000"; else c="cat $RAW; exec sleep 100000"; fi
   zeropty new-session -d -s s$i -x 220 -y 80 "$c" || { echo fail $i; break }
 done
-PID=$(pgrep -f "dist/zeropty serve" | head -1)
+PID=$(lsof -t $ZEROPTY_SOCK | head -1)  # this socket's server, not another one running
 fp() { footprint $PID 2>/dev/null | awk '/phys_footprint:/{print $2,$3; exit}' }
 sleep 14; echo "idle (deep frozen): $(fp)"
 t() { local s=$EPOCHREALTIME; "$@"; printf '  %.0f ms  footprint %s\n' $(( (EPOCHREALTIME - s) * 1000 )) "$(fp)" }

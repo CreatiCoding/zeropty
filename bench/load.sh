@@ -24,7 +24,8 @@ phase() { [ "$MODE" = trace ] && awk -v i="$1" 'BEGIN { x = i * 0.6180339887; pr
 if [ "$KIND" = zeropty ]; then
   export ZEROPTY_SOCK=$HOME/.zeropty/bench.sock ZEROPTY_HISTORY=2000; C="$ROOT/dist/zeropty"
   for i in $(seq 1 "$N"); do $C new-session -d -s "s$i" -x 220 -y 80 "$CMD$(phase "$i")" || { echo "fail $i"; break; }; done
-  PID=$(pgrep -f "zeropty serve" | head -1)
+  # The process holding this socket: another zeropty server may be running.
+  PID=$(lsof -t "$ZEROPTY_SOCK" | head -1)
 else
   C="tmux -L bench"; $C kill-server 2>/dev/null
   for i in $(seq 1 "$N"); do $C new-session -d -s "s$i" -x 220 -y 80 "$CMD$(phase "$i")" || { echo "fail $i"; break; }; done

@@ -30,7 +30,8 @@ function start() {
       `perl ${root}/tests/replay_trace.pl ${root}/tests/streams/claude2.trace ${phase} & P=$!; sleep ${secs}; kill $P; ` +
       `perl -MTime::HiRes=time -e 'printf "\\nTASK-DONE %d\\n", time*1000'; exec sleep 1000`)
   }
-  return Number(execFileSync('pgrep', ['-f', `zeropty serve`], { encoding: 'utf8' }).trim().split('\n')[0])
+  // The process holding this socket: another zeropty server may be running.
+  return Number(execFileSync('lsof', ['-t', sock], { encoding: 'utf8' }).trim().split('\n')[0])
 }
 
 const doneAt = (screen) => Number(/TASK-DONE (\d+)/.exec(screen)?.[1])
