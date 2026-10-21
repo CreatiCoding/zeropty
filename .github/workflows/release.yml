@@ -1,0 +1,74 @@
+# Attaches the prebuilt macOS archive and SHA256SUMS to the GitHub Release of each vX.Y.Z tag
+# (docs/RELEASING.md). Creates the release from the CHANGELOG when the tag has none yet. A pull request
+# that changes what goes into the archive builds and smoke-tests it without publishing it.
+# This is the only hosted job: every other check runs on a Mac before the push (scripts/check.sh).
+name: release
+
+on:
+  push:
+    tags: ['v[0-9]*']
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - scripts/package.sh
+      - scripts/release.mjs
+      - Cargo.toml
+      - Cargo.lock
+      - src/**
+      - shim/**
+      - zeropty-tty
+      - claude-zeropty
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust targets
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+      - name: The tag is the version
+        if: github.ref_type == 'tag'
+        run: node scripts/release.mjs check --tag "$GITHUB_REF_NAME"
+      - name: Release notes from the CHANGELOG
+        run: node scripts/release.mjs release-notes >"$RUNNER_TEMP/notes.md" && cat "$RUNNER_TEMP/notes.md"
+      - name: Pack and smoke-test
+        run: scripts/package.sh
+      - run: cp "$RUNNER_TEMP/notes.md" dist/release/notes.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: |
+            dist/release/*.tar.gz
+            dist/release/SHA256SUMS
+            dist/release/notes.md
+          if-no-files-found: error
+
+  publish:
+    needs: package
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          # A version with a pre-release part (v0.2.0-rc.1) is a prerelease, never "Latest".
+          pre=""
+          case "$tag" in *-*) pre="--prerelease" ;; esac
+          # Created by hand first (or meanwhile), the release keeps its body.
+          gh release view "$tag" >/dev/null 2>&1 ||
+            gh release create "$tag" --verify-tag $pre --title "zeropty ${tag#v}" --notes-file notes.md ||
+            gh release view "$tag" >/dev/null
+          # Never replaces files already there: a rebuild is not byte-identical, and a changed hash would
+          # break whoever pinned it. To replace them on purpose, delete them from the release first.
+          gh release upload "$tag" ./*.tar.gz SHA256SUMS

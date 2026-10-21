@@ -16,6 +16,8 @@
                                                     [Unreleased]를 ## [X.Y.Z] - 날짜로 옮김
                                      │
                                      ▼  병합 후, 관리자가 태그 vX.Y.Z (release.mjs check --tag가 태그와 버전을 대조)
+태그 push: .github/workflows/release.yml ──▶ macOS 묶음을 빌드·스모크 테스트하고, 그것과 SHA256SUMS를
+                                           GitHub Release에 붙임 (릴리스는 CHANGELOG로 만듦)
 ```
 
 - **변경 기록의 원천은 커밋이에요.** 모든 커밋은 [Conventional Commits](https://www.conventionalcommits.org/ko/v1.0.0/) 형식이고(`scripts/check.sh`와 `.githooks/commit-msg`가 확인), 그 타입으로 릴리스 단계가 정해져요.
@@ -74,10 +76,12 @@ node scripts/release.mjs check              # 모든 곳의 버전이 같은지 
 node scripts/release.mjs check --tag v0.2.0 # 그리고 태그가 그 버전인지 (태그가 달린 HEAD에서 scripts/check.sh도 실행)
 node scripts/release.mjs next               # 마지막 태그 이후 커밋으로 계산한 다음 버전
 node scripts/release.mjs notes              # [Unreleased] 초안 (git-cliff, 없으면 npx로 받아요)
+node scripts/release.mjs release-notes 0.2.0 # GitHub Release 본문 (CHANGELOG.md의 ## [0.2.0]으로 만들어요)
 node scripts/release.mjs bump minor --dry-run
 node scripts/release.mjs bump <major|minor|patch|auto|X.Y.Z[-pre]> [--date YYYY-MM-DD] [--generate]
 node scripts/check-commits.mjs --range origin/main..HEAD --changelog   # scripts/check.sh의 커밋·변경 기록 검사만 (섹션 대조 포함)
 scripts/smoke-version.sh                    # dist/의 CLI·서버·C·Node 버전이 같은지 (scripts/check.sh의 version smoke tests 단계)
+scripts/package.sh                          # dist/release/에 릴리스 묶음과 SHA256SUMS를 만들고 푼 상태로 스모크 테스트 (rustup target add aarch64-apple-darwin x86_64-apple-darwin 필요)
 rustup run 1.88.0 cargo check --workspace --all-targets --locked   # MSRV (scripts/check.sh의 MSRV 단계)
 node scripts/check-api.mjs                  # dist/(./build.sh)의 C ABI·Node 내보내기가 api/*.txt와 같은지
 node scripts/check-api.mjs --base origin/main   # 기준선에서 사라진 줄이 깨는 변경으로 표시됐는지 (PR 검사)
@@ -122,7 +126,15 @@ node --test scripts/test/*.test.mjs         # 도구 자체의 테스트 (git-cl
    git tag -a v0.2.0 -m "zeropty 0.2.0"
    git push origin v0.2.0
    ```
-   push하기 전에 `node scripts/release.mjs check --tag v0.2.0`으로 태그와 버전이 같은지 확인해요(태그가 달린 HEAD에서는 `scripts/check.sh`도 이 검사를 해요). GitHub Release를 만든다면 본문에 CHANGELOG의 `## [0.2.0]` 섹션을 붙이되, 상대 링크는 `https://github.com/CreatiCoding/zeropty/blob/v0.2.0/<경로>`로 바꿔요(릴리스 본문에서는 `/releases/` 아래로 풀려서 깨져요).
+   push하기 전에 `node scripts/release.mjs check --tag v0.2.0`으로 태그와 버전이 같은지 확인해요(태그가 달린 HEAD에서는 `scripts/check.sh`도 이 검사를 해요).
+8. **태그가 릴리스를 올려요.** `.github/workflows/release.yml`(macOS runner)이 태그와 버전을 대조하고 `scripts/package.sh`를 돌려, 두 파일을 릴리스에 붙여요.
+   - `zeropty-0.2.0-darwin-universal.tar.gz`: 폴더 `zeropty-0.2.0-darwin-universal/` 하나에 `zeropty`(arm64 + x86_64, `lipo`), `shim.dylib`(arm64, arm64e, x86_64), `zeropty-tty`, `claude-zeropty`, `LICENSE-APACHE`, `LICENSE-MIT`가 실행 권한 그대로 들어 있어요. `zeropty`와 `shim.dylib`는 ad-hoc 서명(`codesign -s -`)이에요. Developer ID 서명과 공증은 나중에 더할 수 있어요.
+   - `SHA256SUMS`: 묶음의 `shasum -a 256`. 버전을 고정하는 쪽은 이 해시를 고정해요.
+
+   태그에 릴리스가 아직 없으면 워크플로가 `node scripts/release.mjs release-notes 0.2.0`을 본문으로 만들어요(CHANGELOG 섹션을 항목당 한 줄로, 상대 링크는 태그 기준 절대 링크로). 프리릴리스 부분이 있는 태그(`v0.2.0-rc.1`)는 프리릴리스가 되고 "Latest"가 되지 않아요. 워크플로가 닿기 전(push 후 1분쯤)에 손으로 만든 릴리스는 본문을 그대로 둬요. Actions에서 실행 결과를 보고, 두 파일을 받아 `shasum -a 256 -c SHA256SUMS`를 돌려 확인해요. 두 바이너리는 macOS 11 이상에서 로드돼요(`package.sh`가 슬라이스마다 최소 버전을 확인해요).
+   - 워크플로는 릴리스에 이미 있는 파일을 바꾸지 않아요. 다시 빌드하면 바이트가 같지 않아서, 해시가 바뀌면 이전 해시를 고정한 쪽이 깨지기 때문이에요. 일부러 바꾸려면 릴리스에서 파일을 지운 뒤 다시 돌려요.
+   - 다시 돌리면 태그가 가리키는 커밋을 그대로 다시 빌드해요. 그래서 저장소 밖의 실패(runner, 네트워크)에만 도움이 되고, 묶음 쪽을 고친 내용은 새 커밋과 다음 PATCH 릴리스로 내보내야 해요.
+   - 임베딩 라이브러리와 bash builtin은 묶음에 없고 `./build.sh`로 만들어요.
 
 > 0.1.0은 첫 공개 커밋(`c612089`)이고 `v0.1.0` 태그가 달려 있어요. 0.1.1이 이 도구로 만든 첫 릴리스예요. `next`·`notes`는 마지막 태그부터 계산해요.
 
