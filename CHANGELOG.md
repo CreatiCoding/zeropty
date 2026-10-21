@@ -17,10 +17,12 @@ release; polish that draft into entries written in English, and add the same ent
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-21
+
 ### Added
 
 - Each release now carries a prebuilt macOS archive, `zeropty-<version>-darwin-universal.tar.gz` (Apple silicon and
-  Intel), and `SHA256SUMS`, so zeropty installs without Rust: download, `shasum -a 256 -c SHA256SUMS`, unpack, and
+  Intel, macOS 11 or later), and `SHA256SUMS`, so zeropty installs without Rust: download, `shasum -a 256 -c SHA256SUMS`, unpack, and
   run from the folder. It holds `zeropty`, `shim.dylib`, `zeropty-tty`, `claude-zeropty` and the licenses, signed
   ad hoc. The embedding libraries and the bash builtin still come from `./build.sh` ([README](README.md#install)).
 
@@ -126,7 +128,8 @@ the interfaces in docs/VERSIONING.md.
 
 - The CLI no longer panics when the reader closes the pipe early (`zeropty capture-pane -p ... | head -1`).
 
-[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/CreatiCoding/zeropty/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/CreatiCoding/zeropty/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/CreatiCoding/zeropty/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/CreatiCoding/zeropty/releases/tag/v0.1.0
