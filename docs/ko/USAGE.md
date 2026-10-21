@@ -186,10 +186,10 @@ tmux와 같은 세션에서 대조했어요. `#{version}`만 쓰는 포맷은 �
 
 ## 셸에서 빠르게: zsh 함수, bash builtin
 
-`zeropty` 프로그램을 실행하면 명령마다 프로세스가 떠요(2.47\~2.60ms). 셸 안에서 소켓에 바로 말하면 그 비용이 없어요.
+`zeropty` 프로그램을 실행하면 명령마다 프로세스가 떠요(3.59\~4.23ms). 셸 안에서 소켓에 바로 말하면 그 비용이 없어요.
 
-- **zsh:** `.zshrc`에 `source /path/to/zeropty/shell/zeropty.zsh`를 넣으면 `zeropty`가 셸 함수가 돼요(p50 `send-keys -l` 0.11ms로 tmux CLI보다 42.3\~43.4배, `has-session` 0.11\~0.20ms로 21.7\~40.4배, 2000줄 `capture-pane` 0.45\~0.48ms로 10.3\~11.1배 빨라요). zsh에 기본으로 있는 `zsh/net/socket` 모듈을 써요.
-- **bash:** `enable -f /path/to/zeropty/dist/zeropty_bash.dylib zeropty`를 한 번 하면 `zeropty`가 builtin이 돼요(명령당 0.035\~0.115ms, tmux CLI보다 37.8\~133배 빨라요). macOS 기본 `/bin/bash`(3.2)에서 확인했어요.
+- **zsh:** `.zshrc`에 `source /path/to/zeropty/shell/zeropty.zsh`를 넣으면 `zeropty`가 셸 함수가 돼요(p50 `send-keys -l` 0.12ms로 tmux CLI보다 50.9\~52.7배, `has-session` 0.11\~0.17ms로 35.5\~56.2배, 2000줄 `capture-pane` 0.50\~0.55ms로 12.1\~13.5배 빨라요). zsh에 기본으로 있는 `zsh/net/socket` 모듈을 써요.
+- **bash:** `enable -f /path/to/zeropty/dist/zeropty_bash.dylib zeropty`를 한 번 하면 `zeropty`가 builtin이 돼요(명령당 0.041\~0.138ms, tmux CLI보다 48.7\~157배 빨라요). macOS 기본 `/bin/bash`(3.2)에서 확인했어요.
 - 둘 다 인자 없는 실행, `attach`(`attach-session`, `a`), `serve`, `restart-server`, `-V`·`--version`, `-h`·`--help`·`help`, 그리고 서버가 없을 때의 명령(`new-session`이 서버를 띄워야 하니까요)은 프로그램을 실행해요. 프로그램 위치는 `ZEROPTY_BIN`으로 바꿀 수 있어요.
 - zsh에서는 `=work:`가 명령 경로로 바뀌어요(`=` 확장). `'=work:'`처럼 따옴표로 감싸요. tmux도 같아요.
 
@@ -253,7 +253,7 @@ const r = await zeropty(['capture-pane', '-p', '-t', '=work:'])   // { ok, code,
 |---|---|
 | `zeropty(argv, { cwd, sock, timeout })` | 명령 하나를 보내고 `{ ok, code, out, err }`로 답해요. 서버가 없으면 CLI를 실행해요(`new-session`이 서버를 띄워요). 기본 타임아웃 15초 |
 | `zeropty(['wait-pane', ...])` | 연결을 따로 열어서, 기다리는 동안에도 다른 명령은 공유 연결로 바로 처리돼요. 기본 타임아웃 없음(`-T`나 `{ timeout }`으로 줘요) |
-| `zeroptySync(argv, { cwd, sock })` | 같은 일을 동기로 해요. `dist/zeropty.node` 필요, 명령당 0.11\~0.20ms 동안 스레드를 막아요 |
+| `zeroptySync(argv, { cwd, sock })` | 같은 일을 동기로 해요. `dist/zeropty.node` 필요, 명령당 0.13\~0.26ms 동안 스레드를 막아요 |
 | `sockPath()`, `cliPath()` | 쓰는 소켓(`ZEROPTY_SOCK`)과 CLI(`ZEROPTY_BIN`) 경로 |
 
 실행해 볼 수 있는 예제: [`examples/node/quickstart.mjs`](../../examples/node/quickstart.mjs)
@@ -271,7 +271,7 @@ await zeropty(['new-session', '-d', '-s', 'w', 'exec cat'])
 
 | 함수 | 하는 일 |
 |---|---|
-| `zeropty(argv, { cwd })`, `zeroptySync(argv, { cwd })` | 서버 클라이언트와 같은 호출, 같은 결과. `send-keys` p50 0.04\~0.06ms, `capture-pane` 0.06\~0.07ms(바쁜 세션 0.09\~0.12ms) ([측정](BENCHMARKS.md)) |
+| `zeropty(argv, { cwd })`, `zeroptySync(argv, { cwd })` | 서버 클라이언트와 같은 호출, 같은 결과. `send-keys` p50 0.06\~0.07ms, `capture-pane` 0.06\~0.07ms(바쁜 세션 0.10\~0.17ms) ([측정](BENCHMARKS.md)) |
 | `open({ history, sizeDir, polled })` | 첫 명령 전에 옵션을 주고 엔진을 시작해요(안 부르면 첫 명령이 기본값으로 시작해요) |
 | `listen(소켓)` | [서버 플러그인](#서버-플러그인-내-프로그램이-소켓도-열기) |
 
@@ -321,7 +321,7 @@ fn main() {
 
 빌드에는 macOS와 Xcode Command Line Tools가 필요해요(`zstd-sys`가 C 코드를 컴파일해요). 터미널이 필요한 프로그램을 띄우는 shim은 crate에 들어 있지 않아요. 그럴 때는 이 저장소의 `./build.sh`로 만든 `dist/zeropty-tty`를 써요.
 
-**polled: 엔진 스레드 없이 (Node 기본값, 대기 400개에서 0.72MB → 0.39\~0.41MB).** 호스트의 이벤트 루프가 엔진을 돌려요. 모든 호출은 그 루프 스레드에서 해요. Node에서는 libuv가 엔진 fd를 지켜봐서 따로 할 일이 없어요.
+**polled: 엔진 스레드 없이 (Node 기본값, 대기 400개에서 0.74MB → 0.45\~0.46MB).** 호스트의 이벤트 루프가 엔진을 돌려요. 모든 호출은 그 루프 스레드에서 해요. Node에서는 libuv가 엔진 fd를 지켜봐서 따로 할 일이 없어요.
 
 ```js
 open({ polled: false })   // Node에서 엔진 스레드를 쓰려면 (worker 스레드에서 부를 때). 첫 명령 전에 불러요
@@ -442,7 +442,7 @@ zeropty는 **프로그램을 띄워 두고 화면을 읽고 키를 보내는 일
 | PTY | 세션마다 1개 (macOS 한도 511\~999개) | 안 씀, 세션 1000개 이상 |
 | 전체화면 프로그램 (vim 등) | ✅ | `zeropty-tty <프로그램>`으로 띄우면 돼요. vim(편집·저장), less(페이지 넘기기·종료), python REPL(줄 편집·히스토리), claude를 확인했어요. `top`·`ps`처럼 권한(setuid, entitlement)이 필요한 시스템 프로그램은 안 돼요 |
 | 프로그램용 접속 | 제어 모드(`-C`) | JSON 소켓 프로토콜, Node 클라이언트 |
-| 모든 세션 화면에서 글자 찾기 | ❌ 세션마다 `capture-pane` | ✅ `grep-panes` (1000개 12\~17ms) |
+| 모든 세션 화면에서 글자 찾기 | ❌ 세션마다 `capture-pane` | ✅ `grep-panes` (1000개 16\~32ms) |
 | 키 입력의 라인 디시플린 (Enter, `C-c` 시그널, 줄 편집, 에코, `C-d`) | ✅ PTY | ✅ 엔진이 흉내 내요(같은 키를 tmux와 대조). `C-d`의 EOF는 입력을 닫아요 |
 | 화면에 글자가 뜨거나 출력이 멈출 때까지 기다리기 | ❌ `capture-pane`을 반복해서 확인 | ✅ `wait-pane` (서버가 출력이 올 때만 확인, 감지 2ms) |
 | 라이브러리로 내장 | ❌ | ✅ C ABI, Node 모듈, Rust crate |

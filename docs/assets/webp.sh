@@ -7,12 +7,12 @@
 # The CDN serves a file under the same name for good, so a redrawn picture gets a new name: bump
 # its revision below, point README.md at the new name, and upload the new files before the change
 # lands on main. An old name keeps showing the old picture (and its old numbers) on the front page.
-# Names already on the CDN: logo-*, bench-*, how-* (first drawing), bench-v2-*, how-v2-*, bench-v3-*. sh cdn-check.sh lists what is missing.
+# Names already on the CDN: logo-*, bench-*, how-* (first drawing), bench-v2-*, how-v2-*, bench-v3-*, bench-v4-*, how-v3-*. sh cdn-check.sh lists what is missing.
 #
-# Two languages: Korean (README.ko.md: bench-v3-light.webp, ...) and English (README.md: bench-v3-en-light.webp,
+# Two languages: Korean (README.ko.md: bench-v4-light.webp, ...) and English (README.md: bench-v4-en-light.webp,
 # from bench-en-light.svg). WEBP_LANGS="en" renders one of them only (default: "ko en").
 set -e
-rev() { case $1 in bench) echo -v3 ;; how) echo -v2 ;; esac; }   # logo: unchanged since the first upload
+rev() { case $1 in bench) echo -v4 ;; how) echo -v3 ;; esac; }   # logo: unchanged since the first upload
 cd "$(dirname "$0")"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT

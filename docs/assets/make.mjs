@@ -29,7 +29,7 @@ const TEXT = {
     footer: '숫자: 측정 범위 · 배수: 범위 양끝으로 나눠 버림 · 막대: 범위의 가운데 · Apple M1, tmux 3.7c, 번갈아 측정 · 전체: docs/BENCHMARKS.md',
     tagline: 'AI 에이전트를 위한 세션 엔진',
     app: '에이전트 앱', anyLang: 'Node · Python · Rust · C — 무엇이든',
-    engine: 'zeropty 엔진 (임베디드)', call: '함수 호출 한 번 0.04~0.06ms (Node)', noServer: '서버 프로세스 없음 · PTY 없음',
+    engine: 'zeropty 엔진 (임베디드)', call: '함수 호출 한 번 0.06~0.07ms (Node)', noServer: '서버 프로세스 없음 · PTY 없음',
     socketPlugin: '+ 소켓 플러그인 (선택)', listenLine: 'listen("app.sock") 한 줄',
     sessions: '× 1000 세션', pipes: '파이프로 연결 · 커널 PTY 한도 없음',
     people: ['사람·', '스크립트'],
@@ -46,7 +46,7 @@ const TEXT = {
     footer: 'Ratios: range ends divided, rounded down · bars: range midpoint · Apple M1, tmux 3.7c, interleaved · all data: docs/BENCHMARKS.md',
     tagline: 'The session engine for AI agents',
     app: 'Agent app', anyLang: 'Node · Python · Rust · C — anything',
-    engine: 'zeropty engine (embedded)', call: 'one function call 0.04~0.06ms (Node)', noServer: 'no server process · no PTY',
+    engine: 'zeropty engine (embedded)', call: 'one function call 0.06~0.07ms (Node)', noServer: 'no server process · no PTY',
     socketPlugin: '+ socket plugin (optional)', listenLine: 'one line: listen("app.sock")',
     sessions: '× 1000 sessions', pipes: 'connected by pipes · no kernel PTY limit',
     people: ['People,', 'scripts'],
@@ -59,24 +59,24 @@ const benchRows = (L) => [
   {
     title: L.cpu, note: L.agents,
     rows: [
-      { name: 'tmux', v: 51.5, label: '51.5%' },
-      { name: 'zeropty', v: 3.62, label: '3.55~3.69%', x: '13.9~14.5×', us: true },
+      { name: 'tmux', v: 54.6, label: '54.30~54.91%' },
+      { name: 'zeropty', v: 3.68, label: '3.51~3.84%', x: '14.1~15.6×', us: true },
     ],
   },
   {
     title: L.mem, note: L.agents,
     rows: [
-      { name: 'tmux', v: 31.9, label: '31.9 MB' },
-      { name: L.server, v: 2.68, label: '2.64~2.72 MB', x: '11.7~12.0×', us: true },
-      { name: L.embedded, v: 1.82, label: '1.82 MB', x: '17.0×', us: true, vs: L.vs('31.1 MB') },
+      { name: 'tmux', v: 32.45, label: '32.4~32.5 MB' },
+      { name: L.server, v: 2.68, label: '2.66~2.70 MB', x: '12.0~12.2×', us: true },
+      { name: L.embedded, v: 1.635, label: '1.63~1.64 MB', x: '19.7~19.9×', us: true },
     ],
   },
   {
     title: L.latency, note: L.sendKeys,
     rows: [
-      { name: 'tmux', v: 8.4, label: '6.43~10.37 ms' },
-      { name: L.socket, v: 0.23, label: '0.22~0.24 ms', x: '26.7~47.1×', us: true },
-      { name: L.embedded, v: 0.05, label: '0.04~0.06 ms', x: '107~259×', us: true },
+      { name: 'tmux', v: 9.3, label: '9.03~9.56 ms' },
+      { name: L.socket, v: 0.25, label: '0.24~0.26 ms', x: '34.7~39.8×', us: true },
+      { name: L.embedded, v: 0.065, label: '0.06~0.07 ms', x: '128~159×', us: true },
     ],
   },
 ]
@@ -207,7 +207,7 @@ function social(L) {
     + `<text x="346" y="262" font-family="${SANS}" font-size="40" font-weight="600" fill="${t.text}">${esc(L.tagline)}</text>`
     + `<text x="346" y="310" font-family="${SANS}" font-size="26" font-weight="400" fill="${t.sub}">${esc(L.socialSub)}</text>`
     + `<line x1="96" y1="420" x2="${W - 96}" y2="420" stroke="${t.line}"/>`
-    + stat(96, '13.9~14.5×', L.socialStats[0]) + stat(416, '11.7~12.0×', L.socialStats[1]) + stat(736, '107~259×', L.socialStats[2]) + stat(1036, '1000', L.socialStats[3])
+    + stat(96, '14.1~15.6×', L.socialStats[0]) + stat(416, '12.0~12.2×', L.socialStats[1]) + stat(736, '128~159×', L.socialStats[2]) + stat(1036, '1000', L.socialStats[3])
     + `</svg>\n`
 }
 

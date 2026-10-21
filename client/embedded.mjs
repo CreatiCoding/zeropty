@@ -1,5 +1,5 @@
 // zeropty's engine inside this Node process (dist/zeropty.node): no server; a command is a function call
-// (send-keys p50 0.04-0.06 ms, docs/BENCHMARKS.md).
+// (send-keys p50 0.06-0.07 ms, docs/BENCHMARKS.md).
 // Same call and result as client/zeropty.mjs, so switching is the import:
 //   import { zeropty } from './client/embedded.mjs'   // instead of './client/zeropty.mjs'
 // Sessions live as long as this process (their programs get EOF when it exits), unlike the server's.

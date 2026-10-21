@@ -115,7 +115,7 @@ impl Engine {
     }
 
     /// Runs one tmux-style command (`argv[0]` is the command), synchronously, with no server round trip
-    /// (`send-keys` p50 0.04-0.06 ms from Node, measured in docs/BENCHMARKS.md).
+    /// (`send-keys` p50 0.06-0.07 ms from Node, measured in docs/BENCHMARKS.md).
     ///
     /// ```js
     /// const { code, out } = engine.command(['capture-pane', '-p', '-t', '=w:'])
