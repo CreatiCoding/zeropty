@@ -203,6 +203,7 @@ zeropty -V
 
 - The folder works wherever you unpack it: `zeropty-tty` finds `shim.dylib` next to itself. Put the folder on your PATH rather than symlinking `zeropty-tty` elsewhere, or point `ZEROPTY_SHIM` at the shim.
 - To pin a version in a script, fix `v` and the archive's hash from that release's `SHA256SUMS`, and compare before unpacking.
+- **Gatekeeper:** the files are signed ad hoc, not notarized. `curl` adds no quarantine mark, so the steps above run as they are. A browser download is marked, `tar` passes the mark on to every unpacked file, and macOS then refuses `zeropty` with a dialog (the command waits on it). Clear the mark before the first run: `xattr -dr com.apple.quarantine zeropty-$v-darwin-universal`.
 
 **If you need only the CLI and the server and have Rust, it is one line.** That is enough to run programs that need no terminal, such as `sh`, `python3` and build commands.
 

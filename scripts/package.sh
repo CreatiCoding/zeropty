@@ -58,6 +58,9 @@ test "$("$z" -V)" = "zeropty $version" || fail "-V: $("$z" -V)"
 # Rosetta, when present, runs the x86_64 slice.
 if arch -x86_64 /usr/bin/true 2>/dev/null; then
 	test "$(arch -x86_64 "$z" -V)" = "zeropty $version" || fail "x86_64 -V: $(arch -x86_64 "$z" -V)"
+	echo "x86_64 slice: ran under Rosetta"
+else
+	echo "x86_64 slice: not run (no Rosetta here)"
 fi
 # Not sh: macOS drops DYLD_INSERT_LIBRARIES for its own binaries, so the shim needs a program of ours.
 printf '#include <stdio.h>\n#include <unistd.h>\nint main(void) { puts(isatty(0) ? "TTY-YES" : "TTY-NO"); fflush(stdout); pause(); }\n' >"$tmp/probe.c"

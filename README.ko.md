@@ -203,6 +203,7 @@ zeropty -V
 
 - 폴더는 어디에 풀어도 동작해요. `zeropty-tty`가 자기 옆의 `shim.dylib`를 찾아요. `zeropty-tty`만 다른 곳에 심볼릭 링크하지 말고 폴더를 PATH에 넣거나, `ZEROPTY_SHIM`으로 shim을 가리켜 주세요.
 - 스크립트에서 버전을 고정하려면 `v`와 그 릴리스 `SHA256SUMS`의 묶음 해시를 코드에 박고, 풀기 전에 비교하세요.
+- **Gatekeeper:** 파일은 ad-hoc 서명이고 공증은 받지 않았어요. `curl`은 quarantine 표시를 붙이지 않아서 위 순서대로면 그대로 실행돼요. 브라우저로 받으면 표시가 붙고, `tar`가 풀린 파일 모두에 그 표시를 옮겨서, macOS가 `zeropty`를 창을 띄워 막아요(명령은 그 창을 기다리며 멈춰요). 처음 실행하기 전에 표시를 지우세요: `xattr -dr com.apple.quarantine zeropty-$v-darwin-universal`.
 
 **Rust가 있고 CLI와 서버만 필요하면 한 줄이에요.** `sh`, `python3`, 빌드 명령처럼 터미널이 없어도 되는 프로그램을 돌리기에는 이걸로 충분해요.
 
