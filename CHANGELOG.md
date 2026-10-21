@@ -17,6 +17,8 @@ release; polish that draft into entries written in English, and add the same ent
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-10-21
+
 ### Fixed
 
 - `C-c`, `C-\` and `C-z` typed at a job in a shell with job control (zsh, `bash -i`) run through `zeropty-tty` went to
@@ -146,7 +148,8 @@ the interfaces in docs/VERSIONING.md.
 
 - The CLI no longer panics when the reader closes the pipe early (`zeropty capture-pane -p ... | head -1`).
 
-[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/CreatiCoding/zeropty/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/CreatiCoding/zeropty/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/CreatiCoding/zeropty/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/CreatiCoding/zeropty/compare/v0.1.1...v0.1.2
