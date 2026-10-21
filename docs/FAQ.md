@@ -34,7 +34,7 @@
 
 ## Does it replace tmux?
 
-**Not as a terminal multiplexer for people.** zeropty focuses on starting programs (coding agents in particular), reading their screens, sending them keys and waiting until they finish. It has no window splits, status line, copy mode or configuration file. In return, for that job it takes the same commands as tmux, is 10x or better on memory, CPU and latency across the whole measured range in 10 of the 15 items measured (1 more is borderline at 9.9\~11.7x, and 4 are under 10x) ([benchmarks](BENCHMARKS.md)), and has no PTY limit on the number of sessions. When a person wants to look in, `zeropty attach` connects to a session.
+**Not as a terminal multiplexer for people.** zeropty focuses on starting programs (coding agents in particular), reading their screens, sending them keys and waiting until they finish. It has no window splits, status line, copy mode or configuration file. In return, for that job it takes the same commands as tmux, is 10x or better on memory, CPU and latency across the whole measured range in 11 of the 15 items measured (4 are under 10x) ([benchmarks](BENCHMARKS.md)), and has no PTY limit on the number of sessions. When a person wants to look in, `zeropty attach` connects to a session.
 
 ## Can I use it without claude?
 
@@ -80,7 +80,7 @@ Full comparison: [Usage: feature comparison with tmux](USAGE.md#feature-comparis
 
 ## Can I use it without a server process?
 
-Yes. Put the engine inside your own process (Node module, C ABI, Rust crate). Commands become function calls, so one `send-keys` from Node takes 0.04\~0.06ms (6.43\~10.37ms when tmux runs for each command). If needed, your program can also open a socket (`listen`) so the CLI and `attach` reach it too. [Usage: embedded](USAGE.md#inside-your-process-embedded)
+Yes. Put the engine inside your own process (Node module, C ABI, Rust crate). Commands become function calls, so one `send-keys` from Node takes 0.06\~0.07ms (9.03\~9.56ms when tmux runs for each command). If needed, your program can also open a socket (`listen`) so the CLI and `attach` reach it too. [Usage: embedded](USAGE.md#inside-your-process-embedded)
 
 ## How do I know when an agent is done?
 

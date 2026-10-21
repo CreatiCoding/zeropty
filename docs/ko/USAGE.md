@@ -271,7 +271,7 @@ await zeropty(['new-session', '-d', '-s', 'w', 'exec cat'])
 
 | 함수 | 하는 일 |
 |---|---|
-| `zeropty(argv, { cwd })`, `zeroptySync(argv, { cwd })` | 서버 클라이언트와 같은 호출, 같은 결과. `send-keys` p50 0.04\~0.06ms, `capture-pane` 0.06\~0.07ms(바쁜 세션 0.09\~0.12ms) ([측정](BENCHMARKS.md)) |
+| `zeropty(argv, { cwd })`, `zeroptySync(argv, { cwd })` | 서버 클라이언트와 같은 호출, 같은 결과. `send-keys` p50 0.06\~0.07ms, `capture-pane` 0.06\~0.07ms(바쁜 세션 0.10\~0.17ms) ([측정](BENCHMARKS.md)) |
 | `open({ history, sizeDir, polled })` | 첫 명령 전에 옵션을 주고 엔진을 시작해요(안 부르면 첫 명령이 기본값으로 시작해요) |
 | `listen(소켓)` | [서버 플러그인](#서버-플러그인-내-프로그램이-소켓도-열기) |
 
@@ -442,7 +442,7 @@ zeropty는 **프로그램을 띄워 두고 화면을 읽고 키를 보내는 일
 | PTY | 세션마다 1개 (macOS 한도 511\~999개) | 안 씀, 세션 1000개 이상 |
 | 전체화면 프로그램 (vim 등) | ✅ | `zeropty-tty <프로그램>`으로 띄우면 돼요. vim(편집·저장), less(페이지 넘기기·종료), python REPL(줄 편집·히스토리), claude를 확인했어요. `top`·`ps`처럼 권한(setuid, entitlement)이 필요한 시스템 프로그램은 안 돼요 |
 | 프로그램용 접속 | 제어 모드(`-C`) | JSON 소켓 프로토콜, Node 클라이언트 |
-| 모든 세션 화면에서 글자 찾기 | ❌ 세션마다 `capture-pane` | ✅ `grep-panes` (1000개 12\~17ms) |
+| 모든 세션 화면에서 글자 찾기 | ❌ 세션마다 `capture-pane` | ✅ `grep-panes` (1000개 16\~32ms) |
 | 키 입력의 라인 디시플린 (Enter, `C-c` 시그널, 줄 편집, 에코, `C-d`) | ✅ PTY | ✅ 엔진이 흉내 내요(같은 키를 tmux와 대조). `C-d`의 EOF는 입력을 닫아요 |
 | 화면에 글자가 뜨거나 출력이 멈출 때까지 기다리기 | ❌ `capture-pane`을 반복해서 확인 | ✅ `wait-pane` (서버가 출력이 올 때만 확인, 감지 2ms) |
 | 라이브러리로 내장 | ❌ | ✅ C ABI, Node 모듈, Rust crate |

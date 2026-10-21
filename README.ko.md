@@ -8,7 +8,7 @@
 <p align="center">
   <b>AI 에이전트를 위한 세션 엔진.</b><br>
   에이전트 1000개를 한 기기에 띄워 두고, 화면을 읽고, 키를 보내고, 끝날 때까지 기다려요.<br>
-  tmux 명령을 그대로 받으면서, tmux보다 <b>CPU는 13.9\~14.5배 · 메모리는 11.7\~12.0배</b> 적게 써요.
+  tmux 명령을 그대로 받으면서, tmux보다 <b>CPU는 14.1\~15.6배 · 메모리는 12.0\~12.2배</b> 적게 써요.
 </p>
 
 <p align="center"><a href="README.md">English</a> · <b>한국어</b></p>
@@ -50,9 +50,9 @@
 | 에이전트 호스트에게 필요한 것 | tmux | zeropty |
 |---|---|---|
 | 세션 수백\~수천 개 | PTY 한도 511개 (최대 999) | **1000개 확인, PTY 한도 없음** |
-| 화면 읽기 · 키 보내기 | 명령마다 tmux 실행 (`send-keys` 6.43\~10.37ms) | **함수 호출 한 번 (`send-keys` 0.04\~0.06ms)** |
+| 화면 읽기 · 키 보내기 | 명령마다 tmux 실행 (`send-keys` 9.03\~9.56ms) | **함수 호출 한 번 (`send-keys` 0.06\~0.07ms)** |
 | 에이전트가 끝났는지 알기 | `capture-pane` 반복 (200ms 폴링이면 p50 82\~93ms 늦게) | **`wait-pane`: 폴링 없이 2ms** |
-| 어느 세션이 입력을 기다리나 | 세션마다 `capture-pane` | **`grep-panes`: 1000개를 12\~17ms에** |
+| 어느 세션이 입력을 기다리나 | 세션마다 `capture-pane` | **`grep-panes`: 1000개를 16\~32ms에** |
 | 서버 업그레이드 | 서버를 다시 띄우면 세션이 끝나요 | **`restart-server`: 실행 중인 세션을 넘겨받아요** |
 | 내 프로그램 안에 넣기 | ❌ | **C ABI · Node 모듈** |
 
@@ -91,11 +91,11 @@ done: 42
 
 ## 벤치마크
 
-<!-- bench-v3-*.webp and how-v2-*.webp are docs/assets/ files of the same name, uploaded to the CDN; a redrawn picture gets a new name (docs/assets/webp.sh) so this page never shows numbers older than its tables. -->
+<!-- bench-v4-*.webp and how-v3-*.webp are docs/assets/ files of the same name, uploaded to the CDN; a redrawn picture gets a new name (docs/assets/webp.sh) so this page never shows numbers older than its tables. -->
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://cdn.creco.dev/zeropty/bench-v3-dark.webp">
-    <img alt="tmux 대비 측정 범위: claude 작업 400개에서 CPU 51.5% 대 3.55~3.69%(13.9~14.5배), 메모리 31.9MB 대 2.64~2.72MB(서버, 11.7~12.0배)와 31.1MB 대 1.82MB(임베디드, 17.0배), Node에서 send-keys 한 번 6.43~10.37ms 대 소켓 0.22~0.24ms(26.7~47.1배)·임베디드 0.04~0.06ms(107~259배)" src="https://cdn.creco.dev/zeropty/bench-v3-light.webp">
+    <source media="(prefers-color-scheme: dark)" srcset="https://cdn.creco.dev/zeropty/bench-v4-dark.webp">
+    <img alt="tmux 대비 측정 범위: claude 작업 400개에서 CPU 54.30~54.91% 대 3.51~3.84%(14.1~15.6배), 메모리 32.4~32.5MB 대 2.66~2.70MB(서버, 12.0~12.2배)와 1.63~1.64MB(임베디드, 19.7~19.9배), Node에서 send-keys 한 번 9.03~9.56ms 대 소켓 0.24~0.26ms(34.7~39.8배)·임베디드 0.06~0.07ms(128~159배)" src="https://cdn.creco.dev/zeropty/bench-v4-light.webp">
   </picture>
 </p>
 
@@ -103,19 +103,19 @@ tmux 3.7c와 같은 기기(Apple M1)에서 같은 부하로 **번갈아** 쟀어
 
 | | tmux | zeropty | |
 |---|---|---|---|
-| **CPU**, claude 작업 400개 재생 | 51.5% | 3.55\~3.69% | **13.9\~14.5×** |
-| **메모리**, claude 작업 400개 재생 (서버) | 31.9MB | 2.64\~2.72MB | **11.7\~12.0×** |
-| **메모리**, claude 작업 400개 재생 (임베디드) | 31.1MB | 1.82MB | **17.0×** |
-| **메모리**, 화면 갱신 400개 | 245MB | 1.55\~1.73MB | **141\~158×** |
-| **메모리**, 대기 400개 (임베디드) | 8.0MB | 0.39\~0.41MB | **19.5\~20.5×** |
-| **`send-keys`**, Node 프로그램에서 (명령마다 tmux 실행 대비, 소켓) | 6.43\~10.37ms | 0.22\~0.24ms | **26.7\~47.1×** |
-| **`send-keys`**, Node 프로그램에서 (명령마다 tmux 실행 대비, 임베디드) | 6.43\~10.37ms | 0.04\~0.06ms | **107\~259×** |
-| **`send-keys`**, bash 스크립트에서 | 4.56\~4.80ms | 0.037ms | **123\~129×** |
-| **5.4MB 출력**이 끝나기까지 | 155\~158ms | 3.2\~3.8ms | **40.7\~49.3×** |
+| **CPU**, claude 작업 400개 재생 | 54.30\~54.91% | 3.51\~3.84% | **14.1\~15.6×** |
+| **메모리**, claude 작업 400개 재생 (서버) | 32.4\~32.5MB | 2.66\~2.70MB | **12.0\~12.2×** |
+| **메모리**, claude 작업 400개 재생 (임베디드) | 32.4\~32.5MB | 1.63\~1.64MB | **19.7\~19.9×** |
+| **메모리**, 화면 갱신 400개 | 251.2\~251.4MB | 1.71\~1.74MB | **144\~147×** |
+| **메모리**, 대기 400개 (임베디드) | 8.0MB | 0.45\~0.46MB | **17.3\~17.7×** |
+| **`send-keys`**, Node 프로그램에서 (명령마다 tmux 실행 대비, 소켓) | 9.03\~9.56ms | 0.24\~0.26ms | **34.7\~39.8×** |
+| **`send-keys`**, Node 프로그램에서 (명령마다 tmux 실행 대비, 임베디드) | 9.03\~9.56ms | 0.06\~0.07ms | **128\~159×** |
+| **`send-keys`**, bash 스크립트에서 | 6.02\~6.31ms | 0.043\~0.048ms | **125\~146×** |
+| **5.4MB 출력**이 끝나기까지 | 166\~176ms | 3.0\~4.6ms | **36.0\~58.6×** |
 
 모든 배수는 한 가지 규칙으로 계산했어요. 표에 적힌 값 범위의 양끝(가장 빠른 tmux ÷ 가장 느린 zeropty부터 그 반대까지)으로 나누고, 올리지 않고 버려요. 이 규칙으로 아래 끝까지 10배 이상인 항목만 이 표에 올려요([배수 계산 방법](docs/ko/BENCHMARKS.md#배수-계산-방법)).
 
-세션 1000개가 실제 claude 작업을 재생해도 zeropty는 **메모리 4.65\~4.73MB, CPU 7.5\~8.0%** 수준이에요. tmux는 PTY 한도 때문에 1000개를 띄우지 못해요.
+세션 1000개가 실제 claude 작업을 재생해도 zeropty는 **메모리 4.65MB, CPU 6.69\~7.10%** 수준이에요. tmux는 PTY 한도 때문에 1000개를 띄우지 못해요.
 
 → 모든 측정값, 측정 방법, 10배에 못 미친 항목과 그 이유: [docs/BENCHMARKS.md](docs/ko/BENCHMARKS.md)
 
@@ -144,8 +144,8 @@ const { out } = await zeropty(['capture-pane', '-p', '-t', '=fix-1:'])
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://cdn.creco.dev/zeropty/how-v2-dark.webp">
-    <img alt="에이전트 앱 안의 zeropty 엔진이 세션 1000개를 다루고, 선택으로 소켓을 열어 사람과 스크립트도 붙어요" src="https://cdn.creco.dev/zeropty/how-v2-light.webp">
+    <source media="(prefers-color-scheme: dark)" srcset="https://cdn.creco.dev/zeropty/how-v3-dark.webp">
+    <img alt="에이전트 앱 안의 zeropty 엔진이 세션 1000개를 다루고, 선택으로 소켓을 열어 사람과 스크립트도 붙어요" src="https://cdn.creco.dev/zeropty/how-v3-light.webp">
   </picture>
 </p>
 
@@ -223,7 +223,7 @@ echo "export PATH=\"$PWD/dist:\$PATH\"" >> ~/.zshrc   # zeropty 폴더 안에서
 
 ```sh
 source shell/zeropty.zsh                          # zsh: send-keys 0.11ms (p50)
-enable -f "$PWD/dist/zeropty_bash.dylib" zeropty  # bash: send-keys 0.037ms
+enable -f "$PWD/dist/zeropty_bash.dylib" zeropty  # bash: send-keys 0.043~0.048ms
 ```
 
 | `dist/`에 생기는 것 | 용도 |

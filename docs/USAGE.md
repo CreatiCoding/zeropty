@@ -271,7 +271,7 @@ await zeropty(['new-session', '-d', '-s', 'w', 'exec cat'])
 
 | Function | What it does |
 |---|---|
-| `zeropty(argv, { cwd })`, `zeroptySync(argv, { cwd })` | Same calls and same results as the server client. `send-keys` p50 0.04\~0.06ms, `capture-pane` 0.06\~0.07ms (busy session 0.09\~0.12ms) ([measurements](BENCHMARKS.md)) |
+| `zeropty(argv, { cwd })`, `zeroptySync(argv, { cwd })` | Same calls and same results as the server client. `send-keys` p50 0.06\~0.07ms, `capture-pane` 0.06\~0.07ms (busy session 0.10\~0.17ms) ([measurements](BENCHMARKS.md)) |
 | `open({ history, sizeDir, polled })` | Starts the engine with options before the first command (if you don't call it, the first command starts the engine with defaults) |
 | `listen(socket)` | [Server plugin](#server-plugin-your-program-opens-the-socket-too) |
 
@@ -442,7 +442,7 @@ zeropty focuses on **keeping programs running, reading their screens and sending
 | PTY | 1 per session (macOS limit 511\~999) | not used; 1000+ sessions |
 | Full-screen programs (vim and others) | ✅ | Launch them with `zeropty-tty <program>`. Verified with vim (editing, saving), less (paging, quitting), the python REPL (line editing, history) and claude. System programs that need privileges (setuid, entitlements), such as `top` and `ps`, do not work |
 | Access for programs | control mode (`-C`) | JSON socket protocol, Node client |
-| Search text across every session's screen | ❌ `capture-pane` per session | ✅ `grep-panes` (12\~17ms for 1000) |
+| Search text across every session's screen | ❌ `capture-pane` per session | ✅ `grep-panes` (16\~32ms for 1000) |
 | Line discipline for key input (Enter, `C-c` signals, line editing, echo, `C-d`) | ✅ PTY | ✅ emulated by the engine (same keys checked against tmux). EOF from `C-d` closes the input |
 | Wait until text appears on screen or output stops | ❌ repeatedly check with `capture-pane` | ✅ `wait-pane` (the server checks only when output arrives; detection 2ms) |
 | Embed as a library | ❌ | ✅ C ABI, Node module, Rust crate |

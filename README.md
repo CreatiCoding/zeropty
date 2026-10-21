@@ -8,7 +8,7 @@
 <p align="center">
   <b>The session engine for AI agents.</b><br>
   Run 1000 agents on one machine: read their screens, send them keys, and wait until they finish.<br>
-  It takes tmux's commands as they are, and uses <b>13.9\~14.5x less CPU and 11.7\~12.0x less memory</b> than tmux.
+  It takes tmux's commands as they are, and uses <b>14.1\~15.6x less CPU and 12.0\~12.2x less memory</b> than tmux.
 </p>
 
 <p align="center"><b>English</b> · <a href="README.ko.md">한국어</a></p>
@@ -50,9 +50,9 @@ Programs that run many coding agents (claude, codex ...) usually start them in t
 | What an agent host needs | tmux | zeropty |
 |---|---|---|
 | Hundreds to thousands of sessions | PTY limit of 511 (999 at most) | **1000 verified, no PTY limit** |
-| Reading a screen, sending keys | Runs tmux for every command (`send-keys` 6.43\~10.37ms) | **One function call (`send-keys` 0.04\~0.06ms)** |
+| Reading a screen, sending keys | Runs tmux for every command (`send-keys` 9.03\~9.56ms) | **One function call (`send-keys` 0.06\~0.07ms)** |
 | Knowing that an agent finished | `capture-pane` in a loop (p50 82\~93ms late at a 200ms poll) | **`wait-pane`: 2ms, no polling** |
-| Which session is waiting for input | `capture-pane` per session | **`grep-panes`: 1000 sessions in 12\~17ms** |
+| Which session is waiting for input | `capture-pane` per session | **`grep-panes`: 1000 sessions in 16\~32ms** |
 | Upgrading the server | Restarting the server ends the sessions | **`restart-server`: takes over the running sessions** |
 | Putting it inside your program | ❌ | **C ABI · Node module** |
 
@@ -91,11 +91,11 @@ The server keeps the environment of the process that started it (the first comma
 
 ## Benchmarks
 
-<!-- bench-v3-*.webp and how-v2-*.webp are docs/assets/ files of the same name, uploaded to the CDN; a redrawn picture gets a new name (docs/assets/webp.sh) so this page never shows numbers older than its tables. This page uses the English set (*-en-*); README.ko.md uses the Korean one. -->
+<!-- bench-v4-*.webp and how-v3-*.webp are docs/assets/ files of the same name, uploaded to the CDN; a redrawn picture gets a new name (docs/assets/webp.sh) so this page never shows numbers older than its tables. This page uses the English set (*-en-*); README.ko.md uses the Korean one. -->
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://cdn.creco.dev/zeropty/bench-v3-en-dark.webp">
-    <img alt="Measured ranges against tmux: with 400 claude jobs, CPU 51.5% vs 3.55~3.69% (13.9~14.5x), memory 31.9MB vs 2.64~2.72MB (server, 11.7~12.0x) and 31.1MB vs 1.82MB (embedded, 17.0x); one send-keys from Node 6.43~10.37ms vs 0.22~0.24ms over the socket (26.7~47.1x) and 0.04~0.06ms embedded (107~259x)" src="https://cdn.creco.dev/zeropty/bench-v3-en-light.webp">
+    <source media="(prefers-color-scheme: dark)" srcset="https://cdn.creco.dev/zeropty/bench-v4-en-dark.webp">
+    <img alt="Measured ranges against tmux: with 400 claude jobs, CPU 54.30~54.91% vs 3.51~3.84% (14.1~15.6x), memory 32.4~32.5MB vs 2.66~2.70MB (server, 12.0~12.2x) and 1.63~1.64MB (embedded, 19.7~19.9x); one send-keys from Node 9.03~9.56ms vs 0.24~0.26ms over the socket (34.7~39.8x) and 0.06~0.07ms embedded (128~159x)" src="https://cdn.creco.dev/zeropty/bench-v4-en-light.webp">
   </picture>
 </p>
 
@@ -103,19 +103,19 @@ Measured against tmux 3.7c on the same machine (Apple M1) under the same load, *
 
 | | tmux | zeropty | |
 |---|---|---|---|
-| **CPU**, replaying 400 claude jobs | 51.5% | 3.55\~3.69% | **13.9\~14.5×** |
-| **Memory**, replaying 400 claude jobs (server) | 31.9MB | 2.64\~2.72MB | **11.7\~12.0×** |
-| **Memory**, replaying 400 claude jobs (embedded) | 31.1MB | 1.82MB | **17.0×** |
-| **Memory**, 400 screens updating | 245MB | 1.55\~1.73MB | **141\~158×** |
-| **Memory**, 400 idle (embedded) | 8.0MB | 0.39\~0.41MB | **19.5\~20.5×** |
-| **`send-keys`** from a Node program (vs running tmux per command, socket) | 6.43\~10.37ms | 0.22\~0.24ms | **26.7\~47.1×** |
-| **`send-keys`** from a Node program (vs running tmux per command, embedded) | 6.43\~10.37ms | 0.04\~0.06ms | **107\~259×** |
-| **`send-keys`** from a bash script | 4.56\~4.80ms | 0.037ms | **123\~129×** |
-| Until **5.4MB of output** is done | 155\~158ms | 3.2\~3.8ms | **40.7\~49.3×** |
+| **CPU**, replaying 400 claude jobs | 54.30\~54.91% | 3.51\~3.84% | **14.1\~15.6×** |
+| **Memory**, replaying 400 claude jobs (server) | 32.4\~32.5MB | 2.66\~2.70MB | **12.0\~12.2×** |
+| **Memory**, replaying 400 claude jobs (embedded) | 32.4\~32.5MB | 1.63\~1.64MB | **19.7\~19.9×** |
+| **Memory**, 400 screens updating | 251.2\~251.4MB | 1.71\~1.74MB | **144\~147×** |
+| **Memory**, 400 idle (embedded) | 8.0MB | 0.45\~0.46MB | **17.3\~17.7×** |
+| **`send-keys`** from a Node program (vs running tmux per command, socket) | 9.03\~9.56ms | 0.24\~0.26ms | **34.7\~39.8×** |
+| **`send-keys`** from a Node program (vs running tmux per command, embedded) | 9.03\~9.56ms | 0.06\~0.07ms | **128\~159×** |
+| **`send-keys`** from a bash script | 6.02\~6.31ms | 0.043\~0.048ms | **125\~146×** |
+| Until **5.4MB of output** is done | 166\~176ms | 3.0\~4.6ms | **36.0\~58.6×** |
 
 Every ratio follows one rule: divide by the ends of the value ranges in the table (from fastest tmux ÷ slowest zeropty to the other way round) and round down, never up. Only the items that stay at 10x or more down to the low end under this rule are in this table ([how ratios are computed](docs/BENCHMARKS.md#how-multipliers-are-computed)).
 
-With 1000 sessions replaying real claude work, zeropty stays at **4.65\~4.73MB of memory and 7.5\~8.0% CPU**. tmux cannot start 1000 because of the PTY limit.
+With 1000 sessions replaying real claude work, zeropty stays at **4.65MB of memory and 6.69\~7.10% CPU**. tmux cannot start 1000 because of the PTY limit.
 
 → Every measurement, how it was measured, and the items under 10x with the reasons: [docs/BENCHMARKS.md](docs/BENCHMARKS.md)
 
@@ -144,8 +144,8 @@ Targets are written `=name:` as in tmux scripts (`=fix-1:` is the session named 
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://cdn.creco.dev/zeropty/how-v2-en-dark.webp">
-    <img alt="The zeropty engine inside an agent app handles 1000 sessions; optionally it opens a socket so people and scripts can attach too" src="https://cdn.creco.dev/zeropty/how-v2-en-light.webp">
+    <source media="(prefers-color-scheme: dark)" srcset="https://cdn.creco.dev/zeropty/how-v3-en-dark.webp">
+    <img alt="The zeropty engine inside an agent app handles 1000 sessions; optionally it opens a socket so people and scripts can attach too" src="https://cdn.creco.dev/zeropty/how-v3-en-light.webp">
   </picture>
 </p>
 
@@ -223,7 +223,7 @@ To use it from inside your shell, faster and with no process:
 
 ```sh
 source shell/zeropty.zsh                          # zsh: send-keys 0.11ms (p50)
-enable -f "$PWD/dist/zeropty_bash.dylib" zeropty  # bash: send-keys 0.037ms
+enable -f "$PWD/dist/zeropty_bash.dylib" zeropty  # bash: send-keys 0.043~0.048ms
 ```
 
 | In `dist/` | For |

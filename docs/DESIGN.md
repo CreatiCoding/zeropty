@@ -40,7 +40,7 @@ flowchart LR
   end
   clients -->|"Unix socket (~/.zeropty/mux.sock)"| srv
   srv --> eng
-  emb -->|"function call (Node send-keys p50 0.04~0.06ms)"| eng
+  emb -->|"function call (Node send-keys p50 0.06~0.07ms)"| eng
   eng -->|"stdin: socketpair"| sessions
   sessions -->|"stdout+stderr: the same socketpair"| eng
 ```
@@ -157,7 +157,7 @@ Most of the cost of a single command is process startup (1.3ms even for an empty
 | tmux CLI | start process → connect to server → execute → process exits | 4.35\~4.80ms |
 | zeropty zsh function | connect to the socket from inside the shell, one line of JSON (no process) | 0.11\~0.20ms |
 | zeropty bash builtin | connect to the socket from inside the shell, one line of JSON (no process) | 0.035\~0.115ms |
-| zeropty embedded | function call | 0.04\~0.06ms in Node (`send-keys` p50) |
+| zeropty embedded | function call | 0.06\~0.07ms in Node (`send-keys` p50) |
 
 ```mermaid
 flowchart TB
@@ -169,7 +169,7 @@ flowchart TB
     direction LR
     z1["one JSON line to the socket from inside the shell"] --> z2["engine"]
   end
-  subgraph emb["zeropty embedded: 0.04~0.06ms (Node)"]
+  subgraph emb["zeropty embedded: 0.06~0.07ms (Node)"]
     direction LR
     e1["function call in your program"] --> e2["engine (same process)"]
   end
@@ -177,7 +177,7 @@ flowchart TB
 ```
 
 - **Socket.** One connection carries many commands (the Node client).
-- **Embedded.** Putting the engine inside your process turns commands into function calls. In Node, one `send-keys` takes p50 0.04\~0.06ms and `capture-pane` 0.06\~0.07ms (busy session 0.09\~0.12ms). Most of that time is the idle Node thread waking up (\~40\~50µs); called back to back without idling, it is 2.6µs per call ([BENCHMARKS](BENCHMARKS.md)). With no server process, there is also no floor of one empty process's memory (0.865MB). If even the engine thread is dropped and the host's event loop drives the engine (polled), 200 idle sessions go from 0.66\~0.69MB to 0.31MB. Commands like `capture-pane` with nothing to read, or `send-keys`, are handled right on the calling thread without waking the engine thread.
+- **Embedded.** Putting the engine inside your process turns commands into function calls. In Node, one `send-keys` takes p50 0.06\~0.07ms and `capture-pane` 0.06\~0.07ms (busy session 0.10\~0.17ms). Most of that time is the idle Node thread waking up (\~40\~50µs); called back to back without idling, it is 2.6µs per call ([BENCHMARKS](BENCHMARKS.md)). With no server process, there is also no floor of one empty process's memory (0.865MB). If even the engine thread is dropped and the host's event loop drives the engine (polled), 200 idle sessions go from 0.68\~0.69MB to 0.39MB. Commands like `capture-pane` with nothing to read, or `send-keys`, are handled right on the calling thread without waking the engine thread.
 - **zsh function, bash builtin.** zsh uses its built-in socket module, and bash a C function loaded with `enable -f`, to talk to the server directly from inside the shell. A tmux command's 4.35\~4.80ms becomes 0.11\~0.20ms in zsh and 0.035\~0.115ms in bash (`has-session` and `send-keys`, zsh at p50; a 2000-line `capture-pane` is 0.45\~0.48ms in zsh and 0.095\~0.102ms in bash).
 
 ## 6. Only measurements decide

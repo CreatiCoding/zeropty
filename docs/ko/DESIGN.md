@@ -40,7 +40,7 @@ flowchart LR
   end
   clients -->|"Unix 소켓 (~/.zeropty/mux.sock)"| srv
   srv --> eng
-  emb -->|"함수 호출 (Node send-keys p50 0.04~0.06ms)"| eng
+  emb -->|"함수 호출 (Node send-keys p50 0.06~0.07ms)"| eng
   eng -->|"stdin: socketpair"| sessions
   sessions -->|"stdout+stderr: 같은 socketpair"| eng
 ```
@@ -157,7 +157,7 @@ sequenceDiagram
 | tmux CLI | 프로세스 시작 → 서버 접속 → 실행 → 프로세스 끝 | 4.35\~4.80ms |
 | zeropty zsh 함수 | 셸 안에서 소켓에 접속해 JSON 한 줄 (프로세스 없음) | 0.11\~0.20ms |
 | zeropty bash builtin | 셸 안에서 소켓에 접속해 JSON 한 줄 (프로세스 없음) | 0.035\~0.115ms |
-| zeropty 임베디드 | 함수 호출 | Node에서 0.04\~0.06ms (`send-keys` p50) |
+| zeropty 임베디드 | 함수 호출 | Node에서 0.06\~0.07ms (`send-keys` p50) |
 
 ```mermaid
 flowchart TB
@@ -169,7 +169,7 @@ flowchart TB
     direction LR
     z1["셸 안에서 소켓에 JSON 한 줄"] --> z2["엔진"]
   end
-  subgraph emb["zeropty 임베디드: 0.04~0.06ms (Node)"]
+  subgraph emb["zeropty 임베디드: 0.06~0.07ms (Node)"]
     direction LR
     e1["내 프로그램의 함수 호출"] --> e2["엔진 (같은 프로세스)"]
   end
@@ -177,7 +177,7 @@ flowchart TB
 ```
 
 - **소켓.** 한 연결로 여러 명령을 보내요(Node 클라이언트).
-- **임베디드.** 엔진을 내 프로세스 안에 넣으면 명령이 함수 호출이 돼요. Node에서 `send-keys` 한 번이 p50 0.04\~0.06ms, `capture-pane`이 0.06\~0.07ms(바쁜 세션 0.09\~0.12ms)예요. 이 시간의 대부분은 쉬던 Node 스레드가 깨는 시간(\~40\~50µs)이고, 쉬지 않고 연달아 부르면 한 번에 2.6µs예요([BENCHMARKS](BENCHMARKS.md)). 서버 프로세스가 없으니 빈 프로세스 하나의 메모리(0.865MB) 하한도 없어요. 엔진 스레드조차 없이 호스트의 이벤트 루프가 엔진을 돌리게 하면(polled) 대기 200개가 0.66\~0.69MB에서 0.31MB가 돼요. 읽을 게 없는 `capture-pane`, `send-keys` 같은 명령은 엔진 스레드를 깨우지 않고 부른 스레드에서 바로 처리해요.
+- **임베디드.** 엔진을 내 프로세스 안에 넣으면 명령이 함수 호출이 돼요. Node에서 `send-keys` 한 번이 p50 0.06\~0.07ms, `capture-pane`이 0.06\~0.07ms(바쁜 세션 0.10\~0.17ms)예요. 이 시간의 대부분은 쉬던 Node 스레드가 깨는 시간(\~40\~50µs)이고, 쉬지 않고 연달아 부르면 한 번에 2.6µs예요([BENCHMARKS](BENCHMARKS.md)). 서버 프로세스가 없으니 빈 프로세스 하나의 메모리(0.865MB) 하한도 없어요. 엔진 스레드조차 없이 호스트의 이벤트 루프가 엔진을 돌리게 하면(polled) 대기 200개가 0.68\~0.69MB에서 0.39MB가 돼요. 읽을 게 없는 `capture-pane`, `send-keys` 같은 명령은 엔진 스레드를 깨우지 않고 부른 스레드에서 바로 처리해요.
 - **zsh 함수, bash builtin.** zsh는 기본 소켓 모듈로, bash는 `enable -f`로 넣는 C 함수로 셸 안에서 서버에 바로 말해요. tmux 명령 4.35\~4.80ms가 zsh 0.11\~0.20ms, bash 0.035\~0.115ms가 돼요(`has-session`·`send-keys`, zsh는 p50. 2000줄 `capture-pane`은 zsh 0.45\~0.48ms, bash 0.095\~0.102ms).
 
 ## 6. 측정으로만 결정
