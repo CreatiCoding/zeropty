@@ -186,10 +186,10 @@ These were checked against tmux on the same sessions. A format that uses only `#
 
 ## Fast from the shell: zsh function, bash builtin
 
-Running the `zeropty` program starts a process for every command (2.47\~2.60ms). Talking to the socket directly from inside the shell removes that cost.
+Running the `zeropty` program starts a process for every command (3.59\~4.23ms). Talking to the socket directly from inside the shell removes that cost.
 
-- **zsh:** add `source /path/to/zeropty/shell/zeropty.zsh` to `.zshrc` and `zeropty` becomes a shell function (p50 `send-keys -l` 0.11ms, 42.3\~43.4x faster than the tmux CLI; `has-session` 0.11\~0.20ms, 21.7\~40.4x faster; a 2000-line `capture-pane` 0.45\~0.48ms, 10.3\~11.1x faster). It uses the `zsh/net/socket` module that ships with zsh.
-- **bash:** run `enable -f /path/to/zeropty/dist/zeropty_bash.dylib zeropty` once and `zeropty` becomes a builtin (0.035\~0.115ms per command, 37.8\~133x faster than the tmux CLI). Verified with macOS's default `/bin/bash` (3.2).
+- **zsh:** add `source /path/to/zeropty/shell/zeropty.zsh` to `.zshrc` and `zeropty` becomes a shell function (p50 `send-keys -l` 0.12ms, 50.9\~52.7x faster than the tmux CLI; `has-session` 0.11\~0.17ms, 35.5\~56.2x faster; a 2000-line `capture-pane` 0.50\~0.55ms, 12.1\~13.5x faster). It uses the `zsh/net/socket` module that ships with zsh.
+- **bash:** run `enable -f /path/to/zeropty/dist/zeropty_bash.dylib zeropty` once and `zeropty` becomes a builtin (0.041\~0.138ms per command, 48.7\~157x faster than the tmux CLI). Verified with macOS's default `/bin/bash` (3.2).
 - Both run the program for: running with no arguments, `attach` (`attach-session`, `a`), `serve`, `restart-server`, `-V`/`--version`, `-h`/`--help`/`help`, and any command when no server is running (because `new-session` has to start the server). Set `ZEROPTY_BIN` to change the program's location.
 - In zsh, `=work:` is turned into a command path (`=` expansion). Quote it as `'=work:'`. The same applies to tmux.
 
@@ -253,7 +253,7 @@ const r = await zeropty(['capture-pane', '-p', '-t', '=work:'])   // { ok, code,
 |---|---|
 | `zeropty(argv, { cwd, sock, timeout })` | Sends one command and resolves to `{ ok, code, out, err }`. If no server is running, it runs the CLI (`new-session` starts the server). Default timeout 15 seconds |
 | `zeropty(['wait-pane', ...])` | Opens a separate connection, so other commands are still handled immediately on the shared connection while it waits. No default timeout (set one with `-T` or `{ timeout }`) |
-| `zeroptySync(argv, { cwd, sock })` | The same, synchronously. Requires `dist/zeropty.node`, and blocks the thread for 0.11\~0.20ms per command |
+| `zeroptySync(argv, { cwd, sock })` | The same, synchronously. Requires `dist/zeropty.node`, and blocks the thread for 0.13\~0.26ms per command |
 | `sockPath()`, `cliPath()` | Paths of the socket (`ZEROPTY_SOCK`) and CLI (`ZEROPTY_BIN`) in use |
 
 Runnable example: [`examples/node/quickstart.mjs`](../examples/node/quickstart.mjs)
@@ -321,7 +321,7 @@ fn main() {
 
 Building requires macOS and the Xcode Command Line Tools (`zstd-sys` compiles C code). The shim used to launch programs that need a terminal is not part of the crate; for that, use `dist/zeropty-tty` built with this repository's `./build.sh`.
 
-**Polled: no engine thread (the Node default; 400 idle sessions go from 0.72MB to 0.39\~0.41MB).** The host's event loop drives the engine. Make every call from that loop's thread. In Node, libuv watches the engine fd, so there is nothing extra to do.
+**Polled: no engine thread (the Node default; 400 idle sessions go from 0.74MB to 0.45\~0.46MB).** The host's event loop drives the engine. Make every call from that loop's thread. In Node, libuv watches the engine fd, so there is nothing extra to do.
 
 ```js
 open({ polled: false })   // to use an engine thread in Node (when calling from worker threads). Call before the first command

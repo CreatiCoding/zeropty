@@ -51,7 +51,7 @@ Programs that run many coding agents (claude, codex ...) usually start them in t
 |---|---|---|
 | Hundreds to thousands of sessions | PTY limit of 511 (999 at most) | **1000 verified, no PTY limit** |
 | Reading a screen, sending keys | Runs tmux for every command (`send-keys` 9.03\~9.56ms) | **One function call (`send-keys` 0.06\~0.07ms)** |
-| Knowing that an agent finished | `capture-pane` in a loop (p50 82\~93ms late at a 200ms poll) | **`wait-pane`: 2ms, no polling** |
+| Knowing that an agent finished | `capture-pane` in a loop (p50 86\~96ms late at a 200ms poll) | **`wait-pane`: 1ms, no polling** |
 | Which session is waiting for input | `capture-pane` per session | **`grep-panes`: 1000 sessions in 16\~32ms** |
 | Upgrading the server | Restarting the server ends the sessions | **`restart-server`: takes over the running sessions** |
 | Putting it inside your program | ❌ | **C ABI · Node module** |
@@ -154,7 +154,7 @@ With the engine inside your process there is no server process, and a command is
 ```js
 import { zeropty, listen } from './client/embedded.mjs'   // only the import changes
 await zeropty(['new-session', '-d', '-s', 'w', 'dist/claude-zeropty'])
-const { out } = await zeropty(['capture-pane', '-p', '-t', '=w:'])   // 0.06~0.07ms (busy session 0.09~0.12ms)
+const { out } = await zeropty(['capture-pane', '-p', '-t', '=w:'])   // 0.06~0.07ms (busy session 0.10~0.17ms)
 listen(`${process.env.HOME}/.zeropty/app.sock`)   // optional: ZEROPTY_SOCK=... zeropty attach -t w
 ```
 
@@ -222,7 +222,7 @@ echo "export PATH=\"$PWD/dist:\$PATH\"" >> ~/.zshrc   # from inside the zeropty 
 To use it from inside your shell, faster and with no process:
 
 ```sh
-source shell/zeropty.zsh                          # zsh: send-keys 0.11ms (p50)
+source shell/zeropty.zsh                          # zsh: send-keys 0.12ms (p50)
 enable -f "$PWD/dist/zeropty_bash.dylib" zeropty  # bash: send-keys 0.043~0.048ms
 ```
 

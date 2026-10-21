@@ -154,18 +154,18 @@ Most of the cost of a single command is process startup (1.3ms even for an empty
 
 | How the command is sent | Work per command | Time per command |
 |---|---|---|
-| tmux CLI | start process → connect to server → execute → process exits | 4.35\~4.80ms |
-| zeropty zsh function | connect to the socket from inside the shell, one line of JSON (no process) | 0.11\~0.20ms |
-| zeropty bash builtin | connect to the socket from inside the shell, one line of JSON (no process) | 0.035\~0.115ms |
+| tmux CLI | start process → connect to server → execute → process exits | 6.04\~6.33ms |
+| zeropty zsh function | connect to the socket from inside the shell, one line of JSON (no process) | 0.11\~0.17ms |
+| zeropty bash builtin | connect to the socket from inside the shell, one line of JSON (no process) | 0.041\~0.075ms |
 | zeropty embedded | function call | 0.06\~0.07ms in Node (`send-keys` p50) |
 
 ```mermaid
 flowchart TB
-  subgraph tmux["tmux CLI: 4.35~4.80ms per command"]
+  subgraph tmux["tmux CLI: 6.04~6.33ms per command"]
     direction LR
     t1["fork + exec tmux"] --> t2["connect to server"] --> t3["execute"] --> t4["process exits"]
   end
-  subgraph zsh["zeropty zsh function · bash builtin: 0.035~0.20ms"]
+  subgraph zsh["zeropty zsh function · bash builtin: 0.041~0.17ms"]
     direction LR
     z1["one JSON line to the socket from inside the shell"] --> z2["engine"]
   end
@@ -178,7 +178,7 @@ flowchart TB
 
 - **Socket.** One connection carries many commands (the Node client).
 - **Embedded.** Putting the engine inside your process turns commands into function calls. In Node, one `send-keys` takes p50 0.06\~0.07ms and `capture-pane` 0.06\~0.07ms (busy session 0.10\~0.17ms). Most of that time is the idle Node thread waking up (\~40\~50µs); called back to back without idling, it is 2.6µs per call ([BENCHMARKS](BENCHMARKS.md)). With no server process, there is also no floor of one empty process's memory (0.865MB). If even the engine thread is dropped and the host's event loop drives the engine (polled), 200 idle sessions go from 0.68\~0.69MB to 0.39MB. Commands like `capture-pane` with nothing to read, or `send-keys`, are handled right on the calling thread without waking the engine thread.
-- **zsh function, bash builtin.** zsh uses its built-in socket module, and bash a C function loaded with `enable -f`, to talk to the server directly from inside the shell. A tmux command's 4.35\~4.80ms becomes 0.11\~0.20ms in zsh and 0.035\~0.115ms in bash (`has-session` and `send-keys`, zsh at p50; a 2000-line `capture-pane` is 0.45\~0.48ms in zsh and 0.095\~0.102ms in bash).
+- **zsh function, bash builtin.** zsh uses its built-in socket module, and bash a C function loaded with `enable -f`, to talk to the server directly from inside the shell. A tmux command's 6.04\~6.33ms becomes 0.11\~0.17ms in zsh and 0.041\~0.075ms in bash (`has-session` and `send-keys`, zsh at p50; a 2000-line `capture-pane` is 0.50\~0.55ms in zsh and 0.114\~0.138ms in bash).
 
 ## 6. Only measurements decide
 

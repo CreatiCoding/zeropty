@@ -22,7 +22,7 @@ One of the 11 crossed 10x only because tmux was slower: 5.4MB of output until it
 | Memory, 400 redrawing screens | 251.2\~251.4MB | 1.71\~1.74MB | **144\~147×** | **−99%** |
 | Memory, 400 idle (standalone server) | 8.0MB | 1.25\~1.27MB | 6.2\~6.4× ⛔ | −84% |
 | `send-keys`, running a tmux command vs zeropty socket (Node) | 9.03\~9.56ms | 0.24\~0.26ms | **34.7\~39.8×** | **−97%** |
-| `send-keys`, tmux control mode (`-C`) vs zeropty embedded (Node) | 0.42\~0.49ms | 0.06\~0.07ms | 5.9\~8.1× ⛔ (per run 7\~8× †) | −83\~87% |
+| `send-keys`, tmux control mode (`-C`) vs zeropty embedded (Node) | 0.42\~0.49ms | 0.06\~0.07ms | 6.0\~8.1× ⛔ (per run 7\~8× †) | −83\~87% |
 | `send-keys`, tmux control mode (`-C`) vs zeropty socket (Node) | 0.42\~0.49ms | 0.24\~0.26ms | 1.6\~2.0× ⛔ (per run 1.7\~2.0× †) | −38\~51% |
 | Keystroke → screen, tmux control mode (`-C`) vs zeropty embedded (Node) | 0.89\~0.98ms | 0.09\~0.10ms | 8.9\~10.8× ⛔ (per run 9\~10× †) | −88\~90% |
 | `has-session` from the shell, tmux vs zeropty zsh function | 6.04\~6.19ms | 0.11\~0.17ms | **35.5\~56.2×** | **−97\~98%** |
@@ -177,7 +177,7 @@ These are multipliers for the same p50 ranges, computed with [the single rule](#
 |---|---|---|---|---|
 | `capture-pane` (busy session) | **31.0\~39.6×** | **54.7\~99.0×** | 3.2\~6.3× ⛔ | 1.8\~2.5× ⛔ |
 | `capture-pane -e -S -200` (quiet session) | **34.7\~44.0×** | **133\~169×** | 6.4\~10.0× ⛔ | 1.6\~2.6× ⛔ |
-| `send-keys` | **34.7\~39.8×** | **128\~159×** | 5.9\~8.1× ⛔ | 1.6\~2.0× ⛔ |
+| `send-keys` | **34.7\~39.8×** | **128\~159×** | 6.0\~8.1× ⛔ | 1.6\~2.0× ⛔ |
 | Keystroke → visible on screen | **57.2\~72.1×** | **246\~280×** | 8.9\~10.8× ⛔ | 2.0\~2.8× ⛔ |
 
 - **The embedded columns are polled mode; engine-thread mode is at the same level.** Measured alternately, twice each, on 2026-10-21, polled vs engine thread p50: busy-session capture 0.08\~0.09 vs 0.08\~0.11, quiet-session capture 0.06\~0.07 vs 0.05\~0.07, `send-keys` 0.06 vs 0.06, keystroke→screen 0.10 vs 0.08\~0.09. So the mode does not explain why embedded `send-keys` went from 0.04\~0.06ms (2026-10-18, engine thread) to 0.06\~0.07ms; the machine was busier, and we have not checked further.
@@ -240,7 +240,7 @@ These are multipliers for the same p50 ranges, computed with [the single rule](#
   - The server spinning for 200µs after replying, waiting for the next request: `send-keys` in back-to-back runs goes from 8.0µs to 4.5µs (5.8x vs tmux -C), but with pauses it is unchanged. In exchange, every request holds a core for 200µs, which eats into the CPU goal. Switching to shared memory would get down to 1.5\~2µs on paper, but again only for back-to-back runs, and a few µs are not perceptible at the speed of a human or of claude.
   - `mach_eventlink`: a thread waits on only one link, so putting it into a server that watches every connection with a single kqueue would need a thread per connection (an allocator heap per thread; +0.8MB in the earlier GCD experiment). Mach messages, which can be used together with kqueue, are only 2µs faster than sockets.
 - **We did not ship a screen mirror on the client side (like mosh, or tmux `%output`) (2026-10-19).** If the client receives output through `attach -r` and interprets the screen itself, capture needs no round trip. But mirroring all 200 busy sessions took server CPU from 2.50% to 6.15%, because sessions someone is watching are read and sent immediately instead of being collected over 300ms. The client also has to re-interpret 573KB per second. And unlike a server capture, a mirror's capture does not check for pending output, so it may be as stale as it is fast. Keeping the batched reads leaves CPU unchanged but makes the screen up to 300ms late. `attach -r` already covers continuously receiving the screen, and `wait-pane` covers waiting for changes.
-- **The synchronous client (`zeroptySync`, `Client` in `zeropty.node`) is 3.0\~4.1x per run (⛔ †, p50 0.13\~0.26ms, the same three runs).** It writes and reads with blocking I/O without going through the event loop, so its p50 is about 30\~46% lower than the async one's. The remaining lower bound is the round trip of two processes, the server and Node, waking each other in turn. When the server is busy, p95 spikes up to 1ms.
+- **The synchronous client (`zeroptySync`, `Client` in `zeropty.node`) is 3.0\~4.1x per run (⛔ †, p50 0.13\~0.26ms, the same three runs).** It writes and reads with blocking I/O without going through the event loop, so its p50 is about 25\~48% lower than the async one's. The remaining lower bound is the round trip of two processes, the server and Node, waking each other in turn. When the server is busy, p95 spikes up to 1ms.
 - **Embedded has no such lower bound.** The remaining lower bound is the time for the Node thread to sleep and wake (\~40\~50µs). Called back to back, it takes 2.6µs per call.
 
 ## Latency: from the shell (`bench/shell.zsh`)
@@ -325,7 +325,7 @@ Out of 1000 idle claude screens, 3 were marked, and this is the time it took to 
 | Memory: embedded 400 idle, 200 and 400 real workloads | ✅ 13.1\~19.9× (polled), 10.4\~14.4× (engine thread, 400 idle 10.8×) |
 | Memory: increment per session | ✅ idle, screen redraw and real workloads 14.1\~1207×. ⛔ whole claude transcript dump 7.9\~28.9× (a 352KB difference between two runs, see the standalone server section) |
 | Latency: vs running tmux per command | ✅ socket 31.0\~72.1×, embedded 54.7\~280× (per run 57\~268× †) |
-| Latency: vs tmux control mode, embedded | ⛔ keystroke→screen 8.9\~10.8× (per run 9\~10× †), send-keys 5.9\~8.1× (echo in cooked sessions), capture 3.2\~10.0× (causes in the latency section above). The low end of the range is under 10x, so these are not in the README |
+| Latency: vs tmux control mode, embedded | ⛔ keystroke→screen 8.9\~10.8× (per run 9\~10× †), send-keys 6.0\~8.1× (echo in cooked sessions), capture 3.2\~10.0× (causes in the latency section above). The low end of the range is under 10x, so these are not in the README |
 | Latency: vs tmux control mode, socket | ⛔ 1.6\~2.8× (async, per run 1.7\~2.8× †), 3.0\~4.1× (synchronous client, †), lower bound of an inter-process round trip |
 | Absolute memory: standalone server idle, whole claude transcript dump | ⛔ 4.1\~6.9×, server process lower bound (empty C process 0.87MB, memory section below) (surpassed with embedded polled: idle 12.8\~17.7×, real workloads 13.1\~19.9×. Even with the server plugin on and sessions handled through the CLI and attach, 200 idle is 12.8\~13.1×) |
 | Memory: embedded 200 idle | ✅ 12.8\~13.0× (polled, the Node default). Engine-thread mode is ⛔ 7.2\~7.5×, thread cost 308\~309KB |

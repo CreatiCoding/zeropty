@@ -51,7 +51,7 @@
 |---|---|---|
 | 세션 수백\~수천 개 | PTY 한도 511개 (최대 999) | **1000개 확인, PTY 한도 없음** |
 | 화면 읽기 · 키 보내기 | 명령마다 tmux 실행 (`send-keys` 9.03\~9.56ms) | **함수 호출 한 번 (`send-keys` 0.06\~0.07ms)** |
-| 에이전트가 끝났는지 알기 | `capture-pane` 반복 (200ms 폴링이면 p50 82\~93ms 늦게) | **`wait-pane`: 폴링 없이 2ms** |
+| 에이전트가 끝났는지 알기 | `capture-pane` 반복 (200ms 폴링이면 p50 86\~96ms 늦게) | **`wait-pane`: 폴링 없이 1ms** |
 | 어느 세션이 입력을 기다리나 | 세션마다 `capture-pane` | **`grep-panes`: 1000개를 16\~32ms에** |
 | 서버 업그레이드 | 서버를 다시 띄우면 세션이 끝나요 | **`restart-server`: 실행 중인 세션을 넘겨받아요** |
 | 내 프로그램 안에 넣기 | ❌ | **C ABI · Node 모듈** |
@@ -154,7 +154,7 @@ const { out } = await zeropty(['capture-pane', '-p', '-t', '=fix-1:'])
 ```js
 import { zeropty, listen } from './client/embedded.mjs'   // import만 바꾸면 돼요
 await zeropty(['new-session', '-d', '-s', 'w', 'dist/claude-zeropty'])
-const { out } = await zeropty(['capture-pane', '-p', '-t', '=w:'])   // 0.06~0.07ms (바쁜 세션 0.09~0.12ms)
+const { out } = await zeropty(['capture-pane', '-p', '-t', '=w:'])   // 0.06~0.07ms (바쁜 세션 0.10~0.17ms)
 listen(`${process.env.HOME}/.zeropty/app.sock`)   // 선택: ZEROPTY_SOCK=... zeropty attach -t w
 ```
 
@@ -222,7 +222,7 @@ echo "export PATH=\"$PWD/dist:\$PATH\"" >> ~/.zshrc   # zeropty 폴더 안에서
 셸 안에서 프로세스 없이 더 빠르게 쓰려면:
 
 ```sh
-source shell/zeropty.zsh                          # zsh: send-keys 0.11ms (p50)
+source shell/zeropty.zsh                          # zsh: send-keys 0.12ms (p50)
 enable -f "$PWD/dist/zeropty_bash.dylib" zeropty  # bash: send-keys 0.043~0.048ms
 ```
 
