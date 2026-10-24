@@ -14,7 +14,12 @@ process.chdir(root)
 
 const files = process.argv.slice(2).length
   ? process.argv.slice(2)
-  : execFileSync('git', ['ls-files', '-co', '--exclude-standard', '*.md'], { encoding: 'utf8' }).split('\n').filter(Boolean).filter((f) => fs.existsSync(f))
+  : execFileSync('git', ['ls-files', '-co', '--exclude-standard', '*.md'], { encoding: 'utf8' })
+      .split('\n')
+      .filter(Boolean)
+      .filter((f) => fs.existsSync(f))
+      // The docs site links by site path (/guide/...), not by file; its build checks those links itself.
+      .filter((f) => !f.startsWith('website/'))
 
 /** The text with fenced code blocks and inline code blanked out (line numbers kept). */
 function prose(text) {
