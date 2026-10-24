@@ -192,10 +192,10 @@ cc -dynamiclib -Ibindings/c/include -o ~/.zeropty/plugins/tally.dylib examples/p
 **릴리스에서 받기: Rust가 필요 없어요.** 0.1.3부터 [릴리스](https://github.com/CreatiCoding/zeropty/releases)마다 모든 맥(Apple silicon·Intel, macOS 11 이상. macOS 15와 26에서 확인)용 묶음 하나와 그 `SHA256SUMS`가 붙어 있어요. 묶음 안에는 폴더 하나가 있고, 그 안에 `zeropty`, `shim.dylib`, `zeropty-tty`, `claude-zeropty`와 라이선스가 들어 있어요.
 
 ```sh
-v=0.1.5   # 최신 버전은: v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/CreatiCoding/zeropty/releases/latest | sed 's|.*/v||')
+v=0.1.6   # 최신 버전은: v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/CreatiCoding/zeropty/releases/latest | sed 's|.*/v||')
 curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/zeropty-$v-darwin-universal.tar.gz"
 curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/SHA256SUMS"
-shasum -a 256 -c SHA256SUMS                 # zeropty-0.1.5-darwin-universal.tar.gz: OK
+shasum -a 256 -c --ignore-missing SHA256SUMS   # zeropty-0.1.6-darwin-universal.tar.gz: OK
 tar -xzf "zeropty-$v-darwin-universal.tar.gz"
 export PATH="$PWD/zeropty-$v-darwin-universal:$PATH"   # 계속 쓰려면 ~/.zshrc에 넣어요
 zeropty -V
