@@ -53,8 +53,10 @@
 //!
 //! # Platform
 //!
-//! macOS only: the engine is built on kqueue, and programs that need a terminal get one through a
-//! `DYLD_INSERT_LIBRARIES` shim ([shim/shim.c](https://github.com/CreatiCoding/zeropty/blob/main/shim/shim.c)).
+//! macOS and Linux. The engine waits on kqueue (macOS) or epoll (Linux, 5.3 or later for pidfds) behind
+//! one set of types, and programs that need a terminal get one through a shim
+//! ([shim/shim.c](https://github.com/CreatiCoding/zeropty/blob/main/shim/shim.c)) loaded with
+//! `DYLD_INSERT_LIBRARIES` (macOS) or `LD_PRELOAD` (Linux).
 //!
 //! # Layers
 //!

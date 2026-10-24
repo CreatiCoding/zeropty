@@ -17,7 +17,7 @@
   <!-- Status badges, each added once what it shows is real (no badge that claims a state it cannot track):
   - Release, once a GitHub release exists:
   <a href="https://github.com/CreatiCoding/zeropty/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/CreatiCoding/zeropty"></a>
-  - crates.io: not published there (macOS-only, built with ./build.sh); no badge until it is. -->
+  - crates.io: not published there (built with ./build.sh); no badge until it is. -->
   <img alt="platform: macOS" src="https://img.shields.io/badge/platform-macOS-111827?logo=apple&logoColor=white">
   <img alt="Rust" src="https://img.shields.io/badge/Rust-engine-b7410e?logo=rust&logoColor=white">
   <img alt="embed: C ABI · Node" src="https://img.shields.io/badge/embed-C%20ABI%20%C2%B7%20Node-0891b2">
@@ -205,6 +205,15 @@ zeropty -V
 - To pin a version in a script, fix `v` and the archive's hash from that release's `SHA256SUMS`, and compare before unpacking.
 - **Gatekeeper:** the files are signed ad hoc, not notarized. `curl` adds no quarantine mark, so the steps above run as they are. A browser download is marked, `tar` passes the mark on to every unpacked file, and macOS then refuses `zeropty` with a dialog (the command waits on it). Clear the mark before the first run: `xattr -dr com.apple.quarantine zeropty-$v-darwin-universal`.
 
+**On Linux (x86_64, glibc 2.29 or later: Ubuntu 20.04, Debian 11 and later)** the release carries `zeropty-$v-linux-x86_64.tar.gz`, in the same `SHA256SUMS`. Its folder holds `shim.so` in place of `shim.dylib`, loaded with `LD_PRELOAD`: no copy and no signing, and any dynamically linked program sees a terminal (a statically linked one, such as most Go binaries, does not).
+
+```sh
+curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/zeropty-$v-linux-x86_64.tar.gz"
+curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/SHA256SUMS"
+sha256sum -c --ignore-missing SHA256SUMS     # zeropty-0.1.6-linux-x86_64.tar.gz: OK
+tar -xzf "zeropty-$v-linux-x86_64.tar.gz" && export PATH="$PWD/zeropty-$v-linux-x86_64:$PATH"
+```
+
 **If you need only the CLI and the server and have Rust, it is one line.** That is enough to run programs that need no terminal, such as `sh`, `python3` and build commands.
 
 ```sh
@@ -253,7 +262,7 @@ zeropty = { git = "https://github.com/CreatiCoding/zeropty" }
 
 ## How it differs from tmux
 
-zeropty concentrates on **starting programs and driving them**. It has no window splits, status line, copy mode or configuration file, and one session runs one program. It supports macOS only (kqueue, DYLD shim). Feature by feature: [docs/USAGE.md](docs/USAGE.md#feature-comparison-with-tmux)
+zeropty concentrates on **starting programs and driving them**. It has no window splits, status line, copy mode or configuration file, and one session runs one program. It supports macOS and Linux (kqueue or epoll, a DYLD or LD_PRELOAD shim). Feature by feature: [docs/USAGE.md](docs/USAGE.md#feature-comparison-with-tmux)
 
 ## FAQ
 
@@ -278,7 +287,7 @@ No. Output is read in batches to save CPU, but commands that read the screen han
 <details>
 <summary><b>Does it run on Linux?</b></summary>
 
-Only macOS for now. The engine is built on kqueue, and the shim uses `DYLD_INSERT_LIBRARIES`. [More](docs/FAQ.md#does-it-run-on-linux-or-windows)
+macOS and Linux (x86_64), not Windows. On Linux the engine waits on epoll and the shim loads with `LD_PRELOAD`. [More](docs/FAQ.md#does-it-run-on-linux-or-windows)
 </details>
 
 → More questions: [docs/FAQ.md](docs/FAQ.md)

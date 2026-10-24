@@ -1,5 +1,6 @@
 #!/bin/sh
-# Runs a program with the session's pipes in place of a terminal: shim.dylib answers isatty, tcgetattr,
+# Runs a program with the session's pipes in place of a terminal: the shim (shim.dylib; shim.so on
+# Linux, through LD_PRELOAD) answers isatty, tcgetattr,
 # TIOCGWINSZ, tcgetpgrp and /dev/tty for it. macOS drops DYLD_INSERT_LIBRARIES for SIP-protected
 # binaries (/usr/bin, /bin, /sbin, /System) and for ones signed with the hardened runtime: those run from
 # an ad-hoc signed copy, refreshed whenever the original changes (an update). A copy has none of the
@@ -14,6 +15,11 @@ case $PROG in
   */*) ;;
   *) PROG=$(command -v "$PROG") || { echo "zeropty-tty: $PROG: not found" >&2; exit 127; } ;;
 esac
+# Linux: LD_PRELOAD reaches every dynamically linked program, so no copy and no signature. A statically
+# linked one (Go's) never loads the shim and sees no terminal.
+if [ "$(uname -s)" = Linux ]; then
+  LD_PRELOAD=${ZEROPTY_SHIM:-$HERE/shim.so} exec "$PROG" "$@"
+fi
 REAL=$(realpath "$PROG")
 # Run by the name it was given (a link's, not its target's): ps and pgrep look for that name.
 RUN=$PROG

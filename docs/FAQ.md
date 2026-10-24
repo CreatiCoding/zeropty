@@ -42,7 +42,7 @@ Yes. A session can run any program (`sh`, `cat`, `python3`, a build command ...)
 
 ## Does it run on Linux or Windows?
 
-Only macOS for now. The engine is built on kqueue, and the shim that fools programs which need a terminal uses macOS's `DYLD_INSERT_LIBRARIES`. Another platform would need both parts ported to its own mechanisms (epoll, `LD_PRELOAD`).
+macOS and Linux (x86_64; glibc 2.29 or later, kernel 5.3 or later), not Windows. The engine's queue is kqueue on macOS and epoll on Linux, behind the same types (`src/sys/kq.rs`, `src/sys/epoll.rs`), and the shim that fools programs which need a terminal loads with `DYLD_INSERT_LIBRARIES` on macOS and `LD_PRELOAD` on Linux (`shim.so`). On Linux a statically linked program never loads the shim and sees no terminal.
 
 ## Why does the README list only results of 10x or more?
 

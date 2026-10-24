@@ -125,7 +125,7 @@ A new function or export only adds a line to the baseline, so it is not a breaki
 - **Rust 1.88** (`rust-version` in `Cargo.toml`). The dependency `napi` 3 requires 1.88. The edition is 2024.
 - The MSRV step of `scripts/check.sh` runs `cargo check --locked` on the whole workspace with exactly 1.88.0 (`rustup run 1.88.0`).
 - The MSRV is raised only in a MINOR release and noted under Changed in the CHANGELOG. When raising it, change `rust-version` in `Cargo.toml`, the MSRV step of `scripts/check.sh` and this document in the same commit.
-- Platform: macOS only (kqueue, the DYLD shim). The checks (`scripts/check.sh`) run on the maintainer's Apple Silicon Mac.
+- Platform: macOS, and Linux x86_64 (glibc 2.29 or later). The checks (`scripts/check.sh`) run on the maintainer's Apple Silicon Mac; the Linux tests run in CI (`test-linux` in `.github/workflows/release.yml`).
 
 ## Examples
 

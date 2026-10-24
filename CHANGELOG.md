@@ -17,6 +17,14 @@ release; polish that draft into entries written in English, and add the same ent
 
 ## [Unreleased]
 
+### Added
+
+- Linux support (x86_64, glibc 2.29 or later, kernel 5.3 or later). The engine waits on epoll instead of kqueue,
+  behind the same `zeropty::engine` types, and the shim loads with `LD_PRELOAD` (`shim.so`), so `zeropty-tty` runs
+  any dynamically linked program as it is, with no copy and no signing. Each release now also carries
+  `zeropty-<version>-linux-x86_64.tar.gz` (`zeropty`, `shim.so`, `zeropty-tty`, `claude-zeropty`), in the same
+  `SHA256SUMS`. A statically linked program (most Go binaries) never loads the shim and sees no terminal.
+
 ## [0.1.5] - 2026-10-21
 
 ### Fixed

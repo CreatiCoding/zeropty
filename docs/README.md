@@ -58,7 +58,7 @@ The other files in `examples/` (`*_bench.rs`, `sizes.rs`, `zstd_ratio.rs`, `clau
 
 ## Rust API docs
 
-The rustdoc of the three crates `zeropty`, `zeropty_c` and `zeropty_node`. They are not published on crates.io (macOS only, built with `./build.sh`). There is no hosted copy; build and open it from the repository:
+The rustdoc of the three crates `zeropty`, `zeropty_c` and `zeropty_node`. They are not published on crates.io (built with `./build.sh`). There is no hosted copy; build and open it from the repository:
 
 ```sh
 cargo doc --no-deps --workspace --open

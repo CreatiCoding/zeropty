@@ -448,4 +448,4 @@ zeropty는 **프로그램을 띄워 두고 화면을 읽고 키를 보내는 일
 | 라이브러리로 내장 | ❌ | ✅ C ABI, Node 모듈, Rust crate |
 | 실행 중인 세션을 다른 프로세스로 옮기기 | ❌ | ✅ `pull-sessions`, `push-sessions` |
 | 서버 재시작·업그레이드 후에도 세션 유지 | ❌ | ✅ `restart-server` |
-| 플랫폼 | 대부분의 Unix | macOS만 (kqueue, DYLD shim) |
+| 플랫폼 | 대부분의 Unix | macOS와 Linux (kqueue 또는 epoll, DYLD 또는 LD_PRELOAD shim) |
