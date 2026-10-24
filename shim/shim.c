@@ -112,7 +112,8 @@ static void window_size(int *cols, int *rows) {
   *cols = env_int("ZEROPTY_COLS", 220); *rows = env_int("ZEROPTY_ROWS", 80);
   const char *path = getenv("ZEROPTY_SIZE_FILE");
   if (!path) return;
-  int fd = open(path, O_RDONLY | O_CLOEXEC);
+  // Never followed or waited on: the directory may be shared, and a FIFO there would hang the program.
+  int fd = open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
   if (fd < 0) return;
   char b[32]; ssize_t n = read(fd, b, sizeof b - 1); close(fd);
   int c, r;

@@ -22,6 +22,15 @@ release; polish that draft into entries written in English, and add the same ent
 - Linux: `send-keys C-c` (or any key that only signals) no longer fails now and then with "write: Broken pipe"
   when the signal ended the program before the key was done.
 
+### Security
+
+- A resized session's size file could be used against the user when its directory is shared: `/tmp`, when
+  `ZEROPTY_SOCK` names a socket there, or the default `size_dir` of an embedded engine on Linux. The size was written
+  through `<file>.new`, opened following symlinks and blocking on FIFOs, and the name shows in the directory: another
+  local user could plant a symlink there to have zeropty overwrite any file the user can write, or a FIFO to hang the
+  server and every session in it. The temporary file is now created afresh (`O_EXCL`), never followed or waited on,
+  with mode 0600, and the shim reads the size file without following a symlink or waiting on a FIFO.
+
 ## [0.1.6] - 2026-10-24
 
 ### Added
