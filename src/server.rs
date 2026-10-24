@@ -84,6 +84,37 @@ pub fn frame(out: &mut Vec<u8>, kind: u8, bytes: &[u8]) {
     protocol::legacy::frame(out, kind, bytes)
 }
 
+/// A client's connection to the server at `path`, refused (`PermissionDenied`) when that server runs as
+/// another user (root aside): the client checks it as the server checks its clients, since whoever
+/// listens first at a path another user can reach (a shared directory, or one planted there) would get
+/// every command line sent to it, keys and passwords included, and answer what it likes. Never inherited.
+///
+/// ```no_run
+/// use std::io::Write as _;
+///
+/// let mut s = zeropty::server::connect("/home/me/.zeropty/mux.sock".as_ref())?;
+/// s.write_all(b"{\"argv\":[\"list-sessions\"],\"cwd\":\"/\"}\n")?;
+/// # Ok::<(), std::io::Error>(())
+/// ```
+pub fn connect(path: &Path) -> std::io::Result<UnixStream> {
+    crate::sys::fd::connect_server(path)
+}
+
+/// Whether only this user (or root) can rename or replace what is in directory `dir`: owned by us or
+/// root, and writable by no one else unless sticky (/tmp). In a directory others can write, another user
+/// can move the socket aside and listen in its place, or plant a link where a file is written.
+fn private_dir(dir: &Path) -> std::io::Result<()> {
+    use std::os::unix::fs::MetadataExt as _;
+    let m = std::fs::metadata(dir)?;
+    if !crate::sys::process::is_us_or_root(m.uid()) || (m.mode() & 0o022 != 0 && m.mode() & 0o1000 == 0) {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::PermissionDenied,
+            format!("{} is another user's or writable by others: not used for the socket", dir.display()),
+        ));
+    }
+    Ok(())
+}
+
 /// The server's tags: HOST_TAG and this bit, so a host's own (crate::embed's wake event) stay apart.
 const SERVER_TAG: usize = HOST_TAG | 1 << 62;
 const LISTENER: usize = usize::MAX;
@@ -174,7 +205,8 @@ pub struct Server {
 impl Server {
     /// Listens at `path` for `engine`'s commands: the socket itself is private (0600), and a directory
     /// made for it too (0700; an existing one is left as it is). Fails if a server already answers there,
-    /// or if something other than a socket is there (it is never deleted).
+    /// if something other than a socket is there (it is never deleted), or if the directory is another
+    /// user's or writable by others without being sticky (`PermissionDenied`), as tmux refuses one.
     ///
     /// # Example
     ///
@@ -226,6 +258,7 @@ impl Server {
             std::fs::create_dir_all(dir)?;
             std::fs::set_permissions(dir, std::os::unix::fs::PermissionsExt::from_mode(0o700))?;
         }
+        private_dir(path.parent().filter(|d| !d.as_os_str().is_empty()).unwrap_or(Path::new(".")))?;
         if crate::sys::fd::connect(path).is_ok() {
             return Err(std::io::Error::new(std::io::ErrorKind::AddrInUse, format!("a server already answers on {}", path.display())));
         }
@@ -896,5 +929,26 @@ mod tests {
             assert!(start.elapsed() < Duration::from_secs(5), "connection not closed");
         }
         assert!(!f.e.command(&["list-sessions".to_string()], "/").out.contains("attached"), "detached");
+    }
+
+    /// A directory others can write (and not sticky as /tmp is) lets them move the socket aside and
+    /// listen in its place: bind refuses it, as tmux does, and takes a private or a sticky one.
+    #[test]
+    fn bind_refuses_a_directory_others_can_write() {
+        use std::os::unix::fs::PermissionsExt as _;
+        let dir = std::env::temp_dir().join(format!("zeropty-srv-shared-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let e = Engine::new(Options { size_dir: dir.clone(), ..Options::default() });
+        for (mode, takes) in [(0o777, false), (0o775, false), (0o1777, true), (0o755, true), (0o700, true)] {
+            std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(mode)).unwrap();
+            let r = Server::bind(&e, &dir.join("s"), Hooks::default());
+            assert_eq!(r.is_ok(), takes, "{mode:o}");
+            if let Err(err) = r {
+                assert_eq!(err.kind(), std::io::ErrorKind::PermissionDenied, "{mode:o}: {err}");
+                assert!(!dir.join("s").exists(), "{mode:o}: nothing bound");
+            }
+        }
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

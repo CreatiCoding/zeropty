@@ -15,10 +15,20 @@ case $PROG in
   */*) ;;
   *) PROG=$(command -v "$PROG") || { echo "zeropty-tty: $PROG: not found" >&2; exit 127; } ;;
 esac
+# The shim, by an absolute path: the loader opens a relative one from each process's own directory, so a
+# program that changes directory would load whatever shim.so lies there. ld.so splits LD_PRELOAD at
+# spaces and colons (dyld at colons) and has no way to quote them: in a path with one, a part of it
+# becomes a relative path of its own, so such a path is refused rather than half loaded.
+if [ "$(uname -s)" = Linux ]; then SHIM=${ZEROPTY_SHIM:-$HERE/shim.so}; SPLIT='*[ :]*'; else SHIM=${ZEROPTY_SHIM:-$HERE/shim.dylib}; SPLIT='*:*'; fi
+case $SHIM in /*) ;; *) SHIM=$(pwd)/$SHIM ;; esac
+# shellcheck disable=SC2254 # $SPLIT is a pattern
+case $SHIM in
+  $SPLIT) echo "zeropty-tty: the shim's path has a character the loader splits it at: $SHIM" >&2; exit 2 ;;
+esac
 # Linux: LD_PRELOAD reaches every dynamically linked program, so no copy and no signature. A statically
 # linked one (Go's) never loads the shim and sees no terminal.
 if [ "$(uname -s)" = Linux ]; then
-  LD_PRELOAD=${ZEROPTY_SHIM:-$HERE/shim.so} exec "$PROG" "$@"
+  LD_PRELOAD=$SHIM exec "$PROG" "$@"
 fi
 REAL=$(realpath "$PROG")
 # Run by the name it was given (a link's, not its target's): ps and pgrep look for that name.
@@ -52,4 +62,4 @@ if [ $copy = yes ]; then
   fi
   RUN=$COPY
 fi
-DYLD_INSERT_LIBRARIES=${ZEROPTY_SHIM:-$HERE/shim.dylib} exec "$RUN" "$@"
+DYLD_INSERT_LIBRARIES=$SHIM exec "$RUN" "$@"

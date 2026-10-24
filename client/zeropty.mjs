@@ -1,6 +1,7 @@
 // zeropty from Node without starting a process per command: one connection to the server's socket is kept
 // open and commands go over it one line each, replies coming back in order. Same argv as the CLI, so
 // `tmux(...args)` call sites become `zeropty(args)`.
+import fs from 'node:fs'
 import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
@@ -41,6 +42,7 @@ const conns = new Map()
 function connection(sock) {
   let c = conns.get(sock)
   if (c) return c
+  if (foreign(sock)) return null
   const socket = net.createConnection(sock)
   c = { socket, waiting: [], chunks: [] }
   c.ready = new Promise((resolve) => {
@@ -75,12 +77,24 @@ function connection(sock) {
   return c
 }
 
+/** The socket's owner is another user (not root): whoever listens there first would get every command,
+ *  keys included, and answer what it likes. The callers leave it to the CLI, which refuses it and says why. */
+const foreign = (sock) => {
+  try {
+    const { uid } = fs.statSync(sock)
+    return uid !== 0 && uid !== process.geteuid()
+  } catch {
+    return false
+  }
+}
+
 /**
  * wait-pane on a connection of its own, closed after: it holds its connection until answered, which
  * would hold up every command sent after it on the shared one. No timeout unless one is given (-T is
  * the server's).
  */
 function waitPane(argv, cwd, sock, timeout) {
+  if (foreign(sock)) return Promise.resolve(failed(`zeropty: the server on ${sock} runs as another user\n`))
   return new Promise((resolve) => {
     const socket = net.createConnection(sock)
     let buf = '', done = false

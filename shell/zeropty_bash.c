@@ -9,6 +9,7 @@
 #include <libgen.h>
 #include <signal.h>
 #include <limits.h>
+#include <pwd.h>
 #include <spawn.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -93,6 +94,28 @@ static int run_program(char **argv) {
   return r;
 }
 
+/* The home directory: HOME, else this user's from the password database, else "/". */
+static const char *home(void) {
+  const char *h = getenv("HOME");
+  if (h && *h) return h;
+  struct passwd *pw = getpwuid(getuid());
+  return pw && pw->pw_dir && *pw->pw_dir ? pw->pw_dir : "/";
+}
+
+/* Whether the server on `fd` runs as this user (or root), as the server checks its clients: whoever
+ * listens first at a path another user can reach would get every command, keys included. */
+static int peer_is_us(int fd) {
+#ifdef __APPLE__
+  uid_t uid; gid_t gid;
+  if (getpeereid(fd, &uid, &gid) != 0) return 0;
+#else
+  struct ucred cr; socklen_t len = sizeof cr;
+  if (getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &cr, &len) != 0) return 0;
+  uid_t uid = cr.uid;
+#endif
+  return uid == 0 || uid == geteuid();
+}
+
 static int zeropty_builtin(WORD_LIST *list) {
   int argc = 0;
   for (WORD_LIST *l = list; l; l = l->next) argc++;
@@ -109,13 +132,16 @@ static int zeropty_builtin(WORD_LIST *list) {
   struct sockaddr_un addr = { .sun_family = AF_UNIX };
   const char *sock = getenv("ZEROPTY_SOCK");
   char def[PATH_MAX];
-  if (!sock) { snprintf(def, sizeof def, "%s/.zeropty/mux.sock", getenv("HOME") ? getenv("HOME") : "/tmp"); sock = def; }
+  /* Without HOME, the user's home from the password database, never a shared directory like /tmp. */
+  if (!sock) { snprintf(def, sizeof def, "%s/.zeropty/mux.sock", home()); sock = def; }
   int fd = -1;
   if (strlen(sock) < sizeof addr.sun_path) {
     strcpy(addr.sun_path, sock);
     fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd >= 0 && connect(fd, (struct sockaddr *)&addr, sizeof addr) != 0) { close(fd); fd = -1; }
   }
+  /* A server run by another user gets nothing (the program says why). */
+  if (fd >= 0 && !peer_is_us(fd)) { close(fd); fd = -1; }
   if (fd < 0) { int r = run_program(argv); free(argv); return r; }
 
   buf req = {0};

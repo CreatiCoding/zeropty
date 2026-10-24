@@ -7,6 +7,7 @@ use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
 use zeropty::engine::{Reply, fail};
 use zeropty::protocol::{Request, request_line};
+use zeropty::server::connect;
 
 /// sockaddr_un.sun_path is 104 bytes on macOS; a longer path fails to bind with no useful error.
 const SUN_PATH_MAX: usize = 104;
@@ -18,8 +19,12 @@ pub fn run(argv: Vec<String>) -> i32 {
         return 1;
     }
     let starts_server = matches!(argv[0].as_str(), "new-session" | "new" | "pull-sessions");
-    let stream = match UnixStream::connect(sock_path()) {
+    let stream = match connect(&sock_path()) {
         Ok(s) => s,
+        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+            eprintln!("zeropty: {e}");
+            return 1;
+        }
         Err(_) if starts_server => match spawn_server_at(&sock_path()) {
             Some(s) => s,
             None => {
@@ -73,7 +78,7 @@ fn spawn_server_at(bind: &Path) -> Option<UnixStream> {
     cmd.stdin(std::process::Stdio::null()).stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null()).process_group(0).spawn().ok()?;
     for _ in 0..100 {
         std::thread::sleep(std::time::Duration::from_millis(20));
-        if let Ok(s) = UnixStream::connect(bind) {
+        if let Ok(s) = connect(bind) {
             return Some(s);
         }
     }
@@ -85,8 +90,11 @@ fn spawn_server_at(bind: &Path) -> Option<UnixStream> {
 /// old server, which has fewer sessions by then (a few ms).
 pub fn restart_server() -> i32 {
     let path = sock_path();
-    if UnixStream::connect(&path).is_err() {
-        eprintln!("no server running on {}", path.display());
+    if let Err(e) = connect(&path) {
+        match e.kind() {
+            std::io::ErrorKind::PermissionDenied => eprintln!("zeropty: {e}"),
+            _ => eprintln!("no server running on {}", path.display()),
+        }
         return 1;
     }
     let mut bind = path.clone().into_os_string();
@@ -112,7 +120,7 @@ pub fn restart_server() -> i32 {
         eprintln!("zeropty: server not restarted");
         return 1;
     }
-    if let Ok(old) = UnixStream::connect(&path) {
+    if let Ok(old) = connect(&path) {
         ask(&old, &["kill-server"]);
     }
     if let Err(e) = std::fs::rename(&bind, &path) {

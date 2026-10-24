@@ -104,6 +104,12 @@ pub(crate) fn cwd(pid: i32) -> String {
     String::from_utf8_lossy(&path).into_owned()
 }
 
+/// Whether `uid` is this process's user, or root.
+pub(crate) fn is_us_or_root(uid: u32) -> bool {
+    // SAFETY: geteuid takes nothing and cannot fail.
+    uid == 0 || uid == unsafe { libc::geteuid() }
+}
+
 #[cfg(target_os = "macos")]
 /// Whether the peer of `s` runs as this process's user, or as root.
 pub(crate) fn peer_is_same_user(s: &std::os::unix::net::UnixStream) -> bool {
@@ -113,8 +119,7 @@ pub(crate) fn peer_is_same_user(s: &std::os::unix::net::UnixStream) -> bool {
     if unsafe { libc::getpeereid(s.as_raw_fd(), &mut uid, &mut gid) } != 0 {
         return false;
     }
-    // SAFETY: geteuid takes nothing and cannot fail.
-    uid == 0 || uid == unsafe { libc::geteuid() }
+    is_us_or_root(uid)
 }
 
 #[cfg(target_os = "macos")]
@@ -193,8 +198,7 @@ pub(crate) fn peer_is_same_user(s: &std::os::unix::net::UnixStream) -> bool {
     if unsafe { libc::getsockopt(s.as_raw_fd(), libc::SOL_SOCKET, libc::SO_PEERCRED, (&mut cred as *mut libc::ucred).cast(), &mut len) } != 0 {
         return false;
     }
-    // SAFETY: geteuid takes nothing and cannot fail.
-    cred.uid == 0 || cred.uid == unsafe { libc::geteuid() }
+    is_us_or_root(cred.uid)
 }
 
 /// Linux has no QoS classes: the default scheduling stands.

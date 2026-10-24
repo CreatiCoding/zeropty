@@ -74,7 +74,7 @@ The server keeps the environment of the process that started it (the first comma
 
 | Command | Options | What it does |
 |---|---|---|
-| `send-keys` (`send`) `<key>...` | `-t` `-l` `-H` `-N <count>` | Sends keys. For each argument, a [key name](#key-names) sends that key's bytes, and anything else is sent as literal text. `-l` sends the text literally without interpreting key names. `-H` reads the arguments as hexadecimal bytes (`-H 41 42 0a` is `AB` plus a newline). `-N` repeats the whole thing that many times |
+| `send-keys` (`send`) `<key>...` | `-t` `-l` `-H` `-N <count>` | Sends keys. For each argument, a [key name](#key-names) sends that key's bytes, and anything else is sent as literal text. `-l` sends the text literally without interpreting key names. `-H` reads the arguments as hexadecimal bytes (`-H 41 42 0a` is `AB` plus a newline). `-N` repeats the whole thing that many times (up to 16 MiB of keys in all; more is an error) |
 | `paste-buffer` (`pasteb`) | `-t` `-b <buffer>` `-d` `-p` `-r` `-s <separator>` | Sends the buffer's contents as keys. Newlines are sent as `\r` (unchanged with `-r`; `-s` sets the separator). `-p` wraps the text in bracketed paste if the program has enabled it. `-d` deletes the buffer after sending |
 
 Keys pass through the [line discipline](#key-input-and-the-line-discipline), just as with a PTY.
@@ -223,7 +223,7 @@ Keys pass through a line discipline, just as with a PTY. A new session starts in
 
 ## From other programs: the socket
 
-Send one line of JSON to the server socket (`~/.zeropty/mux.sock`; change it with `ZEROPTY_SOCK`) and it answers with one line. One connection can carry many commands, and answers come back in order. The socket has 0600 permissions, so only the same user (and root) can connect.
+Send one line of JSON to the server socket (`~/.zeropty/mux.sock`; change it with `ZEROPTY_SOCK`) and it answers with one line. One connection can carry many commands, and answers come back in order. The socket has 0600 permissions, so only the same user (and root) can connect. Clients check the other way too: the CLI, the bash builtin and the Node clients refuse a server that runs as another user (`the server on ... runs as another user`), so a socket someone else made first at that path gets nothing. Without `HOME`, the home directory comes from the password database (never `/tmp`).
 
 ```
 → {"argv":["capture-pane","-p","-t","=work:"],"cwd":"/"}
@@ -356,7 +356,7 @@ ZEROPTY_SOCK=~/.zeropty/myapp.sock zeropty attach -t w
 if (zeropty_listen(a, "/tmp/myapp.sock") != 0) { /* could not open it */ }
 ```
 
-- The socket path must be 103 bytes or less. The socket gets 0600 permissions, and newly created directories get 0700.
+- The socket path must be 103 bytes or less. The socket gets 0600 permissions, and newly created directories get 0700. A directory that is another user's, or that others can write without the sticky bit (as `/tmp` has), is refused, as tmux refuses one: someone else could move the socket aside and listen in its place.
 - If a server already answers at that path, `listen` fails (Node throws, C returns -1). A socket file nobody answers on (left behind by a server that exited) is taken over; if a non-socket file is in the way, it fails without deleting it.
 - `kill-server` from the socket ends only the sessions. Your program keeps running and the socket stays open (a standalone server process exits).
 - Closing the engine (`zeropty_close`, or dropping Rust's `Embedded`/`Polled`) also removes the socket file. If another server has taken the same path in the meantime, its socket is left alone.
@@ -418,7 +418,7 @@ import-sessions (giver → server)
 | `ZEROPTY_PURGE_MS` | 0 | Standalone server: how long to wait before returning freed memory to the OS |
 | `ZEROPTY_BIN` | `dist/zeropty` | Program run by the Node client, the zsh function and the bash builtin |
 | `ZEROPTY_NODE` | `dist/zeropty.node` | Native module loaded by the Node client |
-| `ZEROPTY_SHIM` | `dist/shim.dylib` | Shim injected by `zeropty-tty` |
+| `ZEROPTY_SHIM` | `dist/shim.dylib` | Shim injected by `zeropty-tty`. A relative path is made absolute; a path with a colon (on Linux, also a space) is refused, since the loader splits the list there |
 | `ZEROPTY_CACHE` | `~/.zeropty` | Where `zeropty-tty` keeps re-signed copies (under `tty/`) |
 | `ZEROPTY_CLAUDE_REAL` | `claude` on `PATH` | The claude that `claude-zeropty` launches |
 | `ZEROPTY_PLUGIN_DIR` | (unset: off) | Plugin directory the server launches. Only when set are the executables and `.dylib` files in it run. A server started by `restart-server` or `new-session` takes the value from the shell that ran that command ([PLUGINS.md](PLUGINS.md#autostart-the-plugin-directory)) |

@@ -48,6 +48,15 @@ pub(crate) fn connect(path: &std::path::Path) -> io::Result<UnixStream> {
     making(|| UnixStream::connect(path))
 }
 
+/// [`connect`] to a server, refused (`PermissionDenied`) when it runs as another user (root aside).
+pub(crate) fn connect_server(path: &std::path::Path) -> io::Result<UnixStream> {
+    let s = connect(path)?;
+    if !super::process::peer_is_same_user(&s) {
+        return Err(io::Error::new(io::ErrorKind::PermissionDenied, format!("the server on {} runs as another user", path.display())));
+    }
+    Ok(s)
+}
+
 /// A pipe (read end, write end), both ends close-on-exec and never inherited (as [`socket_pair`]).
 pub(crate) fn pipe() -> io::Result<(OwnedFd, OwnedFd)> {
     making(|| {

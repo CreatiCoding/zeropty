@@ -158,8 +158,14 @@ fn supervise(cfg: &Autostart, program: &Path, stop: &AtomicBool) {
         }
     }
     let mut delay = RESTART_MIN;
-    // A program taken out of the directory is not started again.
+    // A program taken out of the directory is not started again, nor one someone else could have
+    // changed since it was found (the directory or the file replaced by another user's: a parent others
+    // can write lets them swap the directory between starts).
     while !stop.load(Relaxed) && program.exists() {
+        if !still_ours(&cfg.dir, program) {
+            eprintln!("zeropty: plugins: {} is writable by others now: not started again", program.display());
+            return;
+        }
         let started = Instant::now();
         let mut cmd = match &cfg.runner {
             Some(runner) if is_dylib(program) => {
@@ -198,8 +204,48 @@ fn supervise(cfg: &Autostart, program: &Path, stop: &AtomicBool) {
     }
 }
 
-/// The program's log, started over when it grew past LOG_MAX.
+/// Whether `dir` and `program` in it are still only this user's (or root's), as `programs` found them.
+fn still_ours(dir: &Path, program: &Path) -> bool {
+    std::fs::metadata(dir).is_ok_and(|m| ours(&m)) && std::fs::metadata(program).is_ok_and(|m| ours(&m))
+}
+
+/// The program's log, started over when it grew past LOG_MAX. Never opened through a link (one put
+/// there would have the program's output written to the file it names), and readable by this user only.
 fn log_file(path: &Path) -> Option<std::fs::File> {
+    use std::os::unix::fs::OpenOptionsExt as _;
     let long = std::fs::metadata(path).is_ok_and(|m| m.len() > LOG_MAX);
-    std::fs::OpenOptions::new().create(true).append(!long).write(true).truncate(long).open(path).ok()
+    std::fs::OpenOptions::new().create(true).append(!long).write(true).truncate(long).mode(0o600).custom_flags(libc::O_NOFOLLOW).open(path).ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Autostart;
+    use std::os::unix::fs::PermissionsExt as _;
+    use std::time::Duration;
+
+    /// A program checked when found and then made writable by others (or replaced by another user's,
+    /// directory and all) is not started again: the check is made before every start, not once.
+    #[test]
+    fn not_restarted_once_others_can_write_it() {
+        let dir = std::env::temp_dir().join(format!("zeropty-launch-recheck-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let program = dir.join("p");
+        std::fs::write(&program, "#!/bin/sh\necho ran >> runs\n").unwrap();
+        std::fs::set_permissions(&program, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let runs = || std::fs::read_to_string(dir.join("runs")).unwrap_or_default().lines().count();
+        let launcher = Autostart { dir: dir.clone(), sock: dir.join("s"), runner: None, after_gone: None }.spawn().expect("p found");
+        let start = std::time::Instant::now();
+        while runs() == 0 {
+            assert!(start.elapsed() < Duration::from_secs(5), "never started");
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        // Before the restart, 500 ms after the exit.
+        std::fs::set_permissions(&program, std::fs::Permissions::from_mode(0o777)).unwrap();
+        std::thread::sleep(Duration::from_millis(2500));
+        assert_eq!(runs(), 1, "started again after others could write it");
+        drop(launcher);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 }
