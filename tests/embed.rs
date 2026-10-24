@@ -42,7 +42,7 @@ fn commands_from_threads() {
     let dir = std::env::temp_dir().join(format!("zeropty-embed-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let e = std::sync::Arc::new(Embedded::start(Options { size_dir: dir.clone(), ..Options::default() }));
-    assert_eq!(e.command(&argv(&["new-session", "-d", "-s", "c", "-x", "40", "-y", "20", "exec cat"]), "/").code, 0);
+    assert_eq!(e.command(&argv(&["new-session", "-d", "-s", "c", "-x", "40", "-y", "30", "exec cat"]), "/").code, 0);
     // Four threads type into the session at once; every line arrives whole.
     let threads: Vec<_> = (0..4)
         .map(|t| {
@@ -57,7 +57,10 @@ fn commands_from_threads() {
     for t in threads {
         t.join().unwrap();
     }
-    let screen = wait_screen(&e, "=c:", |o| o.lines().filter(|l| l.starts_with('t')).count() == 12);
+    // Each line shows twice (echoed, then printed by cat): 24 lines, so the screen is 30 high, and the
+    // wait is for every line, not for a count that the echoes pass through only for a moment.
+    let all = |o: &str| (0..4).all(|t| (0..3).all(|k| o.lines().any(|l| l == format!("t{t}k{k}"))));
+    let screen = wait_screen(&e, "=c:", all);
     for t in 0..4 {
         for k in 0..3 {
             assert!(screen.lines().any(|l| l == format!("t{t}k{k}")), "t{t}k{k} missing:\n{screen}");
