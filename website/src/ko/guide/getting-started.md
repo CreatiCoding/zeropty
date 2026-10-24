@@ -23,19 +23,19 @@ description: zeropty를 설치하고, 세션을 띄우고, 키를 보내고, wai
 0.1.3부터 [릴리스](https://github.com/CreatiCoding/zeropty/releases)마다 모든 맥용 묶음 하나와 그 `SHA256SUMS`가 붙어 있어요. 둘 다 내려받아 해시를 확인한 뒤 풀어요.
 
 ```sh [터미널]
-v=0.1.6   # or the latest: v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/CreatiCoding/zeropty/releases/latest | sed 's|.*/v||')
+v=0.1.7   # or the latest: v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/CreatiCoding/zeropty/releases/latest | sed 's|.*/v||')
 curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/zeropty-$v-darwin-universal.tar.gz"
 curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/SHA256SUMS"
-shasum -a 256 -c --ignore-missing SHA256SUMS   # zeropty-0.1.6-darwin-universal.tar.gz: OK
+shasum -a 256 -c --ignore-missing SHA256SUMS   # zeropty-0.1.7-darwin-universal.tar.gz: OK
 tar -xzf "zeropty-$v-darwin-universal.tar.gz"
 export PATH="$PWD/zeropty-$v-darwin-universal:$PATH"   # add it to ~/.zshrc to keep it
 zeropty -V
 ```
 
-`v`에 버전이 들어 있어요. 다른 버전으로 고정하려면 `0.1.6`를 바꾸세요. 마지막 명령은 버전을 출력해요. 예를 들면 이래요.
+`v`에 버전이 들어 있어요. 다른 버전으로 고정하려면 `0.1.7`을 바꾸세요. 마지막 명령은 버전을 출력해요. 예를 들면 이래요.
 
 ```text
-zeropty 0.1.6
+zeropty 0.1.7
 ```
 
 ::: warning 브라우저로 받았나요?
