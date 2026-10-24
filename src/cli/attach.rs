@@ -20,6 +20,14 @@ const PREFIX: u8 = 0x02; // Ctrl-b, as tmux
 const RESET_MODES: &[u8] =
     b"\x1b[0m\x1b[?25h\x1b[?1l\x1b>\x1b[?2004l\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1005l\x1b[?1006l\x1b[?1015l\x1b[?1004l\x1b[>4m\x1b[<99u";
 
+/// Why there is no server to talk to: none answers, or the one there is another user's.
+fn no_server(e: &std::io::Error) -> String {
+    match e.kind() {
+        std::io::ErrorKind::PermissionDenied => format!("zeropty: {e}"),
+        _ => format!("no server running on {}", sock_path().display()),
+    }
+}
+
 /// The size to give the session: this terminal's, or 24x80 when it reports none.
 fn window_size() -> (u16, u16) {
     tty::window_size(std::io::stdout().as_fd()).unwrap_or((24, 80))
@@ -27,7 +35,7 @@ fn window_size() -> (u16, u16) {
 
 /// The session to attach to when none was named: the only one, or the one picked from a numbered list.
 fn choose() -> Result<String, String> {
-    let s = UnixStream::connect(sock_path()).map_err(|_| format!("no server running on {}", sock_path().display()))?;
+    let s = zeropty::server::connect(&sock_path()).map_err(|e| no_server(&e))?;
     let out = client::ask(&s, &["list-sessions"]).out;
     let names: Vec<&str> = out.lines().filter_map(|l| l.split(':').next()).collect();
     match names.len() {
@@ -134,7 +142,7 @@ pub fn run(argv: &[String]) -> i32 {
 /// to print.
 fn attach(target: &str, read_only: bool) -> Result<bool, String> {
     let lost = |_| "zeropty attach: lost server\n".to_string();
-    let mut sock = UnixStream::connect(sock_path()).map_err(|_| format!("no server running on {}\n", sock_path().display()))?;
+    let mut sock = zeropty::server::connect(&sock_path()).map_err(|e| no_server(&e) + "\n")?;
     let (rows, cols) = window_size();
     let mut args = vec!["attach".to_string(), "-t".into(), target.to_owned(), "-x".into(), cols.to_string(), "-y".into(), rows.to_string()];
     if read_only {

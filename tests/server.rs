@@ -838,6 +838,151 @@ int main(void) {
     assert_eq!(String::from_utf8_lossy(&outside.stdout), "tty=000\n");
 }
 
+/// A mode change reaches the server even when the program made its terminal non-blocking and filled it
+/// (a TUI drawing fast, then turning echo off for a password): the shim waits for room. It was written
+/// once, failed with EAGAIN and was lost, while tcsetattr said it was done; the password was echoed.
+#[test]
+fn mode_change_waits_for_a_full_terminal() {
+    use std::os::unix::fs::MetadataExt as _;
+    let s = Server::new("fullmode");
+    let lib = shim(&s);
+    let src = s.dir.join("fill.c");
+    std::fs::write(
+        &src,
+        r#"#include <fcntl.h>
+#include <string.h>
+#include <termios.h>
+#include <unistd.h>
+int main(void) {
+  fcntl(1, F_SETFL, O_NONBLOCK);
+  char b[4096]; memset(b, 'x', sizeof b);
+  while (write(1, b, sizeof b) > 0) {}
+  struct termios t; tcgetattr(1, &t); t.c_lflag &= ~ECHO;
+  return tcsetattr(1, TCSANOW, &t) == 0 ? 0 : 1;
+}
+"#,
+    )
+    .unwrap();
+    let fill = s.dir.join("fill");
+    assert!(Command::new("cc").arg("-o").arg(&fill).arg(&src).status().unwrap().success());
+    // The session's terminal as the server makes it: a socket, named in ZEROPTY_TTY_ID; nobody reads it
+    // until the program has filled it.
+    let (mut ours, theirs) = UnixStream::pair().unwrap();
+    let m = std::fs::File::from(std::os::fd::OwnedFd::from(theirs.try_clone().unwrap())).metadata().unwrap();
+    let preload = if cfg!(target_os = "macos") { "DYLD_INSERT_LIBRARIES" } else { "LD_PRELOAD" };
+    let mut child = Command::new(&fill)
+        .env(preload, &lib)
+        .env("ZEROPTY_TTY_ID", format!("{}:{}", m.dev(), m.ino()))
+        .stdin(std::process::Stdio::null())
+        .stdout(std::os::fd::OwnedFd::from(theirs))
+        .spawn()
+        .unwrap();
+    std::thread::sleep(Duration::from_millis(500));
+    let mut out = Vec::new();
+    ours.read_to_end(&mut out).unwrap();
+    assert!(child.wait().unwrap().success());
+    assert!(out.len() > 4096, "filled first: {}", out.len());
+    assert!(out.ends_with(b"\x1b]zeropty-tty;13\x07"), "the change after the fill: {:?}", String::from_utf8_lossy(&out[out.len().saturating_sub(40)..]));
+}
+
+/// zeropty-tty hands the loader the shim by an absolute path, and refuses one the loader would split
+/// (LD_PRELOAD at a space or a colon, DYLD_INSERT_LIBRARIES at a colon): a part of it then became a
+/// relative path, opened from each program's own directory, where anyone could put a library.
+#[test]
+fn zeropty_tty_refuses_a_shim_path_the_loader_splits() {
+    let s = Server::new("ttysplit");
+    let tty = concat!(env!("CARGO_MANIFEST_DIR"), "/zeropty-tty");
+    let mut split = vec![s.dir.join("a:b").join("shim.so")];
+    if cfg!(target_os = "linux") {
+        split.push(s.dir.join("my tools").join("shim.so"));
+    }
+    for shim in split {
+        let o = Command::new(tty).arg("true").env("ZEROPTY_SHIM", &shim).output().unwrap();
+        assert_eq!(o.status.code(), Some(2), "{}: {}", shim.display(), String::from_utf8_lossy(&o.stderr));
+        assert!(String::from_utf8_lossy(&o.stderr).contains("splits"), "{}", String::from_utf8_lossy(&o.stderr));
+    }
+}
+
+/// The CLI checks who serves its socket before it sends anything, as the server checks its clients:
+/// whoever listens first at a path another user can reach (a shared directory, or one made there
+/// first) got every command line, keys and passwords included, and answered what it liked. Needs root,
+/// to run that server as another user: the Linux CI runs it (its container is root); elsewhere it is
+/// skipped even under ZEROPTY_REQUIRE_ALL, which a user's own check could never satisfy.
+#[test]
+fn cli_refuses_a_server_run_by_another_user() {
+    use std::os::unix::process::CommandExt as _;
+    // SAFETY: geteuid takes nothing and cannot fail.
+    if unsafe { libc::geteuid() } != 0 {
+        let _ = writeln!(std::io::stderr(), "SKIPPED cli_refuses_a_server_run_by_another_user: needs root (another user's server)");
+        return;
+    }
+    let s = Server::new("foreign");
+    let nobody = 65534;
+    let theirs = s.dir.join("theirs");
+    std::fs::create_dir(&theirs).unwrap();
+    std::os::unix::fs::chown(&theirs, Some(nobody), Some(nobody)).unwrap();
+    std::fs::set_permissions(&s.dir, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
+    // A copy they can run: the build directory may be closed to them.
+    let exe = theirs.join("zeropty");
+    std::fs::copy(env!("CARGO_BIN_EXE_zeropty"), &exe).unwrap();
+    let sock = theirs.join("s");
+    // Killed however the test ends: left running, it holds the test's output open.
+    struct Killed(std::process::Child);
+    impl Drop for Killed {
+        fn drop(&mut self) {
+            let _ = self.0.kill();
+            let _ = self.0.wait();
+        }
+    }
+    let _server = Killed(Command::new(&exe).arg("serve").arg("--bind").arg(&sock).env("HOME", &theirs).uid(nobody).gid(nobody).spawn().unwrap());
+    let start = Instant::now();
+    while UnixStream::connect(&sock).is_err() {
+        assert!(start.elapsed() < Duration::from_secs(5), "their server never listened");
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    for args in [&["list-sessions"][..], &["send-keys", "-t", "w", "secret", "Enter"], &["new-session", "-d", "-s", "w", "true"]] {
+        let o = Command::new(env!("CARGO_BIN_EXE_zeropty")).args(args).env("ZEROPTY_SOCK", &sock).output().unwrap();
+        let err = String::from_utf8_lossy(&o.stderr);
+        assert_eq!(o.status.code(), Some(1), "{args:?}: {err}");
+        assert!(err.contains("runs as another user"), "{args:?}: {err}");
+    }
+}
+
+/// A repeat count past what the server takes is refused: the keys were made whole first, so a huge -N
+/// ran the server out of memory or overflowed the allocation and panicked, every session with it.
+/// Output on a one-row or one-column screen (a line wrapping, a wide character) panicked it the same way.
+#[test]
+fn a_session_or_a_command_never_takes_the_server_down() {
+    let s = Server::new("down");
+    s.ok(&["new-session", "-d", "-s", "v", "exec cat"]);
+    for n in ["18446744073709551615", "100000000000"] {
+        let o = s.run(&["send-keys", "-N", n, "-t", "=v:", "x"]);
+        assert_eq!(o.status.code(), Some(1), "-N {n}");
+        assert!(String::from_utf8_lossy(&o.stderr).contains("too many keys"), "-N {n}: {}", String::from_utf8_lossy(&o.stderr));
+    }
+    s.ok(&["send-keys", "-N", "3", "-t", "=v:", "ab"]);
+    s.wait_capture(&["capture-pane", "-p", "-t", "=v:"], |o| o.starts_with("ababab\n"));
+    s.ok(&["new-session", "-d", "-s", "row", "-x", "10", "-y", "1", "printf abcdefghijklmnop; exec sleep 100"]);
+    s.ok(&["new-session", "-d", "-s", "col", "-x", "1", "-y", "5", "printf '\\355\\225\\234x'; exec sleep 100"]);
+    s.wait_capture(&["capture-pane", "-p", "-t", "=row:"], |o| o.starts_with("klmnop"));
+    s.wait_capture(&["capture-pane", "-p", "-t", "=col:"], |o| o.starts_with("x\n"));
+    s.ok(&["has-session", "-t", "=v"]);
+}
+
+/// Without HOME, the socket is in the user's home from the password database, never in /tmp, where
+/// another user could make .zeropty first.
+#[test]
+fn no_home_means_the_users_own_home_not_tmp() {
+    let o = Command::new(env!("CARGO_BIN_EXE_zeropty"))
+        .args(["has-session", "-t", "=zeropty-test-no-such"])
+        .env_remove("HOME")
+        .env_remove("ZEROPTY_SOCK")
+        .output()
+        .unwrap();
+    let err = String::from_utf8_lossy(&o.stderr);
+    assert!(!err.contains("/tmp/.zeropty"), "{err}");
+}
+
 /// /dev/tty opened read-write, as fzf does with its stdin piped in, both draws and reads keys: the
 /// session's terminal is one socket, so the stand-in the shim opens can do both (it was the input pipe,
 /// and every write failed with EBADF: fzf showed no list and took no pick).

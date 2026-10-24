@@ -9,13 +9,15 @@ pub mod serve;
 
 use std::path::PathBuf;
 
-/// The server's socket: ZEROPTY_SOCK, else ~/.zeropty/mux.sock.
+/// The server's socket: ZEROPTY_SOCK, else ~/.zeropty/mux.sock. Without HOME, the home directory is the
+/// user's own from the password database (as Node's os.homedir()), never a shared one: /tmp was, and
+/// another user could make /tmp/.zeropty first and listen there.
 pub fn sock_path() -> PathBuf {
     if let Ok(p) = std::env::var("ZEROPTY_SOCK") {
         return p.into();
     }
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".into());
-    PathBuf::from(home).join(".zeropty").join("mux.sock")
+    let home = std::env::home_dir().filter(|h| !h.as_os_str().is_empty()).unwrap_or_else(|| "/".into());
+    home.join(".zeropty").join("mux.sock")
 }
 
 /// Writes to stdout, ignoring errors: `print!` panics on EPIPE ('failed printing to stdout: Broken

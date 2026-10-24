@@ -240,7 +240,7 @@ impl Client {
             }
         }
         if self.stream.is_none() {
-            self.stream = Some(std::os::unix::net::UnixStream::connect(&self.sock)?);
+            self.stream = Some(zeropty::server::connect(self.sock.as_ref())?);
         }
         let s = self.stream.as_mut().unwrap();
         s.write_all(line)?;

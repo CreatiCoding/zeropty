@@ -50,7 +50,7 @@ The program in a session gets these variables: `TERM=xterm-256color`, `COLUMNS` 
 The **server** is the process that runs the engine and owns every session. The `zeropty` CLI sends each command to the server's **socket**, `~/.zeropty/mux.sock` by default. Set `ZEROPTY_SOCK` to use another path, of 103 bytes or less.
 
 - **Who starts it.** If no server is running, `new-session` starts one, just like tmux. `pull-sessions` does too. You can also start it yourself with `zeropty serve`.
-- **Who can connect.** The socket has 0600 permissions, so only the same user (and root) can connect.
+- **Who can connect.** The socket has 0600 permissions, so only the same user (and root) can connect. Clients check the server the same way: the CLI and the Node clients refuse a server that runs as another user, and the server refuses a socket directory others can write.
 - **One engine, one thread.** A single thread and a single kqueue handle every session's output, process exits and timers. There is no thread or process per session.
 - **Not only a separate process.** The same engine can run inside your program instead. For details, see [Four ways to drive zeropty](/guide/concepts/interfaces).
 

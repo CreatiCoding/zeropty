@@ -246,7 +246,7 @@ fn report(r: std::io::Result<Vec<String>>, t: Taken) -> Reply {
 }
 
 fn connect(sock: &Path) -> std::io::Result<UnixStream> {
-    let s = crate::sys::fd::connect(sock).map_err(|e| std::io::Error::new(e.kind(), format!("{}: {e}", sock.display())))?;
+    let s = crate::sys::fd::connect_server(sock).map_err(|e| std::io::Error::new(e.kind(), format!("{}: {e}", sock.display())))?;
     s.set_read_timeout(Some(TIMEOUT))?;
     s.set_write_timeout(Some(TIMEOUT))?;
     Ok(s)

@@ -272,9 +272,15 @@ impl Programs for SystemPrograms {
     }
 
     fn write_size(&self, size_file: &Path, rows: u16, cols: u16) {
-        // Written whole then renamed, so the program never reads half of it.
+        use std::io::Write as _;
+        use std::os::unix::fs::OpenOptionsExt as _;
+        // Written whole then renamed, so the program never reads half of it. The directory may be shared
+        // (/tmp, the default size_dir): the file is made anew (O_EXCL, which never follows a link), so a
+        // link someone else put at its name is replaced, not written through to a file of ours.
         let tmp = size_file.with_extension("new");
-        if std::fs::write(&tmp, format!("{cols} {rows}\n")).is_ok() {
+        let _ = std::fs::remove_file(&tmp);
+        let made = std::fs::OpenOptions::new().write(true).create_new(true).mode(0o600).open(&tmp);
+        if made.and_then(|mut f| f.write_all(format!("{cols} {rows}\n").as_bytes())).is_ok() {
             let _ = std::fs::rename(&tmp, size_file);
         }
     }
@@ -500,5 +506,31 @@ pub(crate) mod fake {
         fn remove_size(&self, size_file: &Path) {
             self.removed.borrow_mut().push(size_file.into())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Programs as _, SystemPrograms};
+
+    /// The size file's temporary name in a shared directory can hold another user's link to a file of
+    /// ours: the size replaces the link and the file stays as it was (it was written through, once).
+    #[test]
+    fn size_file_never_written_through_a_link() {
+        use std::os::unix::fs::PermissionsExt as _;
+        let dir = std::env::temp_dir().join(format!("zeropty-size-link-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let precious = dir.join("precious");
+        std::fs::write(&precious, "PRIVATE\n").unwrap();
+        let size_file = dir.join("zeropty-size-1");
+        std::os::unix::fs::symlink(&precious, size_file.with_extension("new")).unwrap();
+        SystemPrograms.write_size(&size_file, 33, 99);
+        assert_eq!(std::fs::read_to_string(&precious).unwrap(), "PRIVATE\n");
+        assert_eq!(std::fs::read_to_string(&size_file).unwrap(), "99 33\n");
+        assert_eq!(std::fs::metadata(&size_file).unwrap().permissions().mode() & 0o777, 0o600);
+        SystemPrograms.write_size(&size_file, 25, 80);
+        assert_eq!(std::fs::read_to_string(&size_file).unwrap(), "80 25\n", "rewritten over the last one");
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

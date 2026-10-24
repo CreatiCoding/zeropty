@@ -151,6 +151,22 @@ static int tty_flags(const struct termios *t) {
   return (t->c_lflag & ICANON ? 1 : 0) | (t->c_lflag & ECHO ? 2 : 0) | (t->c_lflag & ISIG ? 4 : 0) | (t->c_iflag & ICRNL ? 8 : 0);
 }
 
+// Writes all of `m` to the session: a mode change lost or cut short leaves the server on the old modes
+// (echo on while a password is typed). The program may have made the socket non-blocking (its flags are
+// shared) and filled it: wait for room, up to a few seconds, as a PTY's write would block. errno stays
+// as the caller left it.
+static void tell(int fd, const char *m, size_t n) {
+  int e = errno;
+  while (n > 0) {
+    ssize_t w = write(fd, m, n);
+    if (w > 0) { m += w; n -= (size_t)w; continue; }
+    if (w < 0 && errno == EINTR) continue;
+    if (w < 0 && errno == EAGAIN && poll(&(struct pollfd){ fd, POLLOUT, 0 }, 1, 5000) > 0) continue;
+    break;
+  }
+  errno = e;
+}
+
 // A PTY turns "\n" into "\r\n" until the program clears OPOST or ONLCR; there is no PTY here, so the
 // server's screen does it instead. A change is reported in the output stream itself, so it applies from
 // exactly this point (an OSC the screen otherwise ignores).
@@ -164,11 +180,11 @@ static int my_tcsetattr(int fd, int act, const struct termios *t) {
   if (out < 0) return 0;
   if (tty_flags(&old) != tty_flags(t)) {
     char m[32]; int n = snprintf(m, sizeof m, "\033]zeropty-tty;%d\007", tty_flags(t));
-    (void)!write(out, m, n);
+    tell(out, m, (size_t)n);
   }
   if (onlcr(&old) != onlcr(t)) {
     const char *m = onlcr(t) ? "\033]zeropty-onlcr;1\007" : "\033]zeropty-onlcr;0\007";
-    (void)!write(out, m, strlen(m));
+    tell(out, m, strlen(m));
   }
   return 0;
 }
@@ -182,7 +198,7 @@ static int set_pgrp(pid_t pgrp) {
   int out = out_fd();
   if (out >= 0) {
     char m[40]; int n = snprintf(m, sizeof m, "\033]zeropty-pgrp;%d\007", (int)pgrp);
-    (void)!write(out, m, n);
+    tell(out, m, (size_t)n);
   }
   return 0;
 }
@@ -276,7 +292,7 @@ static char *read_passphrase(int fd, const char *prompt, char *buf, size_t size,
     // Written to the session's socket: in a session from an older server, fd is the input pipe.
     int w = out_fd();
     if (w < 0) w = fd;
-    (void)!write(w, prompt, strlen(prompt));
+    tell(w, prompt, strlen(prompt));
     size_t i = 0;
     ssize_t n;
     char c;
@@ -292,7 +308,7 @@ static char *read_passphrase(int fd, const char *prompt, char *buf, size_t size,
     }
     buf[i] = 0;
     int e = errno;
-    if (!(t.c_lflag & ECHO)) (void)!write(w, "\n", 1);
+    if (!(t.c_lflag & ECHO)) tell(w, "\n", 1);
     my_tcsetattr(fd, TCSAFLUSH, &old);
     int again = 0;
     for (int k = 0; k < NS; k++) sigaction(sigs[k], &old_sa[k], NULL);

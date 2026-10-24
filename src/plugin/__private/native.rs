@@ -261,7 +261,7 @@ static RUN_API: Api = Api { api: API_VERSION, size: std::mem::size_of::<Api>() a
 pub unsafe fn run(path: &Path, sock: &Path) -> Result<(), String> {
     // SAFETY: passed on to our caller.
     let lib = unsafe { load(path, &RUN_API)? };
-    let stream = crate::sys::fd::connect(sock).map_err(|e| format!("no server running on {}: {e}\n", sock.display()))?;
+    let stream = crate::sys::fd::connect_server(sock).map_err(|e| format!("no server running on {}: {e}\n", sock.display()))?;
     let mut conn =
         Conn { out: stream.try_clone().map_err(|e| e.to_string())?, lines: std::io::BufReader::new(stream), backlog: Default::default(), next_id: 1 };
     conn.send(&serde_json::json!({ "argv": lib.manifest.attach_argv(), "cwd": "/" })).map_err(|e| format!("zeropty: {e}\n"))?;

@@ -17,6 +17,32 @@ release; polish that draft into entries written in English, and add the same ent
 
 ## [Unreleased]
 
+### Security
+
+- Another local user could stand in for your server. Without `HOME`, the socket was `/tmp/.zeropty/mux.sock`, and
+  anyone could make `/tmp/.zeropty` first and listen there; the CLI then sent them every command, `send-keys` text
+  included. The home directory now comes from the password database when `HOME` is unset, and the CLI, the bash
+  builtin, `zeropty plugin-run`, `pull-sessions`/`push-sessions` and the Node clients refuse a server that runs
+  as another user (root aside). The server refuses a socket directory that is another user's or that others can
+  write without the sticky bit (as tmux does), where someone could move the socket aside. New:
+  `zeropty::server::connect`, the checked connection for Rust clients.
+- The size file (`zeropty-size-*`, in the socket's directory or `/tmp`) was written through a symbolic link put at
+  its temporary name, overwriting the file it pointed to with the session's size. It is now created anew, 0600.
+- Plugins in `ZEROPTY_PLUGIN_DIR` were checked once, when found, and restarted by path after that: a directory
+  swapped by another user (through a parent others can write) had their program run as you. The check is made
+  before every start, and `<name>.log` is created 0600, never through a link.
+- `zeropty-tty` on Linux, with the shim at a path containing a space (`/opt/my tools/shim.so`), had the loader
+  open part of the path relative to each program's directory, loading whatever library was there. A path the
+  loader splits (a space or a colon on Linux, a colon on macOS) is now refused, and a relative `ZEROPTY_SHIM` is
+  made absolute.
+- A program's output could take the server down, with every session: text wrapping on a one-row screen, or a
+  wide character on a one-column screen, panicked it, and `ESC[65535@` kept it busy for 0.25 s (insert counts
+  are now bounded by the screen). A wide character on a one-column screen is dropped, as tmux drops it.
+- `send-keys -N` with a huge count ran the server out of memory or panicked it; more than 16 MiB of keys in one
+  `send-keys` is now an error.
+- The shim lost a mode change (echo off for a password, raw mode) when the program had made its terminal
+  non-blocking and filled it, while `tcsetattr` reported success; it now waits for room, as a PTY would.
+
 ## [0.1.6] - 2026-10-24
 
 ### Added

@@ -30,7 +30,7 @@ Only the maintainers can see a report. After receiving it, we share what we foun
 
 zeropty is a tool that runs programs **on one user's machine, with that user's privileges**. That makes these parts especially important:
 
-- **The server socket.** The default `~/.zeropty/mux.sock` has 0600 permissions, and newly created directories have 0700. The server checks that the connecting side is the same user (or root). If another user can send commands, that is a vulnerability.
+- **The server socket.** The default `~/.zeropty/mux.sock` has 0600 permissions, and newly created directories have 0700. The server checks that the connecting side is the same user (or root), and refuses a socket directory that is another user's or that others can write; clients check that the server is the same user (or root) before sending anything. If another user can send commands, or receive them, that is a vulnerability.
 - **Session handover.** `pull-sessions`, `push-sessions` and `restart-server` pass fds over the socket (SCM_RIGHTS).
 - **The shim.** `zeropty-tty` injects the shim with `DYLD_INSERT_LIBRARIES`, and because of SIP and the hardened runtime it creates copies that differ only in their signature under `~/.zeropty/tty/`.
 - **Input handling.** The code that parses socket requests (JSON), attach frames and session records.

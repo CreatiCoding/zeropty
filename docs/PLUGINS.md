@@ -294,7 +294,7 @@ zeropty restart-server                                     # takes effect from t
 - A program that exits is restarted. If it exits quickly, the wait before restarting starts at 0.5 seconds and doubles up to 30 seconds; if it ran for 30 seconds or more, it is restarted after 0.5 seconds. Files removed from the directory are not restarted.
 - On `kill-server`, the server sends SIGTERM to the programs it started (each in its own process group).
 - **Plugins survive `restart-server`.** When the old server exits, its plugins get EOF and exit, and the new server starts its own plugins after it takes over the socket (after `mux.sock.new` disappears). Plugins need no reconnect logic of their own. In between, for a brief moment (tens of ms), plugin commands may return `unknown command`.
-- If the directory or a file is writable by other users (group or other write permission, or a different owner), it is skipped and the reason is logged to the server's stderr.
+- If the directory or a file is writable by other users (group or other write permission, or a different owner), it is skipped and the reason is logged to the server's stderr. This is checked again before every restart: a program whose directory or file has become writable by others since (or was replaced by another user's) is not started again. `<name>.log` is created 0600 and never opened through a symbolic link.
 - The plugin directory is a feature of `zeropty serve`. Its implementation (`zeropty::plugin::__private::launch`) is internal to zeropty and is not a stable API (see the API reference below).
 
 ## Events

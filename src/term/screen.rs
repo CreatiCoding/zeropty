@@ -480,6 +480,11 @@ impl Screen {
             return;
         }
         let width = width.unwrap_or(1) as u16;
+        // Wider than the screen (a wide character on one column) it fits nowhere and is dropped, as tmux
+        // drops it; placed anyway, its second half fell outside the row and the server panicked.
+        if width > cols {
+            return;
+        }
 
         let mut wrap = false;
         if pos.col > cols - width {

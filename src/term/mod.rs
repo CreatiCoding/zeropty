@@ -442,6 +442,38 @@ impl Term {
 
 #[cfg(test)]
 mod tests {
+    /// Output on the smallest screens never takes the server down (it panicked, every session with it):
+    /// a line wrapping on one row, a wide character on one column. vt100 panics on both, so the rows
+    /// are stated here: one row scrolls as any screen does; one column drops a wide character, as tmux
+    /// does.
+    #[test]
+    fn smallest_screens() {
+        use super::testing::{after, rows};
+        assert_eq!(rows(after(1, 10, b"abcdefghijklmnop").view()), ["klmnop"]);
+        assert_eq!(rows(after(1, 10, b"\x1b[2;5rabcdefghijkl").view()), ["kl"]);
+        assert_eq!(rows(after(1, 6, "ab한글cdefg".as_bytes()).view()), ["cdefg"]);
+        let mut t = after(5, 1, "한x\u{301}글".as_bytes());
+        assert_eq!(rows(t.view()), ["x\u{301}", "", "", "", ""]);
+        t.process("\x1b[H한\x1b[1@".as_bytes());
+        assert_eq!(rows(t.view()), ["", "", "", "", ""]);
+    }
+
+    /// Insert counts are what the screen can hold: past it nothing changes, and each insertion moved a
+    /// row or the screen (`ESC[65535@` took 0.25 s of the server's thread, every session waiting).
+    #[test]
+    fn huge_insert_counts_cost_what_the_screen_holds() {
+        use super::testing::check;
+        assert_eq!(check(3, 6, b"abcdef\x1b[1;3H\x1b[65535@"), ["ab", "", ""]);
+        assert_eq!(check(3, 6, b"1\r\n2\r\n3\x1b[2H\x1b[65535L"), ["1", "", ""]);
+        assert_eq!(check(3, 6, b"1\r\n2\r\n3\x1b[65535T"), ["", "", ""]);
+        let mut t = super::Term::new(50, 200, 0);
+        let start = std::time::Instant::now();
+        for _ in 0..100 {
+            t.process(b"x\x1b[65535@\x1b[65535L\x1b[65535T");
+        }
+        assert!(start.elapsed() < std::time::Duration::from_secs(2), "{:?}", start.elapsed());
+    }
+
     fn cursor_after(t: &mut super::Term, bytes: &[u8]) -> (u16, u16) {
         t.process(bytes);
         let p = t.screen().cursor();

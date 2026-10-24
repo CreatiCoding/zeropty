@@ -138,7 +138,9 @@ impl Grid {
         let (cols, pos) = (self.cols, self.pos);
         let wide = pos.col < cols && self.cell(pos).unwrap().is_wide_continuation();
         let row = self.current_row_mut();
-        for _ in 0..count {
+        // Past `cols` insertions the row is blank from the cursor on and stays so. Each one moves the
+        // whole row: `ESC[65535@` cost 0.25 s of the server's thread, every session waiting.
+        for _ in 0..count.min(cols) {
             if wide {
                 row.get_mut(pos.col).unwrap().set_wide_continuation(false)
             }
@@ -171,7 +173,8 @@ impl Grid {
     }
 
     pub(in crate::term) fn insert_lines(&mut self, count: u16) {
-        for _ in 0..count {
+        // As insert_cells: past `rows_n` the screen no longer changes (`ESC[65535L` took 18 ms on 4096x4096).
+        for _ in 0..count.min(self.rows_n) {
             self.remove_row(usize::from(self.scroll_bottom), false);
             self.insert_empty(usize::from(self.pos.row));
             let b = self.scroll_bottom;
@@ -187,7 +190,8 @@ impl Grid {
     }
 
     pub(in crate::term) fn scroll_down(&mut self, count: u16) {
-        for _ in 0..count {
+        // As insert_lines.
+        for _ in 0..count.min(self.rows_n) {
             self.remove_row(usize::from(self.scroll_bottom), false);
             self.insert_empty(usize::from(self.scroll_top));
             let b = self.scroll_bottom;
@@ -280,13 +284,16 @@ impl Grid {
     }
 
     pub(in crate::term) fn col_wrap(&mut self, width: u16, wrap: bool) {
-        if self.pos.col > self.cols - width {
-            let mut prev = self.pos;
+        if self.pos.col > self.cols.saturating_sub(width) {
+            let prev = self.pos;
             self.pos.col = 0;
             let scrolled = self.row_inc_scroll(1);
-            prev.row -= scrolled;
             let new = self.pos;
-            self.row_mut(prev.row).unwrap().wrap(wrap && prev.row + 1 == new.row);
+            // On a one-row screen the row just filled has scrolled off: nothing is left to mark (the
+            // row number wrapped to 65535 and the server panicked on the unwrap).
+            if let Some(prev) = prev.row.checked_sub(scrolled) {
+                self.row_mut(prev).unwrap().wrap(wrap && prev + 1 == new.row);
+            }
         }
     }
 

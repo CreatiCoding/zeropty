@@ -74,7 +74,7 @@ zeropty            # usage: zeropty serve | <tmux command> ...  (표준 에러, 
 
 | 명령 | 옵션 | 하는 일 |
 |---|---|---|
-| `send-keys` (`send`) `<키>...` | `-t` `-l` `-H` `-N <횟수>` | 키를 보내요. 인자마다 [키 이름](#키-이름)이면 그 키의 바이트를, 아니면 글자 그대로를 보내요. `-l`은 키 이름을 해석하지 않고 글자 그대로 보내요. `-H`는 인자를 16진수 바이트로 읽어요(`-H 41 42 0a`는 `AB` + 줄바꿈). `-N`은 전체를 그 횟수만큼 반복해요 |
+| `send-keys` (`send`) `<키>...` | `-t` `-l` `-H` `-N <횟수>` | 키를 보내요. 인자마다 [키 이름](#키-이름)이면 그 키의 바이트를, 아니면 글자 그대로를 보내요. `-l`은 키 이름을 해석하지 않고 글자 그대로 보내요. `-H`는 인자를 16진수 바이트로 읽어요(`-H 41 42 0a`는 `AB` + 줄바꿈). `-N`은 전체를 그 횟수만큼 반복해요(키는 모두 합쳐 16 MiB까지, 넘으면 오류예요) |
 | `paste-buffer` (`pasteb`) | `-t` `-b <버퍼>` `-d` `-p` `-r` `-s <구분자>` | 버퍼 내용을 키처럼 보내요. 줄바꿈은 `\r`로 바꿔 보내요(`-r`이면 그대로, `-s`로 구분자 지정). `-p`는 프로그램이 bracketed paste를 켰으면 감싸서 보내요. `-d`는 보낸 뒤 버퍼를 지워요 |
 
 키는 PTY처럼 [라인 디시플린](#키-입력과-라인-디시플린)을 거쳐요.
@@ -223,7 +223,7 @@ zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"
 
 ## 다른 프로그램에서: 소켓
 
-서버 소켓(`~/.zeropty/mux.sock`, `ZEROPTY_SOCK`으로 바꿔요)에 JSON 한 줄을 보내면 한 줄로 답해요. 연결 하나로 여러 명령을 보낼 수 있고, 답은 순서대로 와요. 소켓은 0600 권한이라 같은 사용자(와 root)만 접속할 수 있어요.
+서버 소켓(`~/.zeropty/mux.sock`, `ZEROPTY_SOCK`으로 바꿔요)에 JSON 한 줄을 보내면 한 줄로 답해요. 연결 하나로 여러 명령을 보낼 수 있고, 답은 순서대로 와요. 소켓은 0600 권한이라 같은 사용자(와 root)만 접속할 수 있어요. 반대쪽도 확인해요: CLI, bash 내장 명령, Node 클라이언트는 다른 사용자로 도는 서버를 거부해요(`the server on ... runs as another user`). 그래서 다른 사람이 그 경로에 먼저 만든 소켓은 아무것도 받지 못해요. `HOME`이 없으면 홈 폴더는 사용자 데이터베이스(passwd)에서 가져와요(`/tmp`는 절대 쓰지 않아요).
 
 ```
 → {"argv":["capture-pane","-p","-t","=work:"],"cwd":"/"}
@@ -356,7 +356,7 @@ ZEROPTY_SOCK=~/.zeropty/myapp.sock zeropty attach -t w
 if (zeropty_listen(a, "/tmp/myapp.sock") != 0) { /* 못 열었어요 */ }
 ```
 
-- 소켓 경로는 103바이트 이하예요. 소켓은 0600, 새로 만든 폴더는 0700 권한이에요.
+- 소켓 경로는 103바이트 이하예요. 소켓은 0600, 새로 만든 폴더는 0700 권한이에요. 다른 사용자의 폴더나, 스티키 비트 없이(`/tmp`에는 있어요) 다른 사람이 쓸 수 있는 폴더는 tmux처럼 거부해요: 다른 사람이 소켓을 치우고 그 자리에서 대신 받을 수 있기 때문이에요.
 - 그 경로에서 이미 서버가 답하면 `listen`은 실패해요(Node는 예외, C는 -1). 아무도 답하지 않는 소켓 파일(끝난 서버가 남긴 것)은 넘겨받고, 소켓이 아닌 파일이 있으면 지우지 않고 실패해요.
 - 소켓에서 온 `kill-server`는 세션만 끝내요. 내 프로그램은 계속 돌고 소켓도 계속 열려 있어요(독립 서버는 프로세스가 끝나요).
 - 엔진을 닫으면(`zeropty_close`, Rust의 `Embedded`·`Polled` 해제) 소켓 파일도 지워요. 그사이 다른 서버가 같은 경로를 차지했으면 그 소켓은 건드리지 않아요.
@@ -418,7 +418,7 @@ import-sessions (주는 쪽 → 서버)
 | `ZEROPTY_PURGE_MS` | 0 | 독립 서버: 해제한 메모리를 OS에 돌려주기 전 기다리는 시간 |
 | `ZEROPTY_BIN` | `dist/zeropty` | Node 클라이언트·zsh 함수·bash builtin이 실행할 프로그램 |
 | `ZEROPTY_NODE` | `dist/zeropty.node` | Node 클라이언트가 불러올 네이티브 모듈 |
-| `ZEROPTY_SHIM` | `dist/shim.dylib` | `zeropty-tty`가 넣을 shim |
+| `ZEROPTY_SHIM` | `dist/shim.dylib` | `zeropty-tty`가 넣을 shim. 상대 경로는 절대 경로로 바꾸고, 콜론(Linux에서는 공백도)이 든 경로는 로더가 목록을 거기서 나누므로 거부해요 |
 | `ZEROPTY_CACHE` | `~/.zeropty` | `zeropty-tty`가 서명을 바꾼 사본을 둘 곳(`tty/` 아래) |
 | `ZEROPTY_CLAUDE_REAL` | `PATH`의 `claude` | `claude-zeropty`가 띄울 claude |
 | `ZEROPTY_PLUGIN_DIR` | (없음: 끔) | 서버가 띄울 플러그인 디렉터리. 지정할 때만 그 안의 실행 파일과 `.dylib`를 실행해요. `restart-server`·`new-session`이 띄우는 서버는 그 명령을 실행한 셸의 값을 받아요 ([PLUGINS.md](PLUGINS.md#자동-시작-플러그인-디렉터리)) |

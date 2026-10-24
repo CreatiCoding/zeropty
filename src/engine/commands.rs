@@ -41,6 +41,8 @@ struct Command<E> {
 
 /// capture-pane's flags. -q (quiet) changes nothing here: zeropty reports no errors it would silence.
 const CAPTURE_SPEC: &str = "b:eE:JNpqS:t:";
+/// The most bytes one send-keys makes (its keys times -N): what the server takes from a client unanswered.
+const SEND_KEYS_MAX: usize = 16 << 20;
 
 impl<B: Backend> Engine<B> {
     /// Every command, by name. A const of the engine's type, so each engine type (the real one, the tests'
@@ -262,6 +264,11 @@ impl<B: Backend> Engine<B> {
             } else {
                 once.extend(super::keys::key_bytes(k, app_cursor));
             }
+        }
+        // The keys are made whole before they go out: an unbounded count ran the server out of memory
+        // (or overflowed the allocation and panicked), every session with it.
+        if once.len().checked_mul(repeat).is_none_or(|n| n > SEND_KEYS_MAX) {
+            return Err(CmdError::new(format!("send-keys: too many keys (more than {SEND_KEYS_MAX} bytes)\n")));
         }
         self.type_keys(slot, &once.repeat(repeat))?;
         Ok(ok(""))
