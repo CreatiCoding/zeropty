@@ -33,7 +33,7 @@ zeropty restart-server
 
 A new server starts from the `zeropty` binary you just ran, takes over every session, then takes over the socket. The programs never stop and keep their pids. Commands that arrive during the few ms of the switch go to the old server.
 
-If the new binary is not first on your `PATH`, run it by its path, for example `./zeropty-0.1.5-darwin-universal/zeropty restart-server`.
+If the new binary is not first on your `PATH`, run it by its path, for example `./zeropty-0.1.6-darwin-universal/zeropty restart-server`.
 
 ::: warning The new server has your shell's environment
 `restart-server` starts the new server from the shell that runs it. Sessions created afterwards get that shell's environment, and values set with `set-environment -g` are dropped: set them again. Running sessions keep their own environment. `ZEROPTY_PLUGIN_DIR` and `ZEROPTY_SOCK` also come from this shell.

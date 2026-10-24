@@ -8,7 +8,7 @@ This page explains how a session's output becomes a screen, how commands read it
 
 ```mermaid
 flowchart TB
-  p["program"] -->|"output on the socketpair"| k["kqueue"]
+  p["program"] -->|"output on the socketpair"| k["kqueue / epoll"]
   k -->|"readable"| r["engine: batched read<br/>(300ms boundary)"]
   r --> s["screen + scrollback<br/>6-byte cells"]
   s -->|"quiet 250ms"| f["frozen (~1KB)"]

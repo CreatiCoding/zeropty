@@ -8,10 +8,10 @@ By the end of this guide, you have zeropty installed, a session running a shell,
 
 ## Before you begin
 
-- A Mac. The release archive runs on macOS 11 or later, on Apple silicon and Intel. For details, see [Install and platform support](/guide/install).
+- A Mac (macOS 11 or later, Apple silicon or Intel) or Linux (x86_64, glibc 2.29 or later). For details, see [Install and platform support](/guide/install).
 - One of these:
   - **The release archive.** You need only `curl` and `shasum`, which come with macOS. No Rust is needed.
-  - **A build from source.** You need [Rust](https://rustup.rs) (stable) and the Xcode Command Line Tools (`xcode-select --install`).
+  - **A build from source (macOS).** You need [Rust](https://rustup.rs) (stable) and the Xcode Command Line Tools (`xcode-select --install`).
 - You do not need claude or any other agent. This guide runs `sh`.
 
 ## 1. Install
@@ -23,24 +23,26 @@ Pick one of the two ways below.
 Each [release](https://github.com/CreatiCoding/zeropty/releases) since 0.1.3 carries one archive for every Mac and its `SHA256SUMS`. Download both, check the hash, then unpack:
 
 ```sh [Terminal]
-v=0.1.5   # or the latest: v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/CreatiCoding/zeropty/releases/latest | sed 's|.*/v||')
+v=0.1.6   # or the latest: v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/CreatiCoding/zeropty/releases/latest | sed 's|.*/v||')
 curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/zeropty-$v-darwin-universal.tar.gz"
 curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/SHA256SUMS"
-shasum -a 256 -c SHA256SUMS                 # zeropty-0.1.5-darwin-universal.tar.gz: OK
+shasum -a 256 -c --ignore-missing SHA256SUMS   # zeropty-0.1.6-darwin-universal.tar.gz: OK
 tar -xzf "zeropty-$v-darwin-universal.tar.gz"
 export PATH="$PWD/zeropty-$v-darwin-universal:$PATH"   # add it to ~/.zshrc to keep it
 zeropty -V
 ```
 
-`v` holds the version. Replace `0.1.5` with another version to pin it. The last command prints the version, for example:
+`v` holds the version. Replace `0.1.6` with another version to pin it. The last command prints the version, for example:
 
 ```text
-zeropty 0.1.5
+zeropty 0.1.6
 ```
 
 ::: warning Downloaded with a browser?
 The files are signed ad hoc, not notarized. `curl` adds no quarantine mark, so the steps above run as they are. A browser download is marked, and macOS then refuses `zeropty` with a dialog. Clear the mark before the first run: `xattr -dr com.apple.quarantine zeropty-$v-darwin-universal`.
 :::
+
+On Linux (x86_64), download `zeropty-$v-linux-x86_64.tar.gz` instead, check it with `sha256sum -c --ignore-missing SHA256SUMS`, and put `zeropty-$v-linux-x86_64` on your `PATH`. For the full commands, see [Install and platform support](/guide/install#install-methods).
 
 ### Option B: build from source
 

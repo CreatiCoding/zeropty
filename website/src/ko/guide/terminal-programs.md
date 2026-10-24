@@ -8,7 +8,7 @@ description: zeropty-tty와 claude-zeropty로 claude, vim, python REPL, 대화�
 
 ## 시작하기 전에
 
-- zeropty가 설치된 Mac이 필요해요. `zeropty-tty`, `claude-zeropty`, `shim.dylib`이 한 폴더에 있어야 해요. 릴리스 아카이브와 `./build.sh`(`dist/`)는 모두 그 폴더에 넣어 줘요. `cargo install`은 그렇지 않아요. 자세한 내용은 [설치와 지원 플랫폼](/ko/guide/install)을 보세요.
+- zeropty가 설치된 Mac이나 Linux가 필요해요. `zeropty-tty`, `claude-zeropty`, shim(`shim.dylib`, Linux는 `shim.so`)이 한 폴더에 있어야 해요. 릴리스 아카이브와 `./build.sh`(`dist/`)는 모두 그 폴더에 넣어 줘요. `cargo install`은 그렇지 않아요. 자세한 내용은 [설치와 지원 플랫폼](/ko/guide/install)을 보세요.
 - 셸에서 `C-c`가 작업에 닿으려면(4단계) zeropty 0.1.5 이상이 필요해요. `zeropty -V`로 확인하세요.
 - 3단계에는 `PATH`에 `claude`가 있어야 해요.
 
@@ -18,7 +18,7 @@ description: zeropty-tty와 claude-zeropty로 claude, vim, python REPL, 대화�
 
 세션의 터미널은 PTY(pseudo-terminal)가 아니라 소켓이에요. `isatty()`로 터미널인지 확인하는 프로그램은 터미널이 아니라고 판단해요. vim, less, python REPL, claude 모두 다르게 동작해요. 자세한 내용은 [세션이 터미널을 얻는 방법](/ko/guide/concepts/terminal)을 보세요.
 
-**`zeropty-tty`**가 이 문제를 풀어요. 프로그램을 **shim**(`shim.dylib`, `DYLD_INSERT_LIBRARIES`로 넣어요)과 함께 시작하고, shim이 터미널처럼 다음 호출에 답해요.
+**`zeropty-tty`**가 이 문제를 풀어요. 프로그램을 **shim**(macOS는 `DYLD_INSERT_LIBRARIES`로 넣는 `shim.dylib`, Linux는 `LD_PRELOAD`로 넣는 `shim.so`)과 함께 시작하고, shim이 터미널처럼 다음 호출에 답해요.
 
 | 호출 | 프로그램이 받는 것 |
 |---|---|
@@ -107,7 +107,7 @@ REPL의 배너가 나오고, 그다음에 프롬프트, 내가 친 줄, 답이 �
 | `top`이나 `ps`가 실행되지 않아요 | 사본에는 원본의 권한(setuid, entitlement)이 없어요. 그 권한이 필요한 프로그램은 동작하지 않아요. |
 | `C-c`가 셸의 프롬프트는 끝내지만 `sleep 30`은 못 끝내요 | 0.1.5로 올리기 전에 시작한 셸이라 옛 shim을 그대로 갖고 있어요. 셸을 다시 시작하세요. |
 | 암호가 화면에 보여요 | 프로그램을 셸에서 직접 쳐서 shim 없이 실행됐어요. `zeropty-tty`로 시작하세요. |
-| `zeropty-tty`가 shim을 찾지 못해요 | 폴더를 한데 두거나, `ZEROPTY_SHIM`이 `shim.dylib`를 가리키게 하세요. |
+| `zeropty-tty`가 shim을 찾지 못해요 | 폴더를 한데 두거나, `ZEROPTY_SHIM`이 shim(`shim.dylib`나 `shim.so`)을 가리키게 하세요. |
 
 ## 다음 단계
 

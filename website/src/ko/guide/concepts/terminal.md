@@ -17,7 +17,7 @@ flowchart LR
   subgraph zp["zeropty · socketpair"]
     direction TB
     zc["send-keys"] --> ze["엔진<br/>라인 디시플린 · 에코 · 시그널"]
-    ze -->|"socketpair"| zpg["프로그램<br/>(+ zeropty-tty로 넣은 shim.dylib)"]
+    ze -->|"socketpair"| zpg["프로그램<br/>(+ zeropty-tty로 넣은 shim)"]
   end
   tmux ~~~ zp
 ```
@@ -44,7 +44,7 @@ flowchart LR
 
 ## shim과 zeropty-tty
 
-**shim**(`shim.dylib`)은 프로그램 안에 들어가 터미널 호출에 터미널처럼 답하는 작은 라이브러리예요. **`zeropty-tty`**는 `DYLD_INSERT_LIBRARIES`로 shim을 넣어 프로그램을 띄우는 스크립트예요.
+**shim**(macOS는 `shim.dylib`, Linux는 `shim.so`)은 프로그램 안에 들어가 터미널 호출에 터미널처럼 답하는 작은 라이브러리예요. **`zeropty-tty`**는 `DYLD_INSERT_LIBRARIES`(macOS)나 `LD_PRELOAD`(Linux)로 shim을 넣어 프로그램을 띄우는 스크립트예요.
 
 ```sh [터미널]
 zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"
@@ -102,7 +102,7 @@ cooked 모드에서 `C-c`, `C-\`, `C-z`는 프로세스 그룹에 시그널로 �
 - **PTY 한도가 없어요.** tmux는 창 분할마다 PTY를 하나씩 열어서 기본 511개, 최대 999개에서 멈춰요. 에이전트 호스트에는 세션이 수백~수천 개 필요해서 zeropty는 PTY를 아예 쓰지 않아요.
 - **파이프가 아니라 socketpair.** macOS 파이프는 약 250개가 커지면 나머지가 512바이트로 묶여요. 세션 1000개에서 출력의 41%가 프로그램 안에 묶여 있었어요. 세션마다 64KB 소켓 버퍼를 따로 주자 다 흘러요. 대신 zeropty가 읽지 않는 동안 세션마다 최대 64KB가 커널 버퍼에 기다려요(1000개면 64MB).
 - **엔진이 라인 디시플린을 맡아요.** 에코와 시그널을 엔진에서 하면 cooked 세션에서 키마다 10µs쯤 더 들어요. claude 같은 raw 모드 세션에는 추가 작업이 없어요.
-- **대가는 shim이에요.** 터미널이 필요한 프로그램은 `zeropty-tty`로 띄워야 하고, `top` 같은 권한 있는 시스템 프로그램은 그렇게 돌릴 수 없어요. shim 때문에 zeropty는 macOS(`DYLD_INSERT_LIBRARIES`)에 묶이기도 해요.
+- **대가는 shim이에요.** 터미널이 필요한 프로그램은 `zeropty-tty`로 띄워야 하고, `top` 같은 권한 있는 시스템 프로그램은 그렇게 돌릴 수 없어요. Linux에서 정적 링크된 프로그램(대부분의 Go 바이너리)은 shim을 불러오지 않아요.
 
 ## 다음 단계
 

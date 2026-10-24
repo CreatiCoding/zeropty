@@ -15,7 +15,7 @@ flowchart TB
     att["zeropty attach"]
   end
   subgraph server["Server process: zeropty serve"]
-    eng["engine: sessions · screens · commands<br/>one thread, one kqueue"]
+    eng["engine: sessions · screens · commands<br/>one thread, one kqueue (epoll on Linux)"]
   end
   subgraph sessions["Sessions"]
     s1["work: claude-zeropty"]
@@ -51,7 +51,7 @@ The **server** is the process that runs the engine and owns every session. The `
 
 - **Who starts it.** If no server is running, `new-session` starts one, just like tmux. `pull-sessions` does too. You can also start it yourself with `zeropty serve`.
 - **Who can connect.** The socket has 0600 permissions, so only the same user (and root) can connect.
-- **One engine, one thread.** A single thread and a single kqueue handle every session's output, process exits and timers. There is no thread or process per session.
+- **One engine, one thread.** A single thread and a single kqueue (epoll on Linux) handle every session's output, process exits and timers. There is no thread or process per session.
 - **Not only a separate process.** The same engine can run inside your program instead. For details, see [Four ways to drive zeropty](/guide/concepts/interfaces).
 
 If no server answers on the socket, commands fail with `no server running on ...` and exit code 1.
