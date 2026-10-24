@@ -6,7 +6,7 @@ description: zeropty는 tmux 명령을 받아 PTY 없이 세션을 돌리는 AI 
 
 zeropty는 AI 에이전트를 위한 **세션 엔진**이에요. 코딩 에이전트 같은 프로그램을 띄우고, 화면을 읽고, 키를 보내고, 끝나면 알려 줘요. [tmux](https://github.com/tmux/tmux)와 같은 명령을 받지만 PTY(가상 터미널)는 하나도 쓰지 않아요. 이름도 여기서 왔어요.
 
-zeropty는 [Rust](https://www.rust-lang.org)로 만들었고 macOS에서만 돌아요. 명령줄 도구로 쓰거나, 어떤 언어에서든 소켓으로 말하거나, 엔진을 내 프로그램 안에 넣을 수 있어요.
+zeropty는 [Rust](https://www.rust-lang.org)로 만들었고 macOS와 Linux(x86_64)에서 돌아요. 명령줄 도구로 쓰거나, 어떤 언어에서든 소켓으로 말하거나, 엔진을 내 프로그램 안에 넣을 수 있어요.
 
 ## 어떻게 동작하나요?
 

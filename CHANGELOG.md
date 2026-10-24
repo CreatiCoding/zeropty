@@ -26,8 +26,6 @@ release; polish that draft into entries written in English, and add the same ent
   as another user (root aside). The server refuses a socket directory that is another user's or that others can
   write without the sticky bit (as tmux does), where someone could move the socket aside. New:
   `zeropty::server::connect`, the checked connection for Rust clients.
-- The size file (`zeropty-size-*`, in the socket's directory or `/tmp`) was written through a symbolic link put at
-  its temporary name, overwriting the file it pointed to with the session's size. It is now created anew, 0600.
 - Plugins in `ZEROPTY_PLUGIN_DIR` were checked once, when found, and restarted by path after that: a directory
   swapped by another user (through a parent others can write) had their program run as you. The check is made
   before every start, and `<name>.log` is created 0600, never through a link.
@@ -42,6 +40,22 @@ release; polish that draft into entries written in English, and add the same ent
   `send-keys` is now an error.
 - The shim lost a mode change (echo off for a password, raw mode) when the program had made its terminal
   non-blocking and filled it, while `tcsetattr` reported success; it now waits for room, as a PTY would.
+
+## [0.1.7] - 2026-10-24
+
+### Fixed
+
+- Linux: `send-keys C-c` (or any key that only signals) no longer fails now and then with "write: Broken pipe"
+  when the signal ended the program before the key was done.
+
+### Security
+
+- A resized session's size file could be used against the user when its directory is shared: `/tmp`, when
+  `ZEROPTY_SOCK` names a socket there, or the default `size_dir` of an embedded engine on Linux. The size was written
+  through `<file>.new`, opened following symlinks and blocking on FIFOs, and the name shows in the directory: another
+  local user could plant a symlink there to have zeropty overwrite any file the user can write, or a FIFO to hang the
+  server and every session in it. The temporary file is now created afresh (`O_EXCL`), never followed or waited on,
+  with mode 0600, and the shim reads the size file without following a symlink or waiting on a FIFO.
 
 ## [0.1.6] - 2026-10-24
 
@@ -184,7 +198,8 @@ the interfaces in docs/VERSIONING.md.
 
 - The CLI no longer panics when the reader closes the pipe early (`zeropty capture-pane -p ... | head -1`).
 
-[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.6...HEAD
+[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/CreatiCoding/zeropty/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/CreatiCoding/zeropty/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/CreatiCoding/zeropty/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/CreatiCoding/zeropty/compare/v0.1.3...v0.1.4

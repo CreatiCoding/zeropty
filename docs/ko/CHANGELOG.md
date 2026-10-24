@@ -23,8 +23,6 @@ zeropty의 사용자에게 보이는 변경을 모두 여기에 적어요.
   `pull-sessions`/`push-sessions`, Node 클라이언트는 다른 사용자로 도는 서버(root 제외)를 거부해요. 서버는 다른 사용자의
   소켓 폴더나, 스티키 비트 없이 다른 사람이 쓸 수 있는 소켓 폴더를 tmux처럼 거부해요(누군가 소켓을 치울 수 있어요).
   새로 생긴 것: Rust 클라이언트용으로 확인을 거치는 연결 `zeropty::server::connect`.
-- 크기 파일(`zeropty-size-*`, 소켓 폴더나 `/tmp`에 있어요)은 임시 이름 자리에 놓인 심볼릭 링크를 따라 써져서, 링크가 가리키는
-  파일을 세션 크기로 덮어썼어요. 이제 늘 새로 만들고 권한은 0600이에요.
 - `ZEROPTY_PLUGIN_DIR`의 플러그인은 처음 찾을 때 한 번만 확인하고 그 뒤로는 경로로 다시 띄웠어요. 그래서 다른 사용자가
   (다른 사람이 쓸 수 있는 상위 폴더를 통해) 디렉터리를 바꿔치기하면 그 프로그램이 내 권한으로 돌았어요. 이제 띄울 때마다
   확인하고, `<이름>.log`는 0600으로 만들며 링크를 따라 열지 않아요.
@@ -38,6 +36,22 @@ zeropty의 사용자에게 보이는 변경을 모두 여기에 적어요.
   오류예요.
 - 프로그램이 터미널을 non-blocking으로 만들고 가득 채운 뒤에는 shim이 모드 변경(비밀번호용 echo 끄기, raw 모드)을 잃어버리면서도
   `tcsetattr`은 성공이라고 답했어요. 이제 PTY처럼 자리가 날 때까지 기다려요.
+
+## [0.1.7] - 2026-10-24
+
+### Fixed
+
+- Linux: 시그널만 보내는 키(`send-keys C-c` 등)가, 키 처리가 끝나기 전에 시그널로 프로그램이 끝나면 가끔
+  "write: Broken pipe"로 실패하던 문제를 고쳤어요.
+
+### Security
+
+- 크기를 바꾼 세션의 크기 파일이 공유 디렉터리에 있으면 사용자를 공격하는 데 쓰일 수 있었어요. `ZEROPTY_SOCK`이 `/tmp`의
+  소켓을 가리킬 때나, Linux에서 임베드 엔진의 기본 `size_dir`이 그래요. 크기는 `<파일>.new`를 거쳐 썼는데, 이 파일을
+  심볼릭 링크를 따라가고 FIFO에서 기다리며 열었고, 이름은 디렉터리에서 보였어요. 그래서 다른 로컬 사용자가 그 자리에
+  심볼릭 링크를 놓으면 사용자가 쓸 수 있는 아무 파일이나 덮어쓰게 할 수 있었고, FIFO를 놓으면 서버와 그 안의 모든 세션을
+  멈출 수 있었어요. 이제 임시 파일은 새로 만들고(`O_EXCL`), 링크를 따라가거나 기다리지 않으며, 권한은 0600이에요.
+  shim도 크기 파일을 읽을 때 심볼릭 링크를 따라가거나 FIFO에서 기다리지 않아요.
 
 ## [0.1.6] - 2026-10-24
 
@@ -170,7 +184,8 @@ hardened runtime으로 서명된 프로그램은 shim을 못 읽어서 `zeropty-
 
 - 출력을 읽는 쪽이 파이프를 일찍 닫아도(`zeropty capture-pane -p ... | head -1`) CLI가 패닉하지 않아요.
 
-[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.6...HEAD
+[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/CreatiCoding/zeropty/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/CreatiCoding/zeropty/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/CreatiCoding/zeropty/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/CreatiCoding/zeropty/compare/v0.1.3...v0.1.4

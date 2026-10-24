@@ -15,7 +15,7 @@ flowchart TB
     att["zeropty attach"]
   end
   subgraph server["서버 프로세스: zeropty serve"]
-    eng["엔진: 세션 · 화면 · 명령<br/>스레드 하나, kqueue 하나"]
+    eng["엔진: 세션 · 화면 · 명령<br/>스레드 하나, kqueue 하나(Linux는 epoll)"]
   end
   subgraph sessions["세션"]
     s1["work: claude-zeropty"]
@@ -51,7 +51,7 @@ flowchart TB
 
 - **누가 띄우나요.** 돌고 있는 서버가 없으면 tmux처럼 `new-session`이 띄워요. `pull-sessions`도 그래요. `zeropty serve`로 직접 띄울 수도 있어요.
 - **누가 접속할 수 있나요.** 소켓은 0600 권한이라 같은 사용자(와 root)만 접속할 수 있어요. 클라이언트도 같은 방식으로 서버를 확인해요: CLI와 Node 클라이언트는 다른 사용자로 도는 서버를 거부하고, 서버는 다른 사람이 쓸 수 있는 소켓 폴더를 거부해요.
-- **엔진 하나, 스레드 하나.** 스레드 하나와 kqueue 하나가 모든 세션의 출력, 프로세스 종료, 타이머를 처리해요. 세션마다 스레드나 프로세스를 두지 않아요.
+- **엔진 하나, 스레드 하나.** 스레드 하나와 kqueue 하나(Linux는 epoll)가 모든 세션의 출력, 프로세스 종료, 타이머를 처리해요. 세션마다 스레드나 프로세스를 두지 않아요.
 - **꼭 별도 프로세스일 필요는 없어요.** 같은 엔진을 내 프로그램 안에서 돌릴 수도 있어요. 자세한 내용은 [zeropty를 다루는 네 가지 방법](/ko/guide/concepts/interfaces)을 보세요.
 
 소켓에서 답하는 서버가 없으면 명령은 `no server running on ...`과 종료 코드 1로 실패해요.

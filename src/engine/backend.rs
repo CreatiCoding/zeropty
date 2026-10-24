@@ -272,17 +272,7 @@ impl Programs for SystemPrograms {
     }
 
     fn write_size(&self, size_file: &Path, rows: u16, cols: u16) {
-        use std::io::Write as _;
-        use std::os::unix::fs::OpenOptionsExt as _;
-        // Written whole then renamed, so the program never reads half of it. The directory may be shared
-        // (/tmp, the default size_dir): the file is made anew (O_EXCL, which never follows a link), so a
-        // link someone else put at its name is replaced, not written through to a file of ours.
-        let tmp = size_file.with_extension("new");
-        let _ = std::fs::remove_file(&tmp);
-        let made = std::fs::OpenOptions::new().write(true).create_new(true).mode(0o600).open(&tmp);
-        if made.and_then(|mut f| f.write_all(format!("{cols} {rows}\n").as_bytes())).is_ok() {
-            let _ = std::fs::rename(&tmp, size_file);
-        }
+        write_size_file(size_file, rows, cols);
     }
 
     fn remove_size(&self, size_file: &Path) {
@@ -326,6 +316,99 @@ impl Backend for System {
     type Poller = Kqueue;
     type Clock = SystemClock;
     type Programs = SystemPrograms;
+}
+
+/// Writes "cols rows" to `size_file`: whole into `<size_file>.new`, then renamed over it, so the
+/// program never reads half of it.
+///
+/// The directory may be shared (/tmp, when ZEROPTY_SOCK or Options::size_dir puts it there), and the
+/// names show in it, so `.new` is made afresh (O_EXCL), never followed (O_NOFOLLOW) and never waited on
+/// (O_NONBLOCK): a symlink planted there made this write truncate its target, and a FIFO hung the
+/// engine's thread, every session with it. Something already there is removed (unlink does not follow
+/// a link) and the name tried once more; where it cannot be removed (another user's, in a sticky
+/// directory), the size is not written and the program keeps the one it had.
+pub(crate) fn write_size_file(size_file: &Path, rows: u16, cols: u16) {
+    use std::io::Write as _;
+    use std::os::unix::fs::OpenOptionsExt as _;
+    let mut tmp = size_file.as_os_str().to_owned();
+    tmp.push(".new");
+    let tmp = std::path::PathBuf::from(tmp);
+    let create =
+        || std::fs::OpenOptions::new().write(true).create_new(true).mode(0o600).custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK | libc::O_CLOEXEC).open(&tmp);
+    let file = match create() {
+        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => std::fs::remove_file(&tmp).and_then(|()| create()),
+        r => r,
+    };
+    let Ok(mut file) = file else { return };
+    if file.write_all(format!("{cols} {rows}\n").as_bytes()).is_ok() {
+        let _ = std::fs::rename(&tmp, size_file);
+    } else {
+        let _ = std::fs::remove_file(&tmp);
+    }
+}
+
+#[cfg(test)]
+mod size_file_tests {
+    use std::path::Path;
+
+    fn dir(name: &str) -> std::path::PathBuf {
+        let d = std::env::temp_dir().join(format!("zeropty-size-test-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        std::fs::create_dir_all(&d).unwrap();
+        d
+    }
+
+    fn new_of(size_file: &Path) -> std::path::PathBuf {
+        let mut p = size_file.as_os_str().to_owned();
+        p.push(".new");
+        p.into()
+    }
+
+    #[test]
+    fn writes_and_replaces() {
+        let d = dir("plain");
+        let f = d.join("zeropty-size-1-2-3");
+        super::write_size_file(&f, 24, 80);
+        assert_eq!(std::fs::read_to_string(&f).unwrap(), "80 24\n");
+        super::write_size_file(&f, 30, 90);
+        assert_eq!(std::fs::read_to_string(&f).unwrap(), "90 30\n");
+        assert!(!new_of(&f).exists());
+        let _ = std::fs::remove_dir_all(&d);
+    }
+
+    /// A symlink planted at the temporary name: its target is left alone.
+    #[test]
+    fn a_planted_symlink_is_not_followed() {
+        let d = dir("symlink");
+        let victim = d.join("victim");
+        std::fs::write(&victim, "IMPORTANT DATA").unwrap();
+        let f = d.join("zeropty-size-1-2-3");
+        std::os::unix::fs::symlink(&victim, new_of(&f)).unwrap();
+        super::write_size_file(&f, 30, 90);
+        assert_eq!(std::fs::read_to_string(&victim).unwrap(), "IMPORTANT DATA");
+        assert_eq!(std::fs::read_to_string(&f).unwrap(), "90 30\n");
+        assert!(!std::fs::symlink_metadata(&f).unwrap().file_type().is_symlink());
+        let _ = std::fs::remove_dir_all(&d);
+    }
+
+    /// A FIFO planted at the temporary name: the write neither blocks nor goes into it.
+    #[test]
+    fn a_planted_fifo_does_not_block() {
+        let d = dir("fifo");
+        let f = d.join("zeropty-size-1-2-3");
+        let c = std::ffi::CString::new(new_of(&f).as_os_str().as_encoded_bytes()).unwrap();
+        // SAFETY: `c` is a NUL-terminated path alive for the call.
+        assert_eq!(unsafe { libc::mkfifo(c.as_ptr(), 0o600) }, 0);
+        let (tx, rx) = std::sync::mpsc::channel();
+        let g = f.clone();
+        std::thread::spawn(move || {
+            super::write_size_file(&g, 30, 90);
+            let _ = tx.send(());
+        });
+        rx.recv_timeout(std::time::Duration::from_secs(5)).expect("write_size_file blocked on a FIFO");
+        assert_eq!(std::fs::read_to_string(&f).unwrap(), "90 30\n");
+        let _ = std::fs::remove_dir_all(&d);
+    }
 }
 
 #[cfg(test)]
@@ -506,31 +589,5 @@ pub(crate) mod fake {
         fn remove_size(&self, size_file: &Path) {
             self.removed.borrow_mut().push(size_file.into())
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{Programs as _, SystemPrograms};
-
-    /// The size file's temporary name in a shared directory can hold another user's link to a file of
-    /// ours: the size replaces the link and the file stays as it was (it was written through, once).
-    #[test]
-    fn size_file_never_written_through_a_link() {
-        use std::os::unix::fs::PermissionsExt as _;
-        let dir = std::env::temp_dir().join(format!("zeropty-size-link-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
-        let precious = dir.join("precious");
-        std::fs::write(&precious, "PRIVATE\n").unwrap();
-        let size_file = dir.join("zeropty-size-1");
-        std::os::unix::fs::symlink(&precious, size_file.with_extension("new")).unwrap();
-        SystemPrograms.write_size(&size_file, 33, 99);
-        assert_eq!(std::fs::read_to_string(&precious).unwrap(), "PRIVATE\n");
-        assert_eq!(std::fs::read_to_string(&size_file).unwrap(), "99 33\n");
-        assert_eq!(std::fs::metadata(&size_file).unwrap().permissions().mode() & 0o777, 0o600);
-        SystemPrograms.write_size(&size_file, 25, 80);
-        assert_eq!(std::fs::read_to_string(&size_file).unwrap(), "80 25\n", "rewritten over the last one");
-        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

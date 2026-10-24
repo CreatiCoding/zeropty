@@ -8,7 +8,7 @@ By the end of this guide, you run programs that need a terminal in zeropty sessi
 
 ## Before you begin
 
-- A Mac with zeropty installed. You need `zeropty-tty`, `claude-zeropty` and `shim.dylib` in one folder: the release archive and `./build.sh` (in `dist/`) both put them there. `cargo install` does not. For details, see [Install and platform support](/guide/install).
+- zeropty installed on a Mac or on Linux. You need `zeropty-tty`, `claude-zeropty` and the shim (`shim.dylib`, or `shim.so` on Linux) in one folder: the release archive and `./build.sh` (in `dist/`) both put them there. `cargo install` does not. For details, see [Install and platform support](/guide/install).
 - zeropty 0.1.5 or later for `C-c` to reach a job in a shell (step 4). Check with `zeropty -V`.
 - For step 3, `claude` on your `PATH`.
 
@@ -18,7 +18,7 @@ The commands below write `dist/zeropty-tty`. If you use the release folder, writ
 
 A session's terminal is a socket, not a PTY (pseudo-terminal). Programs that check `isatty()` decide they are not on a terminal: vim, less, the python REPL and claude all behave differently. For details, see [How a session gets a terminal](/guide/concepts/terminal).
 
-**`zeropty-tty`** fixes this. It starts the program with a **shim** (`shim.dylib`, injected with `DYLD_INSERT_LIBRARIES`) that answers these calls as a terminal would:
+**`zeropty-tty`** fixes this. It starts the program with a **shim** (`shim.dylib`, injected with `DYLD_INSERT_LIBRARIES` on macOS; `shim.so`, with `LD_PRELOAD` on Linux) that answers these calls as a terminal would:
 
 | Call | What the program gets |
 |---|---|
@@ -107,7 +107,7 @@ For the shell from step 4, `zeropty capture-pane -p -t '=sh1:'` shows a new prom
 | `top` or `ps` does not run | The copy has none of the original's privileges (setuid, entitlements). Programs that need them do not work. |
 | `C-c` ends the shell's prompt but not `sleep 30` | The shell was started before the upgrade to 0.1.5 and keeps the old shim. Start the shell again. |
 | A passphrase shows on screen | The program was typed at a shell and runs without the shim. Start it with `zeropty-tty`. |
-| `zeropty-tty` cannot find the shim | Keep the folder together, or point `ZEROPTY_SHIM` at `shim.dylib`. |
+| `zeropty-tty` cannot find the shim | Keep the folder together, or point `ZEROPTY_SHIM` at the shim (`shim.dylib` or `shim.so`). |
 ## Next steps
 
 - [How a session gets a terminal](/guide/concepts/terminal) for the shim and the line discipline.

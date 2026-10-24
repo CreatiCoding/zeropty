@@ -17,7 +17,7 @@ flowchart LR
   subgraph zp["zeropty · a socketpair"]
     direction TB
     zc["send-keys"] --> ze["engine<br/>line discipline · echo · signals"]
-    ze -->|"socketpair"| zpg["program<br/>(+ shim.dylib via zeropty-tty)"]
+    ze -->|"socketpair"| zpg["program<br/>(+ the shim via zeropty-tty)"]
   end
   tmux ~~~ zp
 ```
@@ -44,7 +44,7 @@ A socket is not a terminal, so `isatty()` returns false in a session. Programs t
 
 ## The shim and zeropty-tty
 
-The **shim** (`shim.dylib`) is a small library loaded into the program that answers terminal calls as a terminal would. **`zeropty-tty`** is the script that starts a program with the shim injected through `DYLD_INSERT_LIBRARIES`:
+The **shim** (`shim.dylib` on macOS, `shim.so` on Linux) is a small library loaded into the program that answers terminal calls as a terminal would. **`zeropty-tty`** is the script that starts a program with the shim injected through `DYLD_INSERT_LIBRARIES` (macOS) or `LD_PRELOAD` (Linux):
 
 ```sh [Terminal]
 zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"
@@ -102,7 +102,7 @@ Before 0.1.5, these keys went to the shell instead of the job, so `sleep 30` typ
 - **No PTY limit.** tmux opens one PTY per pane and stops at 511 by default, 999 at most. Agent hosts need hundreds to thousands of sessions, so zeropty does not use PTYs at all.
 - **A socketpair, not a pipe.** Once about 250 macOS pipes have grown, the rest are stuck at 512 bytes. With 1000 sessions, 41% of the output was stuck inside the programs. A separate 64KB socket buffer per session lets everything flow. The cost: when zeropty stops reading, up to 64KB per session waits in kernel buffers (64MB for 1000 sessions).
 - **The engine as line discipline.** Doing echo and signals in the engine adds about 10µs per key in cooked sessions. Raw-mode sessions such as claude get no extra work.
-- **The trade-off is the shim.** Programs that need a terminal must start through `zeropty-tty`, and privileged system programs such as `top` cannot run that way. The shim also ties zeropty to macOS (`DYLD_INSERT_LIBRARIES`).
+- **The trade-off is the shim.** Programs that need a terminal must start through `zeropty-tty`, and privileged system programs such as `top` cannot run that way. On Linux a statically linked program, such as most Go binaries, never loads the shim.
 
 ## Next steps
 
