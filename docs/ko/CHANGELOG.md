@@ -15,6 +15,8 @@ zeropty의 사용자에게 보이는 변경을 모두 여기에 적어요.
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-10-24
+
 ### Added
 
 - Linux 지원(x86_64, glibc 2.29 이상, 커널 5.3 이상). 엔진은 kqueue 대신 epoll에서 기다리고 `zeropty::engine` 타입은
@@ -144,7 +146,8 @@ hardened runtime으로 서명된 프로그램은 shim을 못 읽어서 `zeropty-
 
 - 출력을 읽는 쪽이 파이프를 일찍 닫아도(`zeropty capture-pane -p ... | head -1`) CLI가 패닉하지 않아요.
 
-[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/CreatiCoding/zeropty/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/CreatiCoding/zeropty/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/CreatiCoding/zeropty/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/CreatiCoding/zeropty/compare/v0.1.2...v0.1.3
