@@ -8,7 +8,7 @@ description: zeropty가 출력을 화면으로 바꾸고, capture-pane으로 읽
 
 ```mermaid
 flowchart TB
-  p["프로그램"] -->|"socketpair로 출력"| k["kqueue"]
+  p["프로그램"] -->|"socketpair로 출력"| k["kqueue / epoll"]
   k -->|"읽을 수 있음"| r["엔진: 모아 읽기<br/>(300ms 경계)"]
   r --> s["화면 + 스크롤백<br/>6바이트 셀"]
   s -->|"250ms 조용"| f["얼림 (~1KB)"]

@@ -8,10 +8,10 @@ description: zeropty를 설치하고, 세션을 띄우고, 키를 보내고, wai
 
 ## 시작하기 전에
 
-- 맥이 필요해요. 릴리스 묶음은 macOS 11 이상, Apple silicon과 Intel에서 돌아가요. 자세한 내용은 [설치와 지원 플랫폼](/ko/guide/install)을 보세요.
+- 맥(macOS 11 이상, Apple silicon·Intel)이나 Linux(x86_64, glibc 2.29 이상)가 필요해요. 자세한 내용은 [설치와 지원 플랫폼](/ko/guide/install)을 보세요.
 - 아래 중 하나가 필요해요.
   - **릴리스 묶음.** macOS에 기본으로 있는 `curl`과 `shasum`만 있으면 돼요. Rust는 필요 없어요.
-  - **소스에서 빌드.** [Rust](https://rustup.rs)(stable)와 Xcode Command Line Tools(`xcode-select --install`)가 필요해요.
+  - **소스에서 빌드(macOS).** [Rust](https://rustup.rs)(stable)와 Xcode Command Line Tools(`xcode-select --install`)가 필요해요.
 - claude나 다른 에이전트는 없어도 돼요. 이 안내에서는 `sh`를 돌려요.
 
 ## 1. 설치하기
@@ -23,24 +23,26 @@ description: zeropty를 설치하고, 세션을 띄우고, 키를 보내고, wai
 0.1.3부터 [릴리스](https://github.com/CreatiCoding/zeropty/releases)마다 모든 맥용 묶음 하나와 그 `SHA256SUMS`가 붙어 있어요. 둘 다 내려받아 해시를 확인한 뒤 풀어요.
 
 ```sh [터미널]
-v=0.1.5   # or the latest: v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/CreatiCoding/zeropty/releases/latest | sed 's|.*/v||')
+v=0.1.6   # or the latest: v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/CreatiCoding/zeropty/releases/latest | sed 's|.*/v||')
 curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/zeropty-$v-darwin-universal.tar.gz"
 curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/SHA256SUMS"
-shasum -a 256 -c SHA256SUMS                 # zeropty-0.1.5-darwin-universal.tar.gz: OK
+shasum -a 256 -c --ignore-missing SHA256SUMS   # zeropty-0.1.6-darwin-universal.tar.gz: OK
 tar -xzf "zeropty-$v-darwin-universal.tar.gz"
 export PATH="$PWD/zeropty-$v-darwin-universal:$PATH"   # add it to ~/.zshrc to keep it
 zeropty -V
 ```
 
-`v`에 버전이 들어 있어요. 다른 버전으로 고정하려면 `0.1.5`를 바꾸세요. 마지막 명령은 버전을 출력해요. 예를 들면 이래요.
+`v`에 버전이 들어 있어요. 다른 버전으로 고정하려면 `0.1.6`를 바꾸세요. 마지막 명령은 버전을 출력해요. 예를 들면 이래요.
 
 ```text
-zeropty 0.1.5
+zeropty 0.1.6
 ```
 
 ::: warning 브라우저로 받았나요?
 파일은 ad-hoc 서명이고 공증은 받지 않았어요. `curl`은 quarantine 표시를 붙이지 않아서 위 순서대로면 그대로 실행돼요. 브라우저로 받으면 표시가 붙고, macOS가 창을 띄워 `zeropty`를 막아요. 처음 실행하기 전에 표시를 지우세요: `xattr -dr com.apple.quarantine zeropty-$v-darwin-universal`.
 :::
+
+Linux(x86_64)에서는 `zeropty-$v-linux-x86_64.tar.gz`를 받아 `sha256sum -c --ignore-missing SHA256SUMS`로 확인하고, `zeropty-$v-linux-x86_64`를 `PATH`에 넣어요. 명령 전체는 [설치와 지원 플랫폼](/ko/guide/install#설치-방법)을 보세요.
 
 ### 방법 B: 소스에서 빌드하기
 

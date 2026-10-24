@@ -6,7 +6,7 @@ description: zeropty is a session engine for AI agents that takes tmux commands 
 
 zeropty is a **session engine** for AI agents. It starts programs such as coding agents, reads their screens, sends them keys and tells you when they finish. It takes the same commands as [tmux](https://github.com/tmux/tmux), but it uses no PTY (pseudo-terminal) at all, which is where the name comes from.
 
-zeropty is written in [Rust](https://www.rust-lang.org) and runs on macOS only. You can use it as a command-line tool, talk to its socket from any language, or put the engine inside your own program.
+zeropty is written in [Rust](https://www.rust-lang.org) and runs on macOS and Linux (x86_64). You can use it as a command-line tool, talk to its socket from any language, or put the engine inside your own program.
 
 ## How does it work?
 
