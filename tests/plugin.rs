@@ -1618,7 +1618,9 @@ fn a_started_call_times_out_on_time() {
     // On time: the engine's own timers (the 250 ms sweep, the watchdog's quarter deadline) would wake
     // the host up to 250 ms late. 150 ms of slack: the whole suite runs in parallel, and a 60 ms bound
     // failed now and then under that load while still on time.
-    assert!(took >= Duration::from_millis(1200) && took < Duration::from_millis(1350), "{took:?}");
+    // 1 ms early at most: the engine counts whole milliseconds, so a deadline set at 10.9 ms is due at
+    // 1210, 1199.1 ms later. kqueue's wakeups came late enough to hide it; epoll's (Linux) do not.
+    assert!(took >= Duration::from_millis(1199) && took < Duration::from_millis(1350), "{took:?}");
     drop(busy);
     drop(p);
     let _ = std::fs::remove_dir_all(&d);
