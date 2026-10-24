@@ -17,6 +17,11 @@ release; polish that draft into entries written in English, and add the same ent
 
 ## [Unreleased]
 
+### Fixed
+
+- Linux: `send-keys C-c` (or any key that only signals) no longer fails now and then with "write: Broken pipe"
+  when the signal ended the program before the key was done.
+
 ### Security
 
 - A resized session's size file could be used against the user when its directory is shared: `/tmp`, when
