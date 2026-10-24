@@ -464,6 +464,11 @@ impl Sess {
     /// socket turns writable: `flush`).
     pub(super) fn write(&mut self, poller: &impl Poller, udata: usize, bytes: &[u8]) -> Result<(), CmdError> {
         let Some(stdin) = self.stdin.as_ref() else { return Err(CmdError::new("write: input closed\n")) };
+        // Nothing to write is no write: a lone C-c writes the (empty) keys after its signal, and once the
+        // program has died of it, Linux's send(2) of 0 bytes still fails with EPIPE.
+        if bytes.is_empty() {
+            return Ok(());
+        }
         if let Some(x) = self.extra.as_mut().filter(|x| !x.pending.is_empty()) {
             x.pending.extend_from_slice(bytes);
             return Ok(());

@@ -15,6 +15,11 @@ zeropty의 사용자에게 보이는 변경을 모두 여기에 적어요.
 
 ## [Unreleased]
 
+### Fixed
+
+- Linux: 시그널만 보내는 키(`send-keys C-c` 등)가, 키 처리가 끝나기 전에 시그널로 프로그램이 끝나면 가끔
+  "write: Broken pipe"로 실패하던 문제를 고쳤어요.
+
 ## [0.1.6] - 2026-10-24
 
 ### Added

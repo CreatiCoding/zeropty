@@ -17,6 +17,11 @@ release; polish that draft into entries written in English, and add the same ent
 
 ## [Unreleased]
 
+### Fixed
+
+- Linux: `send-keys C-c` (or any key that only signals) no longer fails now and then with "write: Broken pipe"
+  when the signal ended the program before the key was done.
+
 ## [0.1.6] - 2026-10-24
 
 ### Added
