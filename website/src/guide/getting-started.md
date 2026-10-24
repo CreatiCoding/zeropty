@@ -23,19 +23,19 @@ Pick one of the two ways below.
 Each [release](https://github.com/CreatiCoding/zeropty/releases) since 0.1.3 carries one archive for every Mac and its `SHA256SUMS`. Download both, check the hash, then unpack:
 
 ```sh [Terminal]
-v=0.1.7   # or the latest: v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/CreatiCoding/zeropty/releases/latest | sed 's|.*/v||')
+v=0.1.8   # or the latest: v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/CreatiCoding/zeropty/releases/latest | sed 's|.*/v||')
 curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/zeropty-$v-darwin-universal.tar.gz"
 curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/SHA256SUMS"
-shasum -a 256 -c --ignore-missing SHA256SUMS   # zeropty-0.1.7-darwin-universal.tar.gz: OK
+shasum -a 256 -c --ignore-missing SHA256SUMS   # zeropty-0.1.8-darwin-universal.tar.gz: OK
 tar -xzf "zeropty-$v-darwin-universal.tar.gz"
 export PATH="$PWD/zeropty-$v-darwin-universal:$PATH"   # add it to ~/.zshrc to keep it
 zeropty -V
 ```
 
-`v` holds the version. Replace `0.1.7` with another version to pin it. The last command prints the version, for example:
+`v` holds the version. Replace `0.1.8` with another version to pin it. The last command prints the version, for example:
 
 ```text
-zeropty 0.1.7
+zeropty 0.1.8
 ```
 
 ::: warning Downloaded with a browser?

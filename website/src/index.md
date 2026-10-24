@@ -4,7 +4,7 @@ title: zeropty
 titleTemplate: The session engine for AI agents
 sidebar: false
 github: https://github.com/CreatiCoding/zeropty
-badge: v0.1.7 · macOS · Linux · Rust · tmux-compatible commands · C ABI · Node
+badge: v0.1.8 · macOS · Linux · Rust · tmux-compatible commands · C ABI · Node
 headline: [Run 1000 agents, without, a PTY.]
 tagline: zeropty is the session engine for AI agents. Read their screens, send them keys and wait until they finish, with tmux's commands and a fraction of its CPU and memory.
 start: { text: Get started, link: /guide/getting-started }

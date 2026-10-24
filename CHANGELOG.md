@@ -17,6 +17,8 @@ release; polish that draft into entries written in English, and add the same ent
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-10-24
+
 ### Security
 
 - Another local user could stand in for your server. Without `HOME`, the socket was `/tmp/.zeropty/mux.sock`, and
@@ -198,7 +200,8 @@ the interfaces in docs/VERSIONING.md.
 
 - The CLI no longer panics when the reader closes the pipe early (`zeropty capture-pane -p ... | head -1`).
 
-[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.7...HEAD
+[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.8...HEAD
+[0.1.8]: https://github.com/CreatiCoding/zeropty/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/CreatiCoding/zeropty/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/CreatiCoding/zeropty/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/CreatiCoding/zeropty/compare/v0.1.4...v0.1.5
