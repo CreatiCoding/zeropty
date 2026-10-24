@@ -29,7 +29,7 @@ Building from source needs [Rust](https://www.rust-lang.org) 1.88 or later, the 
 | `./build.sh` from source (macOS) | Rust stable, Xcode Command Line Tools | Everything, in `dist/` | Nothing |
 | `cargo install --git` | Rust | `zeropty` only, in `~/.cargo/bin` | The shim, `zeropty-tty`, `claude-zeropty`, embedding libraries, bash builtin |
 
-- **Release archive.** Each release since 0.1.3 carries `zeropty-VERSION-darwin-universal.tar.gz`, and since 0.1.6 also `zeropty-VERSION-linux-x86_64.tar.gz`, with one `SHA256SUMS` for both. Replace `VERSION` with the release number, such as `0.1.6`. Check the archive before you unpack it: `shasum -a 256 -c --ignore-missing SHA256SUMS` on macOS, `sha256sum -c --ignore-missing SHA256SUMS` on Linux (`--ignore-missing` skips the archive you did not download). To pin a version in a script, fix the version and the archive's hash from that release's `SHA256SUMS`.
+- **Release archive.** Each release since 0.1.3 carries `zeropty-VERSION-darwin-universal.tar.gz`, and since 0.1.6 also `zeropty-VERSION-linux-x86_64.tar.gz`, with one `SHA256SUMS` for both. Replace `VERSION` with the release number, such as `0.1.7`. Check the archive before you unpack it: `shasum -a 256 -c --ignore-missing SHA256SUMS` on macOS, `sha256sum -c --ignore-missing SHA256SUMS` on Linux (`--ignore-missing` skips the archive you did not download). To pin a version in a script, fix the version and the archive's hash from that release's `SHA256SUMS`.
 - **`./build.sh`.** Clone the repository and run `./build.sh`. It builds the workspace in release mode and copies the results into `dist/`. To keep using it, put `dist/` on your `PATH`.
 - **`cargo install`.** One line, if you need only the CLI and the server:
 
@@ -44,10 +44,10 @@ There is no Homebrew tap, and the crate is not on crates.io. A Rust program can 
 On Linux, the same steps with the Linux archive:
 
 ```sh [Terminal]
-v=0.1.6
+v=0.1.7
 curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/zeropty-$v-linux-x86_64.tar.gz"
 curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/SHA256SUMS"
-sha256sum -c --ignore-missing SHA256SUMS     # zeropty-0.1.6-linux-x86_64.tar.gz: OK
+sha256sum -c --ignore-missing SHA256SUMS     # zeropty-0.1.7-linux-x86_64.tar.gz: OK
 tar -xzf "zeropty-$v-linux-x86_64.tar.gz"
 export PATH="$PWD/zeropty-$v-linux-x86_64:$PATH"   # add it to ~/.bashrc to keep it
 ```

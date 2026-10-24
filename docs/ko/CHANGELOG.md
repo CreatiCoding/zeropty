@@ -15,6 +15,8 @@ zeropty의 사용자에게 보이는 변경을 모두 여기에 적어요.
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-10-24
+
 ### Fixed
 
 - Linux: 시그널만 보내는 키(`send-keys C-c` 등)가, 키 처리가 끝나기 전에 시그널로 프로그램이 끝나면 가끔
@@ -160,7 +162,8 @@ hardened runtime으로 서명된 프로그램은 shim을 못 읽어서 `zeropty-
 
 - 출력을 읽는 쪽이 파이프를 일찍 닫아도(`zeropty capture-pane -p ... | head -1`) CLI가 패닉하지 않아요.
 
-[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.6...HEAD
+[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/CreatiCoding/zeropty/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/CreatiCoding/zeropty/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/CreatiCoding/zeropty/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/CreatiCoding/zeropty/compare/v0.1.3...v0.1.4

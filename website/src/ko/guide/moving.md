@@ -33,7 +33,7 @@ zeropty restart-server
 
 방금 실행한 `zeropty` 바이너리로 새 서버가 시작되어 세션을 모두 넘겨받고, 그다음 소켓을 넘겨받아요. 프로그램은 멈추지 않고 pid도 그대로예요. 전환하는 몇 ms 사이에 들어온 명령은 옛 서버로 가요.
 
-새 바이너리가 `PATH`에서 첫 번째가 아니라면 경로로 실행하세요. 예: `./zeropty-0.1.6-darwin-universal/zeropty restart-server`
+새 바이너리가 `PATH`에서 첫 번째가 아니라면 경로로 실행하세요. 예: `./zeropty-0.1.7-darwin-universal/zeropty restart-server`
 
 ::: warning 새 서버는 내 셸의 환경을 가져요
 `restart-server`는 그 명령을 실행한 셸에서 새 서버를 띄워요. 이후에 만드는 세션은 그 셸의 환경을 받고, `set-environment -g`로 정한 값은 사라지니 다시 정하세요. 이미 실행 중인 세션은 자기 환경을 그대로 가져요. `ZEROPTY_PLUGIN_DIR`와 `ZEROPTY_SOCK`도 이 셸에서 와요.

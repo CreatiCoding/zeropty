@@ -17,6 +17,8 @@ release; polish that draft into entries written in English, and add the same ent
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-10-24
+
 ### Fixed
 
 - Linux: `send-keys C-c` (or any key that only signals) no longer fails now and then with "write: Broken pipe"
@@ -172,7 +174,8 @@ the interfaces in docs/VERSIONING.md.
 
 - The CLI no longer panics when the reader closes the pipe early (`zeropty capture-pane -p ... | head -1`).
 
-[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.6...HEAD
+[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/CreatiCoding/zeropty/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/CreatiCoding/zeropty/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/CreatiCoding/zeropty/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/CreatiCoding/zeropty/compare/v0.1.3...v0.1.4
