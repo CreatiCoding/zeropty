@@ -16,7 +16,7 @@ release PR: node scripts/release.mjs bump <level>  ──▶ changes the version
                                                        moves [Unreleased] to ## [X.Y.Z] - date
                                      │
                                      ▼  after the merge, the maintainer tags vX.Y.Z (release.mjs check --tag compares the tag with the version)
-tag pushed: .github/workflows/release.yml ──▶ builds and smoke-tests the macOS archive and attaches it and
+tag pushed: .github/workflows/release.yml ──▶ builds and smoke-tests the macOS and Linux archives and attaches them and
                                               SHA256SUMS to the GitHub Release (created from the CHANGELOG)
 ```
 
@@ -127,11 +127,12 @@ node --test scripts/test/*.test.mjs         # tests for the tools themselves (in
    git push origin v0.2.0
    ```
    Before pushing, check that the tag matches the version with `node scripts/release.mjs check --tag v0.2.0` (on a tagged HEAD, `scripts/check.sh` runs this check too).
-8. **The tag publishes the release.** `.github/workflows/release.yml` (a macOS runner) checks the tag against the version, runs `scripts/package.sh`, and attaches its two files to the release:
+8. **The tag publishes the release.** `.github/workflows/release.yml` (a macOS runner, and a Linux one for the Linux archive) checks the tag against the version, runs `scripts/package.sh` and `scripts/package-linux.sh`, and attaches their files to the release:
    - `zeropty-0.2.0-darwin-universal.tar.gz`: one folder, `zeropty-0.2.0-darwin-universal/`, holding `zeropty` (arm64 + x86_64, `lipo`), `shim.dylib` (arm64, arm64e, x86_64), `zeropty-tty`, `claude-zeropty`, `LICENSE-APACHE` and `LICENSE-MIT`, with their execute bits. `zeropty` and `shim.dylib` are signed ad hoc (`codesign -s -`); Developer ID signing and notarization may come later.
-   - `SHA256SUMS`: `shasum -a 256` of the archive. Whoever pins a version pins this hash.
+   - `zeropty-0.2.0-linux-x86_64.tar.gz`: one folder of that name holding `zeropty`, `shim.so` (for `LD_PRELOAD`), `zeropty-tty`, `claude-zeropty` and the licenses. Built by the `package-linux` job with `scripts/package-linux.sh` on Debian 11 (`rust:1.88-bullseye`), so it needs glibc 2.29 or later; the script prints each file's newest glibc symbol and smoke-tests the unpacked archive.
+   - `SHA256SUMS`: the SHA-256 of every archive, made by the publish job once both are built. Whoever pins a version pins this hash.
 
-   If the tag has no release yet, the workflow creates it with `node scripts/release.mjs release-notes 0.2.0` as the body (the CHANGELOG section, one line per entry, relative links made absolute at the tag); a tag with a pre-release part (`v0.2.0-rc.1`) becomes a prerelease, never "Latest". A release you created before the workflow got there (about a minute after the push) keeps its body. Check the run under Actions, then download the two files and run `shasum -a 256 -c SHA256SUMS`. Both binaries load on macOS 11 and later (`package.sh` checks each slice's minimum).
+   If the tag has no release yet, the workflow creates it with `node scripts/release.mjs release-notes 0.2.0` as the body (the CHANGELOG section, one line per entry, relative links made absolute at the tag); a tag with a pre-release part (`v0.2.0-rc.1`) becomes a prerelease, never "Latest". A release you created before the workflow got there (about a minute after the push) keeps its body. Check the run under Actions, then download the files and run `shasum -a 256 -c SHA256SUMS`. Both binaries load on macOS 11 and later (`package.sh` checks each slice's minimum).
    - The workflow never replaces files already on a release: a rebuild is not byte-identical, and a new hash would break whoever pinned the old one. To replace them on purpose, delete them from the release, then re-run.
    - A re-run builds the tagged commit again, so it helps only with a failure outside the repository (a runner or network problem). A fix to the packaging needs a new commit and the next PATCH release.
    - The embedding libraries and the bash builtin are not in the archive; they come from `./build.sh`.

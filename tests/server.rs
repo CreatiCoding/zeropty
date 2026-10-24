@@ -148,6 +148,8 @@ fn environment_and_paste() {
 
 /// The server runs with its allocator settings (MALLOC_ENV), and its sessions' programs start without
 /// them: only a setting the user had made reaches them.
+// macOS only: its allocator settings (MALLOC_ENV) are macOS's.
+#[cfg(target_os = "macos")]
 #[test]
 fn allocator_settings_stay_with_the_server() {
     let s = Server::new("malloc");
@@ -355,7 +357,9 @@ fn input_bigger_than_the_pipe_arrives_whole() {
     s.ok(&["new-session", "-d", "-s", "b", "-x", "40", "-y", "5", "printf '\\033]zeropty-tty;0\\007'; echo READY; head -c 200000 | cksum; exec sleep 100"]);
     s.wait_capture(&["capture-pane", "-p", "-t", "=b:"], |o| o.starts_with("READY"));
     let data: String = (0..200_000).map(|k| (b'a' + (k % 26) as u8) as char).collect();
-    s.ok(&["send-keys", "-t", "=b:", "-l", &data]);
+    // In two: Linux takes at most 128 KB in one argument (MAX_ARG_STRLEN), each still 6 pipes' worth.
+    s.ok(&["send-keys", "-t", "=b:", "-l", &data[..100_000]]);
+    s.ok(&["send-keys", "-t", "=b:", "-l", &data[100_000..]]);
     let want = {
         let mut c = Command::new("cksum").stdin(std::process::Stdio::piped()).stdout(std::process::Stdio::piped()).spawn().unwrap();
         c.stdin.take().unwrap().write_all(data.as_bytes()).unwrap();
@@ -470,6 +474,8 @@ fn output_survives_a_closed_pipe() {
 
 /// shell/zeropty.zsh, the zsh function talking to the server from inside the shell: the same output,
 /// errors and exit codes as the program, with arguments JSON can only carry escaped.
+// macOS only: built and run against /bin/zsh as macOS ships it.
+#[cfg(target_os = "macos")]
 #[test]
 fn zsh_function_answers_like_the_program() {
     let s = Server::new("zsh");
@@ -498,6 +504,8 @@ fn zsh_function_answers_like_the_program() {
 
 /// shell/zeropty_bash.c, the bash builtin (built here with clang): the same as the program, in macOS's
 /// /bin/bash, including running the program when there is no server yet.
+// macOS only: built as a dylib for macOS's /bin/bash.
+#[cfg(target_os = "macos")]
 #[test]
 fn bash_builtin_answers_like_the_program() {
     let s = Server::new("bash");
@@ -649,7 +657,7 @@ fn flags_are_checked_and_acted_on() {
     );
     let o = s.run(&["capture-pane", "-p", "-Z", "-t", "=c:"]);
     assert_eq!(o.status.code(), Some(1));
-    assert!(String::from_utf8_lossy(&o.stderr).contains("unknown flag -Z"), "{:?}", o);
+    assert!(String::from_utf8_lossy(&o.stderr).contains("unknown flag -Z"), "{o:?}");
     assert_eq!(s.ok(&["new-session", "-A", "-d", "-P", "-s", "c", "exec cat"]), "c:\n");
     assert!(!s.run(&["new-session", "-d", "-s", "c", "exec cat"]).status.success());
     // send-keys -N, -H.
@@ -713,14 +721,20 @@ fn key_names_as_xterm_sends_them() {
     }
 }
 
-/// shim/shim.c built here (arm64 and arm64e: system binaries are arm64e), for programs run through
-/// zeropty-tty with it.
+/// shim/shim.c built here (on macOS arm64 and arm64e: system binaries are arm64e; on Linux a shared
+/// object for LD_PRELOAD), for programs run through zeropty-tty with it.
 fn shim(s: &Server) -> PathBuf {
-    let lib = s.dir.join("shim.dylib");
-    let cc = Command::new("clang")
-        .args(["-dynamiclib", "-O2", "-arch", "arm64", "-arch", "arm64e", "-o"])
+    let (name, args): (&str, &[&str]) = if cfg!(target_os = "macos") {
+        ("shim.dylib", &["-dynamiclib", "-O2", "-arch", "arm64", "-arch", "arm64e", "-o"])
+    } else {
+        ("shim.so", &["-shared", "-fPIC", "-O2", "-o"])
+    };
+    let lib = s.dir.join(name);
+    let cc = Command::new("cc")
+        .args(args)
         .arg(&lib)
         .arg(concat!(env!("CARGO_MANIFEST_DIR"), "/shim/shim.c"))
+        .args(if cfg!(target_os = "linux") { &["-ldl"][..] } else { &[] })
         .status()
         .unwrap();
     assert!(cc.success());
@@ -739,7 +753,9 @@ fn terminal_programs_through_zeropty_tty() {
     // Some macOS installs (GitHub's macos-15 runners) kill an ad-hoc re-signed copy of a system binary
     // at launch (SIGKILL, 137), so nothing run through a copy works there. Probe with /usr/bin/true the
     // same way and skip loudly rather than fail on the machine instead of the code.
-    let probe = Command::new("sh").arg("-c").arg(format!("{env} {tty} /usr/bin/true")).status().unwrap();
+    // /usr/bin/true is a SIP-protected binary on macOS (a copy); Linux has it in /bin on some systems.
+    let true_bin = if cfg!(target_os = "macos") { "/usr/bin/true" } else { "true" };
+    let probe = Command::new("sh").arg("-c").arg(format!("{env} {tty} {true_bin}")).status().unwrap();
     if probe.code() != Some(0) {
         use std::io::Write as _;
         let _ = writeln!(std::io::stderr(), "SKIPPED terminal_programs_through_zeropty_tty: a re-signed copy of /usr/bin/true did not run here ({probe})");
@@ -753,7 +769,8 @@ fn terminal_programs_through_zeropty_tty() {
     s.wait_capture(&["capture-pane", "-p", "-t", "=l:"], |o| o.contains("100\n(END)"));
     s.ok(&["send-keys", "-t", "=l:", "q"]);
     s.wait_capture(&["capture-pane", "-p", "-t", "=l:"], |o| o.contains("EXIT=0"));
-    if std::path::Path::new("/Library/Developer/CommandLineTools/usr/bin/python3").exists() {
+    // libedit on macOS, readline on Linux.
+    if ["/Library/Developer/CommandLineTools/usr/bin/python3", "/usr/bin/python3"].iter().any(|p| std::path::Path::new(p).exists()) {
         s.ok(&["new-session", "-d", "-s", "p", "-x", "40", "-y", "6", &format!("{env} {tty} python3 -q")]);
         s.wait_capture(&["capture-pane", "-p", "-t", "=p:"], |o| o.starts_with(">>>"));
         s.ok(&["send-keys", "-t", "=p:", "print(6*7)", "Enter"]);
@@ -787,7 +804,7 @@ int main(void) {
     )
     .unwrap();
     let probe = s.dir.join("probe");
-    assert!(Command::new("clang").arg("-o").arg(&probe).arg(&src).status().unwrap().success());
+    assert!(Command::new("cc").arg("-o").arg(&probe).arg(&src).status().unwrap().success());
     let run = format!("ZEROPTY_SHIM={} ZEROPTY_CACHE={} {tty} {}", lib.display(), s.dir.display(), probe.display());
     let file = s.dir.join("out.txt");
     s.ok(&[
@@ -847,7 +864,7 @@ int main(void) {
     )
     .unwrap();
     let rw = s.dir.join("rw");
-    assert!(Command::new("clang").arg("-o").arg(&rw).arg(&src).status().unwrap().success());
+    assert!(Command::new("cc").arg("-o").arg(&rw).arg(&src).status().unwrap().success());
     let run = format!("ZEROPTY_SHIM={} ZEROPTY_CACHE={} {tty} {}", lib.display(), s.dir.display(), rw.display());
     s.ok(&["new-session", "-d", "-s", "t", "-x", "40", "-y", "6", &format!("true | {run}; echo EXIT=$?; exec sleep 100")]);
     s.wait_capture(&["capture-pane", "-p", "-t", "=t:"], |o| o.starts_with("DRAWN\n"));
@@ -867,9 +884,14 @@ fn passphrases_are_not_echoed() {
     let src = s.dir.join("pw.c");
     std::fs::write(
         &src,
-        r#"#include <readpassphrase.h>
-#include <stdio.h>
+        r#"#include <stdio.h>
 #include <unistd.h>
+#ifdef __APPLE__
+#include <readpassphrase.h>
+#else
+// glibc has no readpassphrase: getpass, the one it has, asks both times.
+#define readpassphrase(p, b, n, f) getpass(p)
+#endif
 int main(void) {
   char b[32];
   char *r = readpassphrase("rpp: ", b, sizeof b, 0);
@@ -883,7 +905,7 @@ int main(void) {
     )
     .unwrap();
     let pw = s.dir.join("pw");
-    assert!(Command::new("clang").arg("-o").arg(&pw).arg(&src).status().unwrap().success());
+    assert!(Command::new("cc").arg("-o").arg(&pw).arg(&src).status().unwrap().success());
     let run = format!("ZEROPTY_SHIM={} ZEROPTY_CACHE={} {tty} {}", lib.display(), s.dir.display(), pw.display());
     s.ok(&["new-session", "-d", "-s", "t", "-x", "40", "-y", "6", &format!("{run}; echo EXIT=$?; exec sleep 100")]);
     s.wait_capture(&["capture-pane", "-p", "-t", "=t:"], |o| o.starts_with("rpp:"));
@@ -930,7 +952,7 @@ int main(void) {
     )
     .unwrap();
     let job = s.dir.join("job");
-    assert!(Command::new("clang").arg("-o").arg(&job).arg(&src).status().unwrap().success());
+    assert!(Command::new("cc").arg("-o").arg(&job).arg(&src).status().unwrap().success());
     let run = format!("ZEROPTY_SHIM={} ZEROPTY_CACHE={} {tty} {}", lib.display(), s.dir.display(), job.display());
     s.ok(&["new-session", "-d", "-s", "j", "-x", "40", "-y", "6", &format!("{run}; echo EXIT=$?; exec sleep 100")]);
     s.wait_capture(&["capture-pane", "-p", "-t", "=j:"], |o| o.contains("RUNNING"));
@@ -942,6 +964,8 @@ int main(void) {
 /// zeropty-tty names its signed copy after the name the program was run by, not the link's target
 /// (claude is a link to claude.exe), so ps and pgrep find it under that name. Each name of one program
 /// gets its own copy, and no name can stand for another's stamp (a link named "mytrue.src").
+// macOS only: Linux runs the program itself, never a copy.
+#[cfg(target_os = "macos")]
 #[test]
 fn zeropty_tty_copy_keeps_the_name_it_was_run_by() {
     let s = Server::new("ttyname");

@@ -137,7 +137,7 @@ unsafe fn read_raw(fd: BorrowedFd<'_>, ptr: *mut u8, len: usize) -> Option<usize
 pub(crate) fn write(fd: BorrowedFd<'_>, bytes: &[u8]) -> io::Result<usize> {
     loop {
         // SAFETY: `bytes` is valid for reads of `bytes.len()` bytes for the duration of the call.
-        let n = unsafe { libc::write(fd.as_raw_fd(), bytes.as_ptr().cast(), bytes.len()) };
+        let n = unsafe { write_raw(fd.as_raw_fd(), bytes) };
         if n >= 0 {
             return Ok(n as usize);
         }
@@ -177,8 +177,40 @@ fn set_socket_option(fd: RawFd, opt: libc::c_int, value: libc::c_int) -> io::Res
 }
 
 /// Writes to `fd` (a socket) fail with EPIPE instead of raising SIGPIPE once the reader is gone.
+#[cfg(target_os = "macos")]
 pub(crate) fn no_sigpipe(fd: BorrowedFd<'_>) -> io::Result<()> {
     set_socket_option(fd.as_raw_fd(), libc::SO_NOSIGPIPE, 1)
+}
+
+/// Linux has no SO_NOSIGPIPE: `write` sends with MSG_NOSIGNAL instead.
+#[cfg(target_os = "linux")]
+pub(crate) fn no_sigpipe(_: BorrowedFd<'_>) -> io::Result<()> {
+    Ok(())
+}
+
+/// write(2), as send(2) with MSG_NOSIGNAL on Linux when `fd` is a socket.
+///
+/// # Safety
+/// `fd` must be open for the duration of the call.
+#[cfg(target_os = "macos")]
+unsafe fn write_raw(fd: RawFd, bytes: &[u8]) -> isize {
+    // SAFETY: `bytes` is valid for reads of its length for the call.
+    unsafe { libc::write(fd, bytes.as_ptr().cast(), bytes.len()) }
+}
+
+/// write(2), as send(2) with MSG_NOSIGNAL on Linux when `fd` is a socket.
+///
+/// # Safety
+/// `fd` must be open for the duration of the call.
+#[cfg(target_os = "linux")]
+unsafe fn write_raw(fd: RawFd, bytes: &[u8]) -> isize {
+    // SAFETY: `bytes` is valid for reads of its length for the call.
+    let n = unsafe { libc::send(fd, bytes.as_ptr().cast(), bytes.len(), libc::MSG_NOSIGNAL) };
+    if n < 0 && io::Error::last_os_error().raw_os_error() == Some(libc::ENOTSOCK) {
+        // SAFETY: as above.
+        return unsafe { libc::write(fd, bytes.as_ptr().cast(), bytes.len()) };
+    }
+    n
 }
 
 /// What a session's program writes into, before it waits for zeropty to read: a full channel holds the

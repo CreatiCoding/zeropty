@@ -56,7 +56,7 @@
 
 ## Rust API 문서
 
-`zeropty`, `zeropty_c`, `zeropty_node` 세 crate의 rustdoc이에요. crates.io에는 올리지 않아요(macOS 전용이고 `./build.sh`로 빌드해요). 웹에 올린 주소는 없고, 저장소에서 만들어 열어요.
+`zeropty`, `zeropty_c`, `zeropty_node` 세 crate의 rustdoc이에요. crates.io에는 올리지 않아요(`./build.sh`로 빌드해요). 웹에 올린 주소는 없고, 저장소에서 만들어 열어요.
 
 ```sh
 cargo doc --no-deps --workspace --open

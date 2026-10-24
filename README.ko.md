@@ -17,7 +17,7 @@
   <!-- Status badges, each added once what it shows is real (no badge that claims a state it cannot track):
   - Release, once a GitHub release exists:
   <a href="https://github.com/CreatiCoding/zeropty/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/CreatiCoding/zeropty"></a>
-  - crates.io: not published there (macOS-only, built with ./build.sh); no badge until it is. -->
+  - crates.io: not published there (built with ./build.sh); no badge until it is. -->
   <img alt="platform: macOS" src="https://img.shields.io/badge/platform-macOS-111827?logo=apple&logoColor=white">
   <img alt="Rust" src="https://img.shields.io/badge/Rust-engine-b7410e?logo=rust&logoColor=white">
   <img alt="embed: C ABI · Node" src="https://img.shields.io/badge/embed-C%20ABI%20%C2%B7%20Node-0891b2">
@@ -205,6 +205,15 @@ zeropty -V
 - 스크립트에서 버전을 고정하려면 `v`와 그 릴리스 `SHA256SUMS`의 묶음 해시를 코드에 박고, 풀기 전에 비교하세요.
 - **Gatekeeper:** 파일은 ad-hoc 서명이고 공증은 받지 않았어요. `curl`은 quarantine 표시를 붙이지 않아서 위 순서대로면 그대로 실행돼요. 브라우저로 받으면 표시가 붙고, `tar`가 풀린 파일 모두에 그 표시를 옮겨서, macOS가 `zeropty`를 창을 띄워 막아요(명령은 그 창을 기다리며 멈춰요). 처음 실행하기 전에 표시를 지우세요: `xattr -dr com.apple.quarantine zeropty-$v-darwin-universal`.
 
+**Linux(x86_64, glibc 2.29 이상: Ubuntu 20.04·Debian 11 이상)** 는 릴리스의 `zeropty-$v-linux-x86_64.tar.gz`를 받아요. 해시는 같은 `SHA256SUMS`에 있어요. 폴더에는 `shim.dylib` 대신 `shim.so`가 있고 `LD_PRELOAD`로 걸려요. 복사·서명 없이 동적 링크된 프로그램은 모두 터미널을 봐요(정적 링크된 프로그램, 예를 들어 대부분의 Go 바이너리는 못 봐요).
+
+```sh
+curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/zeropty-$v-linux-x86_64.tar.gz"
+curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/SHA256SUMS"
+sha256sum -c --ignore-missing SHA256SUMS     # zeropty-0.1.6-linux-x86_64.tar.gz: OK
+tar -xzf "zeropty-$v-linux-x86_64.tar.gz" && export PATH="$PWD/zeropty-$v-linux-x86_64:$PATH"
+```
+
 **Rust가 있고 CLI와 서버만 필요하면 한 줄이에요.** `sh`, `python3`, 빌드 명령처럼 터미널이 없어도 되는 프로그램을 돌리기에는 이걸로 충분해요.
 
 ```sh
@@ -253,7 +262,7 @@ zeropty = { git = "https://github.com/CreatiCoding/zeropty" }
 
 ## tmux와 다른 점
 
-zeropty는 **프로그램을 띄워 두고 다루는 일**에 집중해요. 창 분할, 상태 표시줄, 복사 모드, 설정 파일은 없고, 세션 하나에 프로그램 하나예요. macOS만 지원해요(kqueue, DYLD shim). 기능별 비교: [docs/USAGE.md](docs/ko/USAGE.md#tmux와-기능-비교)
+zeropty는 **프로그램을 띄워 두고 다루는 일**에 집중해요. 창 분할, 상태 표시줄, 복사 모드, 설정 파일은 없고, 세션 하나에 프로그램 하나예요. macOS와 Linux를 지원해요(kqueue 또는 epoll, DYLD 또는 LD_PRELOAD shim). 기능별 비교: [docs/USAGE.md](docs/ko/USAGE.md#tmux와-기능-비교)
 
 ## FAQ
 
@@ -278,7 +287,7 @@ zeropty는 **프로그램을 띄워 두고 다루는 일**에 집중해요. 창 
 <details>
 <summary><b>Linux에서도 되나요?</b></summary>
 
-지금은 macOS만 돼요. 엔진이 kqueue 위에 있고, shim이 `DYLD_INSERT_LIBRARIES`를 써요. [자세히](docs/ko/FAQ.md#linux나-windows에서도-되나요)
+macOS와 Linux(x86_64)에서 돼요. Windows는 안 돼요. Linux에서는 엔진이 epoll을 쓰고 shim이 `LD_PRELOAD`로 걸려요. [자세히](docs/ko/FAQ.md#linux나-windows에서도-되나요)
 </details>
 
 → 더 많은 질문: [docs/FAQ.md](docs/ko/FAQ.md)

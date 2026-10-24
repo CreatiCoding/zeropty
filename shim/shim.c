@@ -1,10 +1,20 @@
 // Makes the session's socket look like a terminal, so a TUI runs without a PTY.
+// macOS loads it with DYLD_INSERT_LIBRARIES and interposes libc's calls (__interpose); Linux with
+// LD_PRELOAD, where this library's isatty, open ... are the ones every program calls and libc's are found
+// after it (REAL).
+#ifdef __linux__
+#define _GNU_SOURCE
+#include <dlfcn.h>
+#include <stddef.h>
+#endif
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <pwd.h>
+#ifdef __APPLE__
 #include <readpassphrase.h>
+#endif
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -19,9 +29,24 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 
+#ifdef __APPLE__
 #define INTERPOSE(n, o) \
   __attribute__((used)) static struct { const void *r; const void *o; } _i_##o \
   __attribute__((section("__DATA,__interpose"))) = { (const void *)&n, (const void *)&o }
+// An interposing image's own calls reach libc's functions.
+#define REAL(f) f
+#else
+// libc's `f`, looked up once.
+#define REAL(f) ({ static __typeof__(&f) p_; if (!p_) p_ = (__typeof__(&f))dlsym(RTLD_NEXT, #f); p_; })
+// readpassphrase(3) is BSD's; glibc has only getpass. The flags read_passphrase takes, as BSD's.
+#define RPP_ECHO_OFF 0x00
+#define RPP_ECHO_ON 0x01
+#define RPP_FORCELOWER 0x04
+#define RPP_FORCEUPPER 0x08
+#define RPP_SEVENBIT 0x10
+#define RPP_STDIN 0x20
+#define _PASSWORD_LEN 128
+#endif
 
 static struct termios fake;
 static int fake_init;
@@ -94,17 +119,27 @@ static void window_size(int *cols, int *rows) {
   if (n > 0 && (b[n] = 0, sscanf(b, "%d %d", &c, &r) == 2) && c > 0 && r > 0) { *cols = c; *rows = r; }
 }
 
-static int my_isatty(int fd) { return ours(fd) ? 1 : isatty(fd); }
+static int my_isatty(int fd) { return ours(fd) ? 1 : REAL(isatty)(fd); }
 
 static int my_tcgetattr(int fd, struct termios *t) {
-  if (!ours(fd)) return tcgetattr(fd, t);
+  if (!ours(fd)) return REAL(tcgetattr)(fd, t);
   if (!fake_init) {
     memset(&fake, 0, sizeof fake);
     fake.c_iflag = ICRNL | IXON; fake.c_oflag = OPOST | ONLCR;
     fake.c_cflag = CS8 | CREAD; fake.c_lflag = ISIG | ICANON | ECHO | ECHOE | ECHOK | IEXTEN;
     // A new tty's control characters (C-c, C-d, BSpace ...): libedit binds keys from them.
+#ifdef __APPLE__
     memcpy(fake.c_cc, ttydefchars, sizeof fake.c_cc);
     fake.c_ispeed = fake.c_ospeed = B38400; fake_init = 1;
+#else
+    // glibc's ttydefchars is in BSD's order, not Linux's c_cc indexes: set each by its index.
+    fake.c_cc[VINTR] = CINTR; fake.c_cc[VQUIT] = CQUIT; fake.c_cc[VERASE] = CERASE; fake.c_cc[VKILL] = CKILL;
+    fake.c_cc[VEOF] = CEOF; fake.c_cc[VTIME] = 0; fake.c_cc[VMIN] = 1; fake.c_cc[VSTART] = CSTART;
+    fake.c_cc[VSTOP] = CSTOP; fake.c_cc[VSUSP] = CSUSP; fake.c_cc[VEOL] = _POSIX_VDISABLE;
+    fake.c_cc[VREPRINT] = CREPRINT; fake.c_cc[VDISCARD] = CDISCARD; fake.c_cc[VWERASE] = CWERASE;
+    fake.c_cc[VLNEXT] = CLNEXT; fake.c_cc[VEOL2] = _POSIX_VDISABLE;
+    cfsetispeed(&fake, B38400); cfsetospeed(&fake, B38400); fake_init = 1;
+#endif
   }
   *t = fake; return 0;
 }
@@ -120,7 +155,7 @@ static int tty_flags(const struct termios *t) {
 // server's screen does it instead. A change is reported in the output stream itself, so it applies from
 // exactly this point (an OSC the screen otherwise ignores).
 static int my_tcsetattr(int fd, int act, const struct termios *t) {
-  if (!ours(fd)) return tcsetattr(fd, act, t);
+  if (!ours(fd)) return REAL(tcsetattr)(fd, act, t);
   struct termios old; my_tcgetattr(fd, &old);
   fake = *t;
   // Input modes too (raw mode clears them all): zeropty applies them to the keys it is sent, so they go out
@@ -165,20 +200,28 @@ static int my_ioctl(int fd, unsigned long req, ...) {
     // line editing off, prompt and all, when tcgetpgrp fails.
     if (req == TIOCGPGRP) { *(pid_t *)arg = getpgrp(); return 0; }
     if (req == TIOCSPGRP) return set_pgrp(*(pid_t *)arg);
+#ifdef __APPLE__
     if (req == TIOCGETA) return my_tcgetattr(fd, arg);
     if (req == TIOCSETA || req == TIOCSETAW || req == TIOCSETAF) return my_tcsetattr(fd, 0, arg);
+#else
+    // The kernel's struct termios, which TCGETS takes, is glibc's cut short after 19 control chars.
+    const size_t kernel_termios = offsetof(struct termios, c_cc) + 19;
+    struct termios t;
+    if (req == TCGETS) { my_tcgetattr(fd, &t); memcpy(arg, &t, kernel_termios); return 0; }
+    if (req == TCSETS || req == TCSETSW || req == TCSETSF) {
+      my_tcgetattr(fd, &t); memcpy(&t, arg, kernel_termios); return my_tcsetattr(fd, 0, &t);
+    }
+#endif
   }
-  return ioctl(fd, req, arg);
+  return REAL(ioctl)(fd, req, arg);
 }
 
 // A session has no controlling terminal, so opening /dev/tty fails (ENXIO); programs that read keys
 // from it (less, more, fzf) then quit. They get the session's socket instead, when this process still
 // has it: a dup, so a terminal too, read and written whatever the mode asked. In a session from an
 // older server reading goes to its input pipe, which cannot be written.
-static int my_open(const char *path, int flags, ...) {
-  int mode = 0;
-  if (flags & O_CREAT) { va_list ap; va_start(ap, flags); mode = va_arg(ap, int); va_end(ap); }
-  int fd = open(path, flags, mode);
+// `fd` as open(path, flags) returned it, or the session's terminal for /dev/tty.
+static int tty_open(int fd, const char *path, int flags) {
   if (fd < 0 && path && strcmp(path, "/dev/tty") == 0) {
     int e = errno, from = out_fd();
     if ((flags & O_ACCMODE) != O_WRONLY && legacy) from = is(0, &tty_in) ? 0 : -1;
@@ -186,6 +229,12 @@ static int my_open(const char *path, int flags, ...) {
     fd = fcntl(from, (flags & O_CLOEXEC) ? F_DUPFD_CLOEXEC : F_DUPFD, 3);
   }
   return fd;
+}
+
+static int my_open(const char *path, int flags, ...) {
+  int mode = 0;
+  if (flags & O_CREAT) { va_list ap; va_start(ap, flags); mode = va_arg(ap, int); va_end(ap); }
+  return tty_open(REAL(open)(path, flags, mode), path, flags);
 }
 
 // libc's readpassphrase (ssh, ssh-keygen, ssh-add) and getpass turn echo off with libc's own tcgetattr and
@@ -262,6 +311,7 @@ static char *read_passphrase(int fd, const char *prompt, char *buf, size_t size,
   }
 }
 
+#ifdef __APPLE__
 static char *my_readpassphrase(const char *prompt, char *buf, size_t size, int flags) {
   if (size == 0) { errno = EINVAL; return NULL; }
   int fd = passphrase_tty(flags);
@@ -272,12 +322,13 @@ static char *my_readpassphrase(const char *prompt, char *buf, size_t size, int f
   errno = e;
   return r;
 }
+#endif
 
 // As libc's getpass: a failed read gives "", not NULL.
 static char *my_getpass(const char *prompt) {
   static char buf[_PASSWORD_LEN + 1];
   int fd = passphrase_tty(0);
-  if (fd < 0) return getpass(prompt);
+  if (fd < 0) return REAL(getpass)(prompt);
   if (!read_passphrase(fd, prompt, buf, sizeof buf, RPP_ECHO_OFF)) buf[0] = 0;
   int e = errno;
   close(fd);
@@ -285,6 +336,7 @@ static char *my_getpass(const char *prompt) {
   return buf;
 }
 
+#ifdef __APPLE__
 INTERPOSE(my_open, open);
 INTERPOSE(my_readpassphrase, readpassphrase);
 INTERPOSE(my_getpass, getpass);
@@ -292,3 +344,33 @@ INTERPOSE(my_isatty, isatty);
 INTERPOSE(my_tcgetattr, tcgetattr);
 INTERPOSE(my_tcsetattr, tcsetattr);
 INTERPOSE(my_ioctl, ioctl);
+#else
+// glibc's own calls between these (isatty to tcgetattr, tcgetpgrp to ioctl) stay inside libc, so each
+// entry point a program may call is taken here: the open family (/dev/tty), tcgetpgrp and tcsetpgrp.
+#define EXPORT __attribute__((visibility("default")))
+static int mode_arg(int flags, va_list ap) { return (flags & (O_CREAT | O_TMPFILE)) ? va_arg(ap, int) : 0; }
+EXPORT int open(const char *path, int flags, ...) {
+  va_list ap; va_start(ap, flags); int mode = mode_arg(flags, ap); va_end(ap);
+  return tty_open(REAL(open)(path, flags, mode), path, flags);
+}
+EXPORT int open64(const char *path, int flags, ...) {
+  va_list ap; va_start(ap, flags); int mode = mode_arg(flags, ap); va_end(ap);
+  return tty_open(REAL(open64)(path, flags, mode), path, flags);
+}
+EXPORT int openat(int dir, const char *path, int flags, ...) {
+  va_list ap; va_start(ap, flags); int mode = mode_arg(flags, ap); va_end(ap);
+  return tty_open(REAL(openat)(dir, path, flags, mode), path, flags);
+}
+EXPORT int __open_2(const char *path, int flags) { return tty_open(REAL(open)(path, flags, 0), path, flags); }
+EXPORT int __open64_2(const char *path, int flags) { return tty_open(REAL(open64)(path, flags, 0), path, flags); }
+EXPORT char *getpass(const char *prompt) { return my_getpass(prompt); }
+EXPORT int isatty(int fd) { return my_isatty(fd); }
+EXPORT int tcgetattr(int fd, struct termios *t) { return my_tcgetattr(fd, t); }
+EXPORT int tcsetattr(int fd, int act, const struct termios *t) { return my_tcsetattr(fd, act, t); }
+EXPORT pid_t tcgetpgrp(int fd) { return ours(fd) ? getpgrp() : REAL(tcgetpgrp)(fd); }
+EXPORT int tcsetpgrp(int fd, pid_t pgrp) { return ours(fd) ? set_pgrp(pgrp) : REAL(tcsetpgrp)(fd, pgrp); }
+EXPORT int ioctl(int fd, unsigned long req, ...) {
+  va_list ap; va_start(ap, req); void *arg = va_arg(ap, void *); va_end(ap);
+  return my_ioctl(fd, req, arg);
+}
+#endif

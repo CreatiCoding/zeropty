@@ -42,7 +42,7 @@
 
 ## Linux나 Windows에서도 되나요?
 
-지금은 macOS만 돼요. 엔진이 kqueue 위에 있고, 터미널이 필요한 프로그램을 속이는 shim이 macOS의 `DYLD_INSERT_LIBRARIES`를 써요. 다른 플랫폼은 이 두 부분을 각자의 방식(epoll, `LD_PRELOAD`)으로 옮겨야 해요.
+macOS와 Linux(x86_64, glibc 2.29·커널 5.3 이상)에서 돼요. Windows는 안 돼요. 엔진의 큐는 macOS에서 kqueue, Linux에서 epoll이고 같은 타입 뒤에 있어요(`src/sys/kq.rs`, `src/sys/epoll.rs`). 터미널이 필요한 프로그램을 속이는 shim은 macOS에서 `DYLD_INSERT_LIBRARIES`, Linux에서 `LD_PRELOAD`(`shim.so`)로 걸려요. Linux에서 정적 링크된 프로그램은 shim을 불러오지 않아서 터미널을 못 봐요.
 
 ## 왜 README에는 10배 이상인 항목만 있나요?
 

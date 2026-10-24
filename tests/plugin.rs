@@ -1133,6 +1133,7 @@ fn a_full_output_plugin_costs_the_engine_nothing() {
 }
 
 /// The peak memory (macOS's lifetime-max physical footprint) of the server process `pid`.
+#[cfg(target_os = "macos")]
 fn peak_footprint(pid: i32) -> u64 {
     // SAFETY: an all-zero rusage_info_v4 is valid (integers only).
     let mut info: libc::rusage_info_v4 = unsafe { std::mem::zeroed() };
@@ -1140,6 +1141,14 @@ fn peak_footprint(pid: i32) -> u64 {
     let r = unsafe { libc::proc_pid_rusage(pid, libc::RUSAGE_INFO_V4, (&raw mut info).cast()) };
     assert_eq!(r, 0, "proc_pid_rusage({pid}): {}", std::io::Error::last_os_error());
     info.ri_lifetime_max_phys_footprint
+}
+
+/// The peak memory (Linux's peak resident set, VmHWM) of the server process `pid`.
+#[cfg(target_os = "linux")]
+fn peak_footprint(pid: i32) -> u64 {
+    let status = std::fs::read_to_string(format!("/proc/{pid}/status")).unwrap();
+    let kb = status.lines().find_map(|l| l.strip_prefix("VmHWM:")).and_then(|v| v.trim().trim_end_matches("kB").trim().parse::<u64>().ok());
+    kb.expect("VmHWM") << 10
 }
 
 /// The memory side of a_full_output_plugin_costs_the_engine_nothing: a 200 MB burst (`yes`, read in

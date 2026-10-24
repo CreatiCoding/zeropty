@@ -1,7 +1,8 @@
-# Attaches the prebuilt macOS archive and SHA256SUMS to the GitHub Release of each vX.Y.Z tag
+# Attaches the prebuilt macOS and Linux archives and SHA256SUMS to the GitHub Release of each vX.Y.Z tag
 # (docs/RELEASING.md). Creates the release from the CHANGELOG when the tag has none yet. A pull request
 # that changes what goes into the archive builds and smoke-tests it without publishing it.
-# This is the only hosted job: every other check runs on a Mac before the push (scripts/check.sh).
+# The only hosted jobs: every other check runs on a Mac before the push (scripts/check.sh), except the
+# Linux tests below, which a Mac cannot run.
 name: release
 
 on:
@@ -11,6 +12,7 @@ on:
     paths:
       - .github/workflows/release.yml
       - scripts/package.sh
+      - scripts/package-linux.sh
       - scripts/release.mjs
       - Cargo.toml
       - Cargo.lock
@@ -46,8 +48,32 @@ jobs:
             dist/release/notes.md
           if-no-files-found: error
 
+  # Linux x86_64, built on Debian 11 (glibc 2.31): it runs on that glibc and newer (Ubuntu 22.04 and later).
+  package-linux:
+    runs-on: ubuntu-latest
+    container: rust:1.88-bullseye
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pack and smoke-test
+        run: scripts/package-linux.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-linux
+          path: dist/release/*.tar.gz
+          if-no-files-found: error
+
+  # The engine's and the shim's tests on Linux (epoll, /proc, LD_PRELOAD). Not needed by publish.
+  test-linux:
+    runs-on: ubuntu-latest
+    container: rust:1.88-bullseye
+    steps:
+      - uses: actions/checkout@v4
+      # less: terminal_programs_through_zeropty_tty reads keys through /dev/tty with it.
+      - run: apt-get update -qq && apt-get install -y -qq less
+      - run: cargo test --release --locked --workspace
+
   publish:
-    needs: package
+    needs: [package, package-linux]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
@@ -56,6 +82,11 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: release
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-linux
+      # One SHA256SUMS for every archive.
+      - run: sha256sum ./*.tar.gz | sed 's| \./| |' >SHA256SUMS && cat SHA256SUMS
       - name: Attach to the release
         env:
           GH_TOKEN: ${{ github.token }}

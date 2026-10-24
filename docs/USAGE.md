@@ -448,4 +448,4 @@ zeropty focuses on **keeping programs running, reading their screens and sending
 | Embed as a library | ❌ | ✅ C ABI, Node module, Rust crate |
 | Move running sessions to another process | ❌ | ✅ `pull-sessions`, `push-sessions` |
 | Keep sessions across server restarts and upgrades | ❌ | ✅ `restart-server` |
-| Platforms | most Unix systems | macOS only (kqueue, DYLD shim) |
+| Platforms | most Unix systems | macOS and Linux (kqueue or epoll; DYLD or LD_PRELOAD shim) |

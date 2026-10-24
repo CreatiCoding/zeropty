@@ -15,6 +15,14 @@ zeropty의 사용자에게 보이는 변경을 모두 여기에 적어요.
 
 ## [Unreleased]
 
+### Added
+
+- Linux 지원(x86_64, glibc 2.29 이상, 커널 5.3 이상). 엔진은 kqueue 대신 epoll에서 기다리고 `zeropty::engine` 타입은
+  그대로예요. shim은 `LD_PRELOAD`(`shim.so`)로 걸려서, `zeropty-tty`가 동적 링크된 프로그램을 복사·서명 없이 그대로
+  돌려요. 릴리스마다 `zeropty-<version>-linux-x86_64.tar.gz`(`zeropty`, `shim.so`, `zeropty-tty`, `claude-zeropty`)도
+  붙고, 해시는 같은 `SHA256SUMS`에 있어요. 정적 링크된 프로그램(대부분의 Go 바이너리)은 shim을 불러오지 않아서 터미널을
+  못 봐요.
+
 ## [0.1.5] - 2026-10-21
 
 ### Fixed
