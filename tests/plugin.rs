@@ -822,6 +822,24 @@ fn the_node_example_plugin_shows_names_literally() {
     let _ = std::fs::remove_dir_all(&d);
 }
 
+/// attachPlugin (client/plugin.mjs) refuses a server run by another user before sending anything: that
+/// server would learn the plugin's commands and could call them, reading what they return. Needs root to
+/// run that server as another user, as tests/server.rs's cli_refuses_a_server_run_by_another_user, and
+/// is skipped without it even under ZEROPTY_REQUIRE_ALL.
+#[test]
+fn attach_plugin_refuses_a_server_run_by_another_user() {
+    // SAFETY: geteuid takes nothing and cannot fail.
+    if unsafe { libc::geteuid() } != 0 {
+        let _ = writeln!(std::io::stderr(), "SKIPPED attach_plugin_refuses_a_server_run_by_another_user: needs root (another user's server)");
+        return;
+    }
+    if !have("node", "--version") {
+        return skip("no node");
+    }
+    let o = std::process::Command::new("node").arg(format!("{ROOT}/tests/node/plugin_foreign.mjs")).output().unwrap();
+    assert!(o.status.success(), "{}{}", String::from_utf8_lossy(&o.stdout), String::from_utf8_lossy(&o.stderr));
+}
+
 /// What a plugin may run through its host is what its manifest asked for: looking by default, typing,
 /// managing sessions and calling other plugins only when asked; kill-server never.
 #[test]

@@ -17,6 +17,13 @@ release; polish that draft into entries written in English, and add the same ent
 
 ## [Unreleased]
 
+### Security
+
+- Node's `attachPlugin` (`client/plugin.mjs`) now refuses a server run by another user (root aside), as the CLI and
+  `zeropty.mjs` have since 0.1.8. With the socket in a directory others can reach (`ZEROPTY_SOCK` or `sock` under
+  `/tmp`), another user listening there first was told the plugin's commands and could call them, reading what they
+  returned.
+
 ## [0.1.8] - 2026-10-24
 
 ### Security

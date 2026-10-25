@@ -15,6 +15,12 @@ zeropty의 사용자에게 보이는 변경을 모두 여기에 적어요.
 
 ## [Unreleased]
 
+### Security
+
+- Node의 `attachPlugin`(`client/plugin.mjs`)도 이제 다른 사용자(root 제외)가 띄운 서버를 거절해요. CLI와 `zeropty.mjs`는
+  0.1.8부터 그랬어요. 소켓이 다른 사용자도 닿는 디렉터리에 있으면(`ZEROPTY_SOCK`이나 `sock`이 `/tmp` 아래), 거기서 먼저
+  기다린 다른 사용자가 플러그인의 명령을 알게 되고, 그 명령을 불러 결과를 읽을 수 있었어요.
+
 ## [0.1.8] - 2026-10-24
 
 ### Security
