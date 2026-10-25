@@ -192,10 +192,10 @@ cc -dynamiclib -Ibindings/c/include -o ~/.zeropty/plugins/tally.dylib examples/p
 **Download a release: no Rust needed.** Each [release](https://github.com/CreatiCoding/zeropty/releases) since 0.1.3 carries one archive for every Mac (Apple silicon and Intel, macOS 11 or later; tested on macOS 15 and 26) and its `SHA256SUMS`. The archive holds one folder: `zeropty`, `shim.dylib`, `zeropty-tty`, `claude-zeropty` and the licenses.
 
 ```sh
-v=0.1.8   # or the latest: v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/CreatiCoding/zeropty/releases/latest | sed 's|.*/v||')
+v=0.1.9   # or the latest: v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/CreatiCoding/zeropty/releases/latest | sed 's|.*/v||')
 curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/zeropty-$v-darwin-universal.tar.gz"
 curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/SHA256SUMS"
-shasum -a 256 -c --ignore-missing SHA256SUMS   # zeropty-0.1.8-darwin-universal.tar.gz: OK
+shasum -a 256 -c --ignore-missing SHA256SUMS   # zeropty-0.1.9-darwin-universal.tar.gz: OK
 tar -xzf "zeropty-$v-darwin-universal.tar.gz"
 export PATH="$PWD/zeropty-$v-darwin-universal:$PATH"   # add it to ~/.zshrc to keep it
 zeropty -V
@@ -210,7 +210,7 @@ zeropty -V
 ```sh
 curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/zeropty-$v-linux-x86_64.tar.gz"
 curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/SHA256SUMS"
-sha256sum -c --ignore-missing SHA256SUMS     # zeropty-0.1.8-linux-x86_64.tar.gz: OK
+sha256sum -c --ignore-missing SHA256SUMS     # zeropty-0.1.9-linux-x86_64.tar.gz: OK
 tar -xzf "zeropty-$v-linux-x86_64.tar.gz" && export PATH="$PWD/zeropty-$v-linux-x86_64:$PATH"
 ```
 

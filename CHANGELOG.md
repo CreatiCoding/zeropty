@@ -17,6 +17,8 @@ release; polish that draft into entries written in English, and add the same ent
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-10-25
+
 ### Security
 
 - Node's `attachPlugin` (`client/plugin.mjs`) now refuses a server run by another user (root aside), as the CLI and
@@ -207,7 +209,8 @@ the interfaces in docs/VERSIONING.md.
 
 - The CLI no longer panics when the reader closes the pipe early (`zeropty capture-pane -p ... | head -1`).
 
-[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.8...HEAD
+[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.9...HEAD
+[0.1.9]: https://github.com/CreatiCoding/zeropty/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/CreatiCoding/zeropty/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/CreatiCoding/zeropty/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/CreatiCoding/zeropty/compare/v0.1.5...v0.1.6

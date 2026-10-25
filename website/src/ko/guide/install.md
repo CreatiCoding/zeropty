@@ -29,7 +29,7 @@ description: zeropty가 돌아가는 맥과 Linux, 설치하는 세 가지 방�
 | 소스에서 `./build.sh`(macOS) | Rust stable, Xcode Command Line Tools | 전부, `dist/`에 | 없어요 |
 | `cargo install --git` | Rust | `zeropty`만, `~/.cargo/bin`에 | shim, `zeropty-tty`, `claude-zeropty`, 임베딩 라이브러리, bash builtin |
 
-- **릴리스 묶음.** 0.1.3부터 릴리스마다 `zeropty-VERSION-darwin-universal.tar.gz`가, 0.1.6부터는 `zeropty-VERSION-linux-x86_64.tar.gz`도 붙어 있고, `SHA256SUMS`는 둘을 함께 담아요. `VERSION`은 `0.1.8` 같은 릴리스 번호로 바꾸세요. 풀기 전에 묶음을 확인하세요. macOS는 `shasum -a 256 -c --ignore-missing SHA256SUMS`, Linux는 `sha256sum -c --ignore-missing SHA256SUMS`예요(`--ignore-missing`은 받지 않은 묶음을 건너뛰어요). 스크립트에서 버전을 고정하려면 버전과, 그 릴리스 `SHA256SUMS`에 있는 묶음 해시를 고정해 두세요.
+- **릴리스 묶음.** 0.1.3부터 릴리스마다 `zeropty-VERSION-darwin-universal.tar.gz`가, 0.1.6부터는 `zeropty-VERSION-linux-x86_64.tar.gz`도 붙어 있고, `SHA256SUMS`는 둘을 함께 담아요. `VERSION`은 `0.1.9` 같은 릴리스 번호로 바꾸세요. 풀기 전에 묶음을 확인하세요. macOS는 `shasum -a 256 -c --ignore-missing SHA256SUMS`, Linux는 `sha256sum -c --ignore-missing SHA256SUMS`예요(`--ignore-missing`은 받지 않은 묶음을 건너뛰어요). 스크립트에서 버전을 고정하려면 버전과, 그 릴리스 `SHA256SUMS`에 있는 묶음 해시를 고정해 두세요.
 - **`./build.sh`.** 저장소를 clone하고 `./build.sh`를 실행해요. 워크스페이스를 release 모드로 빌드하고 결과를 `dist/`에 복사해요. 계속 쓰려면 `dist/`를 `PATH`에 넣어 두세요.
 - **`cargo install`.** CLI와 서버만 필요하면 한 줄이에요.
 
@@ -44,10 +44,10 @@ Homebrew tap은 없고, crate는 crates.io에 올라가 있지 않아요. Rust �
 Linux에서는 Linux 묶음으로 같은 순서를 따라요.
 
 ```sh [터미널]
-v=0.1.8
+v=0.1.9
 curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/zeropty-$v-linux-x86_64.tar.gz"
 curl -fLO "https://github.com/CreatiCoding/zeropty/releases/download/v$v/SHA256SUMS"
-sha256sum -c --ignore-missing SHA256SUMS     # zeropty-0.1.8-linux-x86_64.tar.gz: OK
+sha256sum -c --ignore-missing SHA256SUMS     # zeropty-0.1.9-linux-x86_64.tar.gz: OK
 tar -xzf "zeropty-$v-linux-x86_64.tar.gz"
 export PATH="$PWD/zeropty-$v-linux-x86_64:$PATH"   # 계속 쓰려면 ~/.bashrc에 넣어요
 ```
