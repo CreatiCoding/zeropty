@@ -144,7 +144,8 @@ python3 examples/plugins/hello.py &
 zeropty hello you
 ```
 
-**Node:** [`client/plugin.mjs`](../../client/plugin.mjs)의 `attachPlugin`이 연결, 줄 나누기, 번호 맞추기를 해 줘요.
+**Node:** [`client/plugin.mjs`](../../client/plugin.mjs)의 `attachPlugin`이 연결, 줄 나누기, 번호 맞추기를 해 줘요. CLI처럼, 다른 사용자(root 제외)가 띄운 서버에는 아무것도
+보내기 전에 거절해요. 그런 서버는 플러그인의 명령을 불러 그 결과를 읽을 수 있기 때문이에요.
 
 ```js
 import { attachPlugin } from './client/plugin.mjs'

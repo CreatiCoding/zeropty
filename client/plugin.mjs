@@ -9,17 +9,32 @@
 //     onEvent: (ev) => console.log(ev.session, ev.reason),
 //     commands: { 'notes-count': async (argv, { plugin }) => `${(await plugin.command(['list-sessions'])).out.split('\n').length - 1}\n` },
 //   })
+import fs from 'node:fs'
 import net from 'node:net'
 import { sockPath } from './zeropty.mjs'
+
+/** The socket's owner is another user (not root), as zeropty.mjs checks it (kept out of its exports). */
+const foreign = (sock) => {
+  try {
+    const { uid } = fs.statSync(sock)
+    return uid !== 0 && uid !== process.geteuid()
+  } catch {
+    return false
+  }
+}
 
 /**
  * `access` lists what `plugin.command` may run besides looking (read): 'input', 'manage', 'call', 'all'.
  * Resolves the attached plugin { command(argv, cwd) -> Promise<{ ok, code, out, err }>, close(), closed },
- * or rejects with zeropty's reason (a name taken, a built-in command...).
+ * or rejects with zeropty's reason (a name taken, a built-in command...), or when the server runs as another
+ * user (root aside).
  * A command function returns a string (the output), { code, out, err }, or throws (code 1, the message).
  */
 export function attachPlugin({ name, events = [], commands = {}, access = [], onEvent = () => {}, sock = sockPath() }) {
   return new Promise((resolve, reject) => {
+    // Another user's server would be told the plugin's commands and could call them, reading what they
+    // return: refused before anything is sent, as zeropty.mjs and the CLI refuse it.
+    if (foreign(sock)) { reject(new Error(`the server on ${sock} runs as another user`)); return }
     const socket = net.createConnection(sock)
     const waiting = new Map()
     let nextId = 1, attached = false, rest = ''

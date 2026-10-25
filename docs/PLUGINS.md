@@ -144,7 +144,8 @@ python3 examples/plugins/hello.py &
 zeropty hello you
 ```
 
-**Node:** `attachPlugin` in [`client/plugin.mjs`](../client/plugin.mjs) handles connecting, line splitting and matching reply numbers.
+**Node:** `attachPlugin` in [`client/plugin.mjs`](../client/plugin.mjs) handles connecting, line splitting and matching reply numbers. It refuses a server run by another user (root aside)
+before sending anything, as the CLI does: that server could call the plugin's commands and read what they return.
 
 ```js
 import { attachPlugin } from './client/plugin.mjs'
