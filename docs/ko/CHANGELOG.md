@@ -15,6 +15,8 @@ zeropty의 사용자에게 보이는 변경을 모두 여기에 적어요.
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-10-25
+
 ### Security
 
 - Node의 `attachPlugin`(`client/plugin.mjs`)도 이제 다른 사용자(root 제외)가 띄운 서버를 거절해요. CLI와 `zeropty.mjs`는
@@ -192,7 +194,8 @@ hardened runtime으로 서명된 프로그램은 shim을 못 읽어서 `zeropty-
 
 - 출력을 읽는 쪽이 파이프를 일찍 닫아도(`zeropty capture-pane -p ... | head -1`) CLI가 패닉하지 않아요.
 
-[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.8...HEAD
+[Unreleased]: https://github.com/CreatiCoding/zeropty/compare/v0.1.9...HEAD
+[0.1.9]: https://github.com/CreatiCoding/zeropty/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/CreatiCoding/zeropty/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/CreatiCoding/zeropty/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/CreatiCoding/zeropty/compare/v0.1.5...v0.1.6
