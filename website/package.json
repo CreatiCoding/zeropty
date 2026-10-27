@@ -9,9 +9,14 @@
     "preview": "vitepress preview src"
   },
   "devDependencies": {
-    "mermaid": "11.4.1",
+    "mermaid": "11.17.2",
     "vitepress": "1.6.3",
     "vitepress-plugin-mermaid": "2.0.17"
   },
-  "packageManager": "yarn@4.18.0"
+  "packageManager": "yarn@4.18.0",
+  "resolutions": {
+    "vite": "^6.4.5",
+    "lodash-es": "^4.18.1",
+    "katex": "^0.18.2"
+  }
 }

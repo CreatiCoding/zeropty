@@ -1,7 +1,7 @@
 # zeropty.pubdoc.dev: build the docs site from the repository's Markdown, serve it with nginx.
 # Build with the repository root as the context (docker build -f website/Dockerfile .): the site reads
 # README.md, CHANGELOG.md, CONTRIBUTING.md, docs/ and api/ from there.
-FROM node:22.23.2-alpine AS build
+FROM node:22.23.4-alpine AS build
 WORKDIR /repo/website
 RUN corepack enable
 COPY website/package.json website/yarn.lock website/.yarnrc.yml ./
