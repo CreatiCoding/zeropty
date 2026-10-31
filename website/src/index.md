@@ -56,9 +56,9 @@ quick:
     - git clone https://github.com/CreatiCoding/zeropty && cd zeropty && ./build.sh
     - export PATH="$PWD/dist:$PATH"
     - zeropty new-session -d -s demo -x 80 -y 6 sh
-    - zeropty send-keys -t demo -l 'echo "done: $((6 * 7))"'
+    - "zeropty send-keys -t demo -l 'echo \"done: $((6 * 7))\"'"
     - zeropty send-keys -t demo Enter
-    - zeropty wait-pane -t demo -m 'done: 42' -T 10000
+    - "zeropty wait-pane -t demo -m 'done: 42' -T 10000"
     - zeropty capture-pane -p -t demo
   text: Read the guide
   link: /guide/introduction
