@@ -17,6 +17,10 @@ release; polish that draft into entries written in English, and add the same ent
 
 ## [Unreleased]
 
+### Fixed
+
+- Website: the quick start block on the landing page showed two commands as YAML objects; they now render as written.
+
 ## [0.1.9] - 2026-10-25
 
 ### Security

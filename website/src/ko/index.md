@@ -5,7 +5,7 @@ titleTemplate: AI 에이전트를 위한 세션 엔진
 sidebar: false
 github: https://github.com/CreatiCoding/zeropty
 badge: v0.1.9 · macOS · Linux · Rust · tmux 호환 명령 · C ABI · Node
-headline: [에이전트 1000개를, PTY, 없이.]
+headline: [에이전트 1000개를, PTY, 없이]
 tagline: zeropty는 AI 에이전트를 위한 세션 엔진이에요. 화면을 읽고, 키를 보내고, 끝날 때까지 기다려요. tmux 명령 그대로, CPU와 메모리는 훨씬 적게 써요.
 start: { text: 시작하기, link: /ko/guide/getting-started }
 arch:
@@ -56,9 +56,9 @@ quick:
     - git clone https://github.com/CreatiCoding/zeropty && cd zeropty && ./build.sh
     - export PATH="$PWD/dist:$PATH"
     - zeropty new-session -d -s demo -x 80 -y 6 sh
-    - zeropty send-keys -t demo -l 'echo "done: $((6 * 7))"'
+    - "zeropty send-keys -t demo -l 'echo \"done: $((6 * 7))\"'"
     - zeropty send-keys -t demo Enter
-    - zeropty wait-pane -t demo -m 'done: 42' -T 10000
+    - "zeropty wait-pane -t demo -m 'done: 42' -T 10000"
     - zeropty capture-pane -p -t demo
   text: 가이드 읽기
   link: /ko/guide/introduction
