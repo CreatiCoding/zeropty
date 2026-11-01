@@ -1,0 +1,95 @@
+{
+  "pipelines": [
+    {
+      "id": "zeropty-docs",
+      "branch": "main",
+      "on": [
+        "push",
+        "pr"
+      ],
+      "timeout": "40m",
+      "steps": [
+        "cd website",
+        "corepack yarn install --immutable",
+        "corepack yarn build"
+      ],
+      "deploy": [
+        "raW-nZJ_FHAdxkduCq5Px"
+      ],
+      "notifyAutofix": true
+    },
+    {
+      "id": "zeropty-release",
+      "branch": "main",
+      "on": [
+        "tag",
+        "manual"
+      ],
+      "tagPattern": "v[0-9]*",
+      "timeout": "60m",
+      "jobs": [
+        {
+          "name": "package",
+          "runsOn": [
+            "macos"
+          ],
+          "artifacts": [
+            "dist/release/*.tar.gz",
+            "dist/release/SHA256SUMS",
+            "dist/release/notes.md"
+          ],
+          "steps": [
+            "rustup target add aarch64-apple-darwin x86_64-apple-darwin",
+            "if [ -n \"$CI_TAG\" ]; then node scripts/release.mjs check --tag \"$CI_TAG\"; fi",
+            "notes=\"$TMPDIR/zeropty-notes-$CI_RUN_ID.md\"",
+            "node scripts/release.mjs release-notes \u003e\"$notes\" \u0026\u0026 cat \"$notes\"",
+            "scripts/package.sh",
+            "cp \"$notes\" dist/release/notes.md"
+          ]
+        },
+        {
+          "name": "package-linux",
+          "runsOn": [
+            "rust-bullseye"
+          ],
+          "artifacts": [
+            "dist/release/*.tar.gz"
+          ],
+          "steps": [
+            "scripts/package-linux.sh"
+          ]
+        },
+        {
+          "name": "test-linux",
+          "runsOn": [
+            "rust-bullseye"
+          ],
+          "steps": [
+            "cargo test --release --locked --workspace"
+          ]
+        },
+        {
+          "name": "publish",
+          "runsOn": [
+            "linux"
+          ],
+          "needs": [
+            "package",
+            "package-linux"
+          ],
+          "when": "tag",
+          "steps": [
+            "cd dist/release",
+            "sha256sum ./*.tar.gz | sed 's| \\./| |' \u003eSHA256SUMS \u0026\u0026 cat SHA256SUMS",
+            "export GH_REPO=CreatiCoding/zeropty",
+            "tag=\"$CI_TAG\"; pre=\"\"",
+            "case \"$tag\" in *-*) pre=\"--prerelease\" ;; esac",
+            "gh release view \"$tag\" \u003e/dev/null 2\u003e\u00261 || gh release create \"$tag\" --verify-tag $pre --title \"zeropty ${tag#v}\" --notes-file notes.md || gh release view \"$tag\" \u003e/dev/null",
+            "gh release upload \"$tag\" ./*.tar.gz SHA256SUMS"
+          ]
+        }
+      ],
+      "note": "GitHub release.yml 옮김: v* 태그 push 면 macOS·Linux 묶음 → 릴리스에 올림(수동 실행은 묶음·시험만). PR 경로 필터가 없어 PR 실행은 뺌"
+    }
+  ]
+}
