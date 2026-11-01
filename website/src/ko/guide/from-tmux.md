@@ -44,12 +44,12 @@ zeropty는 프로그램을 계속 실행하고, 화면을 읽고, 키를 보내�
 #!/bin/sh
 set -e
 T=zeropty                                   # was: T=tmux
-$T new-session -d -s fix-1 -x 220 -y 80 -c ~/proj "$PWD/dist/claude-zeropty"
+$T new-session -d -s fix-1 -x 220 -y 80 -c ~/proj "BUN_OPTIONS='--preload $HOME/tty-adapter.cjs' exec claude"
 $T send-keys -t '=fix-1:' -l 'Fix the failing test'
 $T send-keys -t '=fix-1:' Enter
 ```
 
-`~/proj`는 내 저장소로 바꾸세요. 터미널이 필요한 프로그램은 `zeropty-tty`로 시작해야 하고, claude는 `claude-zeropty`가 그 일을 해요. 자세한 내용은 [claude와 다른 터미널 프로그램 실행하기](/ko/guide/terminal-programs)를 보세요.
+`~/proj`는 내 저장소로 바꾸세요. 터미널이 필요한 프로그램은 `zeropty-tty`로 시작해야 하고, claude는 대신 런타임 어댑터(여기선 `$HOME/tty-adapter.cjs`)를 불러와요. 자세한 내용은 [claude와 다른 터미널 프로그램 실행하기](/ko/guide/terminal-programs)를 보세요.
 
 첫 `new-session`은 tmux처럼, 서버가 없으면 서버를 띄워요.
 

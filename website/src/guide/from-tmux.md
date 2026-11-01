@@ -44,12 +44,12 @@ Replace `tmux` with `zeropty`. A one-line variable keeps the change small:
 #!/bin/sh
 set -e
 T=zeropty                                   # was: T=tmux
-$T new-session -d -s fix-1 -x 220 -y 80 -c ~/proj "$PWD/dist/claude-zeropty"
+$T new-session -d -s fix-1 -x 220 -y 80 -c ~/proj "BUN_OPTIONS='--preload $HOME/tty-adapter.cjs' exec claude"
 $T send-keys -t '=fix-1:' -l 'Fix the failing test'
 $T send-keys -t '=fix-1:' Enter
 ```
 
-Replace `~/proj` with your repository. Programs that need a terminal must start through `zeropty-tty`; for claude, `claude-zeropty` does it. For details, see [Run claude and other terminal programs](/guide/terminal-programs).
+Replace `~/proj` with your repository. Programs that need a terminal must start through `zeropty-tty`; claude loads a runtime adapter instead (`$HOME/tty-adapter.cjs` here). For details, see [Run claude and other terminal programs](/guide/terminal-programs).
 
 The first `new-session` starts the server if none is running, as tmux does.
 

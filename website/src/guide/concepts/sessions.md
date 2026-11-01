@@ -18,7 +18,7 @@ flowchart TB
     eng["engine: sessions · screens · commands<br/>one thread, one kqueue (epoll on Linux)"]
   end
   subgraph sessions["Sessions"]
-    s1["work: claude-zeropty"]
+    s1["work: claude"]
     s2["build: sh"]
     s3["..."]
   end

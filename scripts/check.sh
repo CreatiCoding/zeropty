@@ -97,6 +97,7 @@ tmp=$(mktemp -d)
 sh examples/shell/quickstart.sh
 node examples/node/quickstart.mjs
 node examples/node/embedded.mjs
+sh examples/node/adapter.sh
 cc examples/c/hello.c -Idist -Ldist -lzeropty_c -o "$tmp/zeropty-hello"
 DYLD_LIBRARY_PATH=dist "$tmp/zeropty-hello"
 cargo run --release --locked --example embed

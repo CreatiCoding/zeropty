@@ -68,7 +68,7 @@ RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace   # API 문서: 경�
 - 화면은 `vt100` crate(0.16)와 같아야 해요. `cargo test`가 녹화한 claude 세션과 무작위 입력을 둘 다에 넣고, 읽는 사이사이에 얼리기·녹이기·압축을 무작위로 섞어서 대조해요.
 - 새 코드 경로를 넣었다면 일부러 한 번 망가뜨려(mutation) 테스트가 실패하는지 보세요. 실패하는 테스트가 없으면 테스트를 더해요. 확인한 뒤에는 되돌려요.
 - `capture-pane` 출력은 바꾸려는 의도가 없다면 같은 화면에 대해 바이트까지 같아야 해요(저장해 둔 결과와 비교).
-- 끝에서 끝까지: 할 수 있다면 `dist/claude-zeropty`로 실제 claude를 세션에 띄워 `send-keys`, `paste-buffer`, `capture-pane -e -S`, ONLCR(`echo` 줄이 0열에서 시작), `kill-session`을 확인해요.
+- 끝에서 끝까지: 할 수 있다면 실제 claude를 ([런타임 어댑터](USAGE.md#shim-대신-런타임-어댑터)로) 세션에 띄워 `send-keys`, `paste-buffer`, `capture-pane -e -S`, ONLCR(`echo` 줄이 0열에서 시작), `kill-session`을 확인해요.
 
 **호환성**
 
@@ -186,7 +186,7 @@ BREAKING CHANGE: zeropty_open(const char *) is now zeropty_open(const zeropty_op
    - **clippy:** `cargo clippy --workspace --all-targets --locked -- -D warnings`.
    - **rustfmt:** `cargo fmt --all --check`.
    - **commit messages and changelog:** 기준 브랜치 뒤의 커밋이 모두 Conventional Commits인지, 사용자에게 보이는 커밋이 있으면 `[Unreleased]`에 그 type에 맞는 제목 아래 새 항목이 있는지(`node scripts/check-commits.mjs --changelog`).
-   - 여기부터는 `--quick`이면 빠져요. **rustdoc:** `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace`(문서 없는 공개 항목, 깨진 문서 링크). **examples:** 셸·Node·C·Rust 예제 6개. **MSRV:** `rustup run 1.88.0 cargo check --workspace --all-targets --locked`(`rustup toolchain install 1.88.0`이 필요해요). **git-cliff draft:** `node scripts/release.mjs notes`가 초안을 만드는지. **README images:** `docs/assets/cdn-check.sh`.
+   - 여기부터는 `--quick`이면 빠져요. **rustdoc:** `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace`(문서 없는 공개 항목, 깨진 문서 링크). **examples:** 셸·Node·C·Rust 예제 7개. **MSRV:** `rustup run 1.88.0 cargo check --workspace --all-targets --locked`(`rustup toolchain install 1.88.0`이 필요해요). **git-cliff draft:** `node scripts/release.mjs notes`가 초안을 만드는지. **README images:** `docs/assets/cdn-check.sh`.
 
    기준 브랜치는 `$ZEROPTY_CHECK_BASE`, 없으면 지금 브랜치의 upstream, 그것도 없으면 `origin/main`이에요.
 3. 예제는 각자 임시 소켓의 서버나 프로세스 안의 엔진을 쓰고 끝날 때 정리해서, 쓰고 있는 세션을 건드리지 않아요.

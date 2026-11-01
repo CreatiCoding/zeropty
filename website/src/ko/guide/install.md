@@ -25,9 +25,9 @@ description: zeropty가 돌아가는 맥과 Linux, 설치하는 세 가지 방�
 
 | 방법 | 필요한 것 | 받는 것 | 빠지는 것 |
 |---|---|---|---|
-| 릴리스 묶음 | `curl`, `shasum`(Linux는 `sha256sum`) | `zeropty`, shim, `zeropty-tty`, `claude-zeropty` | C·Node 임베딩 라이브러리, bash builtin |
+| 릴리스 묶음 | `curl`, `shasum`(Linux는 `sha256sum`) | `zeropty`, shim, `zeropty-tty` | C·Node 임베딩 라이브러리, bash builtin |
 | 소스에서 `./build.sh`(macOS) | Rust stable, Xcode Command Line Tools | 전부, `dist/`에 | 없어요 |
-| `cargo install --git` | Rust | `zeropty`만, `~/.cargo/bin`에 | shim, `zeropty-tty`, `claude-zeropty`, 임베딩 라이브러리, bash builtin |
+| `cargo install --git` | Rust | `zeropty`만, `~/.cargo/bin`에 | shim, `zeropty-tty`, 임베딩 라이브러리, bash builtin |
 
 - **릴리스 묶음.** 0.1.3부터 릴리스마다 `zeropty-VERSION-darwin-universal.tar.gz`가, 0.1.6부터는 `zeropty-VERSION-linux-x86_64.tar.gz`도 붙어 있고, `SHA256SUMS`는 둘을 함께 담아요. `VERSION`은 `0.1.9` 같은 릴리스 번호로 바꾸세요. 풀기 전에 묶음을 확인하세요. macOS는 `shasum -a 256 -c --ignore-missing SHA256SUMS`, Linux는 `sha256sum -c --ignore-missing SHA256SUMS`예요(`--ignore-missing`은 받지 않은 묶음을 건너뛰어요). 스크립트에서 버전을 고정하려면 버전과, 그 릴리스 `SHA256SUMS`에 있는 묶음 해시를 고정해 두세요.
 - **`./build.sh`.** 저장소를 clone하고 `./build.sh`를 실행해요. 워크스페이스를 release 모드로 빌드하고 결과를 `dist/`에 복사해요. 계속 쓰려면 `dist/`를 `PATH`에 넣어 두세요.
@@ -63,14 +63,13 @@ export PATH="$PWD/zeropty-$v-linux-x86_64:$PATH"   # 계속 쓰려면 ~/.bashrc�
 | `zeropty` | 있어요 (arm64, x86_64) | 있어요 | 서버와 CLI |
 | `shim.dylib`(macOS) | 있어요 (arm64, arm64e, x86_64) | 있어요 (arm64, arm64e) | 세션의 소켓을 프로그램에게 터미널처럼 보이게 해요 |
 | `shim.so`(Linux) | 있어요 (x86_64) | 없어요 | 같은 일을 `LD_PRELOAD`로 해요 |
-| `zeropty-tty` | 있어요 | 있어요 | shim을 넣어 프로그램을 띄워요(vim, less, claude) |
-| `claude-zeropty` | 있어요 | 있어요 | `zeropty-tty claude`를 실행해요 |
+| `zeropty-tty` | 있어요 | 있어요 | shim을 넣어 프로그램을 띄워요(vim, less) |
 | `libzeropty_c.dylib`, `zeropty.h` | 없어요 | 있어요 | C ABI(애플리케이션 바이너리 인터페이스)로 엔진 넣기 |
 | `zeropty.node` | 없어요 | 있어요 | Node.js에 엔진 넣기, `client/embedded.mjs`가 불러요 |
 | `zeropty_bash.dylib` | 없어요 | 있어요 | bash builtin: `enable -f dist/zeropty_bash.dylib zeropty` |
 | `LICENSE-MIT`, `LICENSE-APACHE` | 있어요 | 없어요 | 라이선스 |
 
-이 파일들은 한곳에 두세요. `zeropty-tty`는 자기 옆의 shim을 찾고, `claude-zeropty`도 같은 방식으로 `zeropty-tty`를 찾아요. `zeropty-tty`나 `claude-zeropty`만 다른 곳에 심볼릭 링크하지 말고 폴더를 `PATH`에 넣거나, `ZEROPTY_SHIM`으로 shim을 가리켜 주세요.
+이 파일들은 한곳에 두세요. `zeropty-tty`는 자기 옆의 shim을 찾아요. `zeropty-tty`만 다른 곳에 심볼릭 링크하지 말고 폴더를 `PATH`에 넣거나, `ZEROPTY_SHIM`으로 shim을 가리켜 주세요.
 
 zsh 함수 `shell/zeropty.zsh`는 `dist/`가 아니라 저장소에 있어요. `source shell/zeropty.zsh`로 불러요.
 

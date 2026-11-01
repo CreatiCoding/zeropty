@@ -31,7 +31,7 @@ zeropty의 명령, 옵션, 프로토콜을 모두 적은 레퍼런스예요. 처
 ## CLI 빠르게 보기
 
 ```sh
-zeropty new-session -d -s work -x 220 -y 80 -c ~/proj "$PWD/dist/claude-zeropty"   # 서버가 없으면 띄워요
+zeropty new-session -d -s work -x 220 -y 80 -c ~/proj "$PWD/dist/zeropty-tty python3"   # 서버가 없으면 띄워요
 zeropty capture-pane -p -e -S -200 -t '=work:'    # 화면 + 스크롤백 200줄, 색 포함
 zeropty wait-pane -t '=work:' -m '>' -q 1000 -T 60000   # '>'가 보이고 1초 조용할 때까지 (최대 60초)
 zeropty send-keys -t '=work:' -l 'hello' && zeropty send-keys -t '=work:' Enter
@@ -206,7 +206,21 @@ zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"
 - 터미널로 치는 건 세션 자신의 소켓뿐이에요(어느 fd 번호에 있든). stdin, stdout, stderr가 모두 그 소켓 하나예요(tmux에서 PTY 하나인 것처럼). 읽기, 쓰기, 읽기+쓰기 어느 모드로 연 `/dev/tty`도 그 소켓이라서, 그걸로 키를 읽고 화면을 그리는 프로그램(stdin을 파이프로 받은 `fzf`)도 돌아요. stdout을 파이프로 넘기거나(`zeropty-tty prog | cat`) 파일로 돌린 프로그램, stdin이 `/dev/null`인 프로그램은 거기서 터미널을 보지 못해요(tmux와 같아요). 모드 변경 신호도 그 출력에 섞이지 않아요. 자식 프로세스도 `DYLD_INSERT_LIBRARIES`를 물려받지만 같은 규칙을 따르고, 세션 밖에서는 shim이 아무것도 터미널로 답하지 않아요. 예전 서버가 시작해서 `restart-server`로 이어진 세션은 입력이 아직 파이프예요. shim이 그 파이프와 소켓을 찾고(`ZEROPTY_TTY_ID`에서, 그게 없으면 프로그램이 시작할 때 가진 fd에서), 거기서 읽기로 연 `/dev/tty`는 그 파이프라서 쓸 수 없어요.
 - macOS는 `/usr/bin` 같은 SIP 보호 바이너리와 hardened runtime 서명 바이너리에 shim을 넣지 못하게 해요. 그래서 `zeropty-tty`는 이런 프로그램을 서명만 바꾼 사본(`~/.zeropty/tty/`)으로 실행하고, 원본이 바뀌면 다시 만들어요. 사본이든 아니든 프로그램은 실행할 때 쓴 이름으로 돌아요(`claude.exe`를 가리키는 `claude` 링크는 `claude`로 실행돼요). 그래서 `ps`, `pgrep`에서 그 이름으로 찾을 수 있어요.
 - 사본에는 원본의 권한이 없어서 `top`, `ps`는 안 돼요. `/usr/bin/env`를 거치는 스크립트는 SIP가 shim을 지워요. 인터프리터를 직접 `zeropty-tty`로 띄워요.
-- `dist/claude-zeropty`는 `zeropty-tty claude`를 하는 작은 래퍼예요. 다른 claude를 쓰려면 `ZEROPTY_CLAUDE_REAL`로 경로를 줘요.
+- 서명을 바꾼 사본을 쓸 수 없을 때(보안 정책이 막거나, 프로그램을 그대로 두고 싶을 때) Node나 Bun 프로그램은 대신 [런타임 어댑터](#shim-대신-런타임-어댑터)를 쓸 수 있어요.
+
+### shim 대신 런타임 어댑터
+
+Node나 Bun에서 도는 프로그램은 shim 없이, 바이너리를 복사하거나 다시 서명하지 않고도 터미널을 줄 수 있어요. 런타임이 프로그램보다 먼저 작은 스크립트를 불러오고, 그 스크립트가 shim이 libc에 알려 주던 것을 프로그램의 `tty` 모듈과 `process.stdout`/`process.stdin`에 알려 줘요. [`examples/node/tty-adapter.cjs`](../../examples/node/tty-adapter.cjs)가 그런 어댑터예요. [`examples/node/adapter.sh`](../../examples/node/adapter.sh)는 이걸로 Node 프로그램을 띄우고, 세션 크기를 바꾸고, raw 모드에서 키를 보내 봐요.
+
+```sh
+zeropty new-session -d -s app "NODE_OPTIONS='--require /path/to/tty-adapter.cjs' exec node app.js"
+zeropty new-session -d -s agent "BUN_OPTIONS='--preload /path/to/tty-adapter.cjs' exec claude"
+```
+
+- 모든 세션에 이미 있는 것만 써요. `ZEROPTY_TTY_ID`(어느 파일이 터미널인지, `dev:ino`), `ZEROPTY_SIZE_FILE`(`cols rows`, SIGWINCH 전에 다시 써요), 모드 변경을 알리는 `\033]zeropty-tty;N\007`(0은 raw, 15는 새 터미널의 모드. [라인 디시플린](#키-입력과-라인-디시플린) 참고)이에요.
+- 환경에서 `NODE_OPTIONS`와 `BUN_OPTIONS`를 지워서, 프로그램이 띄우는 다른 프로그램은 어댑터를 다시 불러오지 않아요.
+- JavaScript 쪽에만 닿아요. 프로그램 안의 네이티브 코드가 직접 `isatty`를 부르면 여전히 소켓으로 보여요.
+- claude의 네이티브 빌드는 hardened runtime으로 서명된 Bun 실행 파일이라 shim이 들어가지 못해요. 어댑터를 쓰면 서명과 hardened runtime을 그대로 둔 원래 바이너리로 돌아요. macOS의 claude 2.1.110, 2.1.214, 2.1.316과 Linux(arm64)에서 확인했어요. Bun 실행 파일은 `BUN_OPTIONS` 지원을 빼고 빌드될 수도 있으니, 프로그램의 첫 화면이 뜨는지 확인하세요.
 
 ## 키 입력과 라인 디시플린
 
@@ -420,7 +434,6 @@ import-sessions (주는 쪽 → 서버)
 | `ZEROPTY_NODE` | `dist/zeropty.node` | Node 클라이언트가 불러올 네이티브 모듈 |
 | `ZEROPTY_SHIM` | `dist/shim.dylib` | `zeropty-tty`가 넣을 shim. 상대 경로는 절대 경로로 바꾸고, 콜론(Linux에서는 공백도)이 든 경로는 로더가 목록을 거기서 나누므로 거부해요 |
 | `ZEROPTY_CACHE` | `~/.zeropty` | `zeropty-tty`가 서명을 바꾼 사본을 둘 곳(`tty/` 아래) |
-| `ZEROPTY_CLAUDE_REAL` | `PATH`의 `claude` | `claude-zeropty`가 띄울 claude |
 | `ZEROPTY_PLUGIN_DIR` | (없음: 끔) | 서버가 띄울 플러그인 디렉터리. 지정할 때만 그 안의 실행 파일과 `.dylib`를 실행해요. `restart-server`·`new-session`이 띄우는 서버는 그 명령을 실행한 셸의 값을 받아요 ([PLUGINS.md](PLUGINS.md#자동-시작-플러그인-디렉터리)) |
 | `ZEROPTY_PLUGIN_TIMEOUT_MS` | 10000 | 플러그인 명령과 훅의 마감 시간. 플러그인의 `Host::command`는 그 절반까지 기다려요 |
 

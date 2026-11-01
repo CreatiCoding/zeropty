@@ -1,5 +1,5 @@
 ---
-description: Run claude, vim, the python REPL and interactive shells in zeropty sessions with zeropty-tty and claude-zeropty.
+description: Run claude, vim, the python REPL and interactive shells in zeropty sessions with zeropty-tty and a runtime adapter.
 ---
 
 # Run claude and other terminal programs
@@ -8,9 +8,9 @@ By the end of this guide, you run programs that need a terminal in zeropty sessi
 
 ## Before you begin
 
-- zeropty installed on a Mac or on Linux. You need `zeropty-tty`, `claude-zeropty` and the shim (`shim.dylib`, or `shim.so` on Linux) in one folder: the release archive and `./build.sh` (in `dist/`) both put them there. `cargo install` does not. For details, see [Install and platform support](/guide/install).
+- zeropty installed on a Mac or on Linux. You need `zeropty-tty` and the shim (`shim.dylib`, or `shim.so` on Linux) in one folder: the release archive and `./build.sh` (in `dist/`) both put them there. `cargo install` does not. For details, see [Install and platform support](/guide/install).
 - zeropty 0.1.5 or later for `C-c` to reach a job in a shell (step 4). Check with `zeropty -V`.
-- For step 3, `claude` on your `PATH`.
+- For step 3, `claude` on your `PATH` (its native build) and a copy of [`tty-adapter.cjs`](https://github.com/CreatiCoding/zeropty/blob/main/examples/node/tty-adapter.cjs).
 
 The commands below write `dist/zeropty-tty`. If you use the release folder, write the path of that folder instead.
 
@@ -45,21 +45,15 @@ vim works the same way: `zeropty new-session -d -s v "dist/zeropty-tty vim notes
 
 macOS does not let the shim into SIP-protected binaries (`/usr/bin`, `/bin`, `/sbin`, `/System`) or binaries signed with the hardened runtime. `zeropty-tty` runs those from a copy with only the signature changed, kept under `~/.zeropty/tty/` (`ZEROPTY_CACHE`). It rebuilds the copy when the original changes, and runs it under the name you gave, so `ps` and `pgrep` find it.
 
-## 3. Start claude with claude-zeropty
+## 3. Start claude with a runtime adapter
 
-**`claude-zeropty`** is a small wrapper that runs `zeropty-tty claude`:
-
-```sh [Terminal]
-zeropty new-session -d -s fix-1 -x 220 -y 80 -c ~/proj "$PWD/dist/claude-zeropty"
-```
-
-Replace `~/proj` with the repository the agent works in. To run a different claude, give its path in `ZEROPTY_CLAUDE_REAL`. Set it before the server starts, since sessions get the server's environment, or pass it with `-e`:
+claude's native build is signed with the hardened runtime, so `zeropty-tty` would run it from a re-signed copy. It is a Bun program, so a **runtime adapter** gives it a terminal instead, with its binary left as it is. Bun loads the adapter before claude:
 
 ```sh [Terminal]
-zeropty new-session -d -s fix-2 -e ZEROPTY_CLAUDE_REAL=/opt/claude/bin/claude "$PWD/dist/claude-zeropty"
+zeropty new-session -d -s fix-1 -x 220 -y 80 -c ~/proj "BUN_OPTIONS='--preload $HOME/tty-adapter.cjs' exec claude"
 ```
 
-Replace `/opt/claude/bin/claude` with the path of your claude. Give the agent work and wait as in [Drive agents from the shell](/guide/shell).
+Replace `~/proj` with the repository the agent works in, and `$HOME/tty-adapter.cjs` with where you put the adapter. The adapter removes `BUN_OPTIONS` again, so the commands claude runs do not load it. For how it works, see [How a session gets a terminal](/guide/concepts/terminal#a-runtime-adapter-instead-of-the-shim). Give the agent work and wait as in [Drive agents from the shell](/guide/shell).
 
 ## 4. Run an interactive shell and stop its jobs
 
@@ -102,7 +96,7 @@ For the shell from step 4, `zeropty capture-pane -p -t '=sh1:'` shows a new prom
 
 | Symptom | Fix |
 |---|---|
-| A program behaves differently because it is "not a terminal" | Start it through `zeropty-tty`. For claude, use `claude-zeropty`. |
+| A program behaves differently because it is "not a terminal" | Start it through `zeropty-tty`. For claude, use the runtime adapter (step 3). |
 | A script started through `/usr/bin/env` loses the shim | SIP strips it there. Start the interpreter directly: `zeropty-tty python3 script.py`. |
 | `top` or `ps` does not run | The copy has none of the original's privileges (setuid, entitlements). Programs that need them do not work. |
 | `C-c` ends the shell's prompt but not `sleep 30` | The shell was started before the upgrade to 0.1.5 and keeps the old shim. Start the shell again. |
@@ -112,4 +106,4 @@ For the shell from step 4, `zeropty capture-pane -p -t '=sh1:'` shows a new prom
 
 - [How a session gets a terminal](/guide/concepts/terminal) for the shim and the line discipline.
 - [Drive agents from the shell](/guide/shell) to give the agent work and wait for it.
-- [Environment variables](/reference/environment) for `ZEROPTY_SHIM`, `ZEROPTY_CACHE` and `ZEROPTY_CLAUDE_REAL`.
+- [Environment variables](/reference/environment) for `ZEROPTY_SHIM` and `ZEROPTY_CACHE`.

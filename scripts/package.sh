@@ -2,7 +2,7 @@
 # Packs the files a GitHub Release carries (docs/RELEASING.md) into dist/release/:
 #   zeropty-<version>-darwin-universal.tar.gz   one folder of that name: zeropty (arm64 + x86_64),
 #                                               shim.dylib (arm64, arm64e, x86_64), zeropty-tty,
-#                                               claude-zeropty, LICENSE-APACHE, LICENSE-MIT
+#                                               LICENSE-APACHE, LICENSE-MIT
 #   SHA256SUMS                                  for `shasum -a 256 -c SHA256SUMS`
 # Both binaries load on macOS 11 and later, whatever macOS builds them (MACOSX_DEPLOYMENT_TARGET).
 # .github/workflows/release.yml runs it on each tag. It runs the same on any Mac with both Rust targets:
@@ -26,8 +26,8 @@ for target in aarch64-apple-darwin x86_64-apple-darwin; do
 done
 lipo -create -output "$stage/zeropty" target/aarch64-apple-darwin/release/zeropty target/x86_64-apple-darwin/release/zeropty
 clang -dynamiclib -O2 -arch arm64 -arch arm64e -arch x86_64 -o "$stage/shim.dylib" shim/shim.c
-cp zeropty-tty claude-zeropty LICENSE-APACHE LICENSE-MIT "$stage/"
-chmod 755 "$stage/zeropty" "$stage/zeropty-tty" "$stage/claude-zeropty"
+cp zeropty-tty LICENSE-APACHE LICENSE-MIT "$stage/"
+chmod 755 "$stage/zeropty" "$stage/zeropty-tty"
 chmod 644 "$stage/shim.dylib" "$stage/LICENSE-APACHE" "$stage/LICENSE-MIT"
 # Ad-hoc: arm64 runs nothing unsigned, and lipo leaves the x86_64 slice as the linker made it.
 codesign --force -s - "$stage/zeropty" "$stage/shim.dylib"
@@ -64,7 +64,7 @@ trap cleanup EXIT
 cp "$out/SHA256SUMS" "$out/$name.tar.gz" "$tmp/"
 (cd "$tmp" && shasum -a 256 -c SHA256SUMS >/dev/null) || fail "SHA256SUMS does not match"
 tar -C "$tmp" -xzf "$tmp/$name.tar.gz"
-test "$(cd "$dir" && LC_ALL=C ls -A | tr '\n' ' ')" = "LICENSE-APACHE LICENSE-MIT claude-zeropty shim.dylib zeropty zeropty-tty " ||
+test "$(cd "$dir" && LC_ALL=C ls -A | tr '\n' ' ')" = "LICENSE-APACHE LICENSE-MIT shim.dylib zeropty zeropty-tty " ||
 	fail "unexpected files: $(ls -A "$dir")"
 test -x "$dir/zeropty-tty" || fail "zeropty-tty lost its execute bit"
 test "$("$z" -V)" = "zeropty $version" || fail "-V: $("$z" -V)"

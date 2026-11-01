@@ -71,9 +71,9 @@ macOS는 `/usr/bin` 같은 SIP 보호 바이너리와 hardened runtime 서명 �
 - `/usr/bin/env`를 거치는 스크립트는 shim을 잃어요. 인터프리터를 직접 `zeropty-tty`로 띄우세요.
 - 세션 안 셸에서 친 `/usr/bin` 프로그램은 shim 없이 돌아요. 터미널이 필요하면 `zeropty-tty`로 띄우세요.
 
-### claude-zeropty
+### shim 대신 런타임 어댑터
 
-`claude-zeropty`는 `zeropty-tty claude`를 실행하는 작은 래퍼예요. `PATH`에 있는 `claude`를 써요. 다른 claude를 쓰려면 `ZEROPTY_CLAUDE_REAL`을 정하세요.
+Node나 Bun에서 도는 프로그램은 shim과 사본 없이도 돼요. 런타임이 프로그램보다 먼저 작은 스크립트를 불러오고(`NODE_OPTIONS=--require`, `BUN_OPTIONS=--preload`), 그 스크립트가 세션의 소켓을 프로그램의 `tty` 모듈과 `process.stdout`/`process.stdin`에 터미널로 보이게 해요. `ZEROPTY_TTY_ID`와 `ZEROPTY_SIZE_FILE`을 읽고, SIGWINCH를 따르고, raw 모드는 shim과 같은 OSC 시퀀스로 알려요. 프로그램의 바이너리와 서명, hardened runtime은 그대로예요. claude의 네이티브 빌드가 이런 프로그램이에요. [`examples/node/tty-adapter.cjs`](https://github.com/CreatiCoding/zeropty/blob/main/examples/node/tty-adapter.cjs)가 그런 어댑터이고, [claude와 다른 터미널 프로그램 실행하기](/ko/guide/terminal-programs)에서 써요.
 
 ## 라인 디시플린
 
