@@ -125,7 +125,7 @@ zeropty는 [Semantic Versioning 2.0.0](https://semver.org/lang/ko/)을 따라요
 - **Rust 1.88** (`Cargo.toml`의 `rust-version`). 의존성 `napi` 3이 1.88을 요구해요. edition은 2024예요.
 - `scripts/check.sh`의 MSRV 단계가 정확히 1.88.0으로(`rustup run 1.88.0`) 워크스페이스 전체를 `cargo check --locked` 해요.
 - MSRV는 MINOR 릴리스에서만 올리고, CHANGELOG의 Changed에 적어요. 올릴 때는 `Cargo.toml`의 `rust-version`, `scripts/check.sh`의 MSRV 단계, 이 문서를 같은 커밋에서 바꿔요.
-- 플랫폼: macOS, 그리고 Linux x86_64(glibc 2.29 이상). 검사(`scripts/check.sh`)는 관리자의 Apple Silicon Mac에서 돌고, Linux 테스트는 CI(`.github/workflows/release.yml`의 `test-linux`)에서 돌아요.
+- 플랫폼: macOS, 그리고 Linux x86_64(glibc 2.29 이상). 검사(`scripts/check.sh`)는 관리자의 Apple Silicon Mac에서 돌고, Linux 테스트는 CI(ci.creco.dev 파이프라인 `zeropty-release`의 `test-linux`)에서 돌아요.
 
 ## 판단 예시
 

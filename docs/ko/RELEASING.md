@@ -16,7 +16,7 @@
                                                     [Unreleased]를 ## [X.Y.Z] - 날짜로 옮김
                                      │
                                      ▼  병합 후, 관리자가 태그 vX.Y.Z (release.mjs check --tag가 태그와 버전을 대조)
-태그 push: .github/workflows/release.yml ──▶ macOS·Linux 묶음을 빌드·스모크 테스트하고, 그것들과 SHA256SUMS를
+태그 push: ci.creco.dev zeropty-release ──▶ macOS·Linux 묶음을 빌드·스모크 테스트하고, 그것들과 SHA256SUMS를
                                            GitHub Release에 붙임 (릴리스는 CHANGELOG로 만듦)
 ```
 
@@ -127,7 +127,7 @@ node --test scripts/test/*.test.mjs         # 도구 자체의 테스트 (git-cl
    git push origin v0.2.0
    ```
    push하기 전에 `node scripts/release.mjs check --tag v0.2.0`으로 태그와 버전이 같은지 확인해요(태그가 달린 HEAD에서는 `scripts/check.sh`도 이 검사를 해요).
-8. **태그가 릴리스를 올려요.** `.github/workflows/release.yml`(macOS runner, Linux 묶음은 Linux runner)이 태그와 버전을 대조하고 `scripts/package.sh`와 `scripts/package-linux.sh`를 돌려, 그 파일들을 릴리스에 붙여요.
+8. **태그가 릴리스를 올려요.** ci.creco.dev 파이프라인 `zeropty-release`(macOS 에이전트, Linux 묶음은 Debian 11 `rust-bullseye` 에이전트)가 태그와 버전을 대조하고 `scripts/package.sh`와 `scripts/package-linux.sh`를 돌려, 그 파일들을 릴리스에 붙여요.
    - `zeropty-0.2.0-darwin-universal.tar.gz`: 폴더 `zeropty-0.2.0-darwin-universal/` 하나에 `zeropty`(arm64 + x86_64, `lipo`), `shim.dylib`(arm64, arm64e, x86_64), `zeropty-tty`, `claude-zeropty`, `LICENSE-APACHE`, `LICENSE-MIT`가 실행 권한 그대로 들어 있어요. `zeropty`와 `shim.dylib`는 ad-hoc 서명(`codesign -s -`)이에요. Developer ID 서명과 공증은 나중에 더할 수 있어요.
    - `zeropty-0.2.0-linux-x86_64.tar.gz`: 같은 이름의 폴더 하나에 `zeropty`, `shim.so`(`LD_PRELOAD`용), `zeropty-tty`, `claude-zeropty`, 라이선스가 있어요. `package-linux` job이 Debian 11(`rust:1.88-bullseye`)에서 `scripts/package-linux.sh`로 만들어서 glibc 2.29 이상이 필요해요. 스크립트가 파일마다 가장 새 glibc 심볼을 출력하고, 푼 묶음을 직접 돌려 확인해요.
    - `SHA256SUMS`: 모든 묶음의 SHA-256. 두 묶음이 다 만들어지면 publish job이 만들어요. 버전을 고정하는 쪽은 이 해시를 고정해요.
