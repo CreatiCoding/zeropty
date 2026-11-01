@@ -23,6 +23,29 @@ pub(crate) fn name_thread(name: &str) {
     };
 }
 
+/// Makes the program `cmd` starts lead a session of its own (setsid), and so its own process group too.
+///
+/// In the server's session, a session's group lost its link outside when its parent, the server, exited
+/// (restart-server hands the program over and the old server exits): POSIX calls the group orphaned
+/// then, and the kernel sends SIGHUP and SIGCONT to every member when one of them is stopped. A program
+/// stopped at that moment (C-z, kill -STOP), or one with a stopped child, died with its session. In a
+/// session of its own the group is orphaned from the start, so no exit of the server changes anything
+/// for it; the kernel also discards the stop signals a program sends its own group (an orphaned group
+/// does not stop on SIGTSTP, SIGTTIN or SIGTTOU), as no shell would continue it. Jobs a shell in the
+/// session starts lead groups whose parent, the shell, is in the same session: they stop and continue as
+/// before.
+///
+/// pre_exec makes std fork instead of posix_spawn: starting 200 sessions took 722~762 ms against
+/// 692~737 ms, 600 took 2195~2327 against 1928~1931 (bench of `new-session` in a loop, alternated).
+pub(crate) fn in_own_session(cmd: &mut std::process::Command) {
+    use std::os::unix::process::CommandExt as _;
+    // SAFETY: the closure runs in the child between fork and exec, where only async-signal-safe calls
+    // are allowed: setsid is one, and an io::Error made from an OS error code allocates nothing.
+    unsafe {
+        cmd.pre_exec(|| if libc::setsid() < 0 { Err(std::io::Error::last_os_error()) } else { Ok(()) });
+    }
+}
+
 /// Sends `sig` to process group `pgid` (a session's program leads its own group). A group already gone
 /// (ESRCH) is not an error worth reporting: the signal was for ending it.
 pub(crate) fn signal_group(pgid: i32, sig: i32) {

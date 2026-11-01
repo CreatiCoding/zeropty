@@ -188,3 +188,33 @@ fn restart_server_keeps_sessions() {
     s.ok(&["send-keys", "-t", "=k:", "-l", "after\n"]);
     s.wait_capture("=k:", |o| o.contains("before") && o.lines().any(|l| l == "after"));
 }
+
+fn signal(pid: i32, sig: &str) {
+    assert!(Command::new("kill").args([sig, &pid.to_string()]).status().unwrap().success());
+}
+
+/// A program stopped while restart-server runs is still there after it. In the old server's session its
+/// group became orphaned when the old server exited, and the kernel hung up every member of an orphaned
+/// group that has a stopped one (a C-z'd program, or one with a stopped child): the session vanished.
+#[test]
+fn restart_server_keeps_a_stopped_program() {
+    let s = Server::new("st");
+    s.ok(&["new-session", "-d", "-s", "z", "exec sleep 100"]);
+    s.ok(&["new-session", "-d", "-s", "y", "exec sleep 100"]);
+    let (z, y) = (pid_of(&s, "=z:"), pid_of(&s, "=y:"));
+    // SAFETY: getsid takes a pid and touches no memory.
+    assert_eq!(unsafe { libc::getsid(z) }, z, "the program leads a session of its own");
+    signal(z, "-STOP");
+    wait(
+        || Command::new("ps").args(["-o", "stat=", "-p", &z.to_string()]).output().map(|o| String::from_utf8_lossy(&o.stdout).into_owned()).unwrap(),
+        |o| o.trim().starts_with('T'),
+    );
+    let mut moved: Vec<String> = s.ok(&["restart-server"]).lines().map(String::from).collect();
+    moved.sort();
+    assert_eq!(moved, ["y", "z"]);
+    // The kernel's hangup came as the old server exited, right after restart-server answered.
+    std::thread::sleep(Duration::from_millis(300));
+    assert!(alive(z) && alive(y), "both programs are alive");
+    assert!(s.has("=z") && s.has("=y"), "both sessions are in the new server");
+    signal(z, "-CONT");
+}
