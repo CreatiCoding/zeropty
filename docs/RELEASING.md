@@ -16,7 +16,7 @@ release PR: node scripts/release.mjs bump <level>  ──▶ changes the version
                                                        moves [Unreleased] to ## [X.Y.Z] - date
                                      │
                                      ▼  after the merge, the maintainer tags vX.Y.Z (release.mjs check --tag compares the tag with the version)
-tag pushed: .github/workflows/release.yml ──▶ builds and smoke-tests the macOS and Linux archives and attaches them and
+tag pushed: ci.creco.dev zeropty-release ──▶ builds and smoke-tests the macOS and Linux archives and attaches them and
                                               SHA256SUMS to the GitHub Release (created from the CHANGELOG)
 ```
 
@@ -127,7 +127,7 @@ node --test scripts/test/*.test.mjs         # tests for the tools themselves (in
    git push origin v0.2.0
    ```
    Before pushing, check that the tag matches the version with `node scripts/release.mjs check --tag v0.2.0` (on a tagged HEAD, `scripts/check.sh` runs this check too).
-8. **The tag publishes the release.** `.github/workflows/release.yml` (a macOS runner, and a Linux one for the Linux archive) checks the tag against the version, runs `scripts/package.sh` and `scripts/package-linux.sh`, and attaches their files to the release:
+8. **The tag publishes the release.** The ci.creco.dev pipeline `zeropty-release` (a macOS agent, and a Debian 11 `rust-bullseye` agent for the Linux archive) checks the tag against the version, runs `scripts/package.sh` and `scripts/package-linux.sh`, and attaches their files to the release:
    - `zeropty-0.2.0-darwin-universal.tar.gz`: one folder, `zeropty-0.2.0-darwin-universal/`, holding `zeropty` (arm64 + x86_64, `lipo`), `shim.dylib` (arm64, arm64e, x86_64), `zeropty-tty`, `claude-zeropty`, `LICENSE-APACHE` and `LICENSE-MIT`, with their execute bits. `zeropty` and `shim.dylib` are signed ad hoc (`codesign -s -`); Developer ID signing and notarization may come later.
    - `zeropty-0.2.0-linux-x86_64.tar.gz`: one folder of that name holding `zeropty`, `shim.so` (for `LD_PRELOAD`), `zeropty-tty`, `claude-zeropty` and the licenses. Built by the `package-linux` job with `scripts/package-linux.sh` on Debian 11 (`rust:1.88-bullseye`), so it needs glibc 2.29 or later; the script prints each file's newest glibc symbol and smoke-tests the unpacked archive.
    - `SHA256SUMS`: the SHA-256 of every archive, made by the publish job once both are built. Whoever pins a version pins this hash.
