@@ -9,6 +9,7 @@
       ],
       "timeout": "40m",
       "steps": [
+        "vuln-check",
         "cd website",
         "corepack yarn install --immutable",
         "corepack yarn build"
