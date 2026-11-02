@@ -31,7 +31,7 @@ This is the complete reference for zeropty's commands, options and protocols. If
 ## CLI at a glance
 
 ```sh
-zeropty new-session -d -s work -x 220 -y 80 -c ~/proj "$PWD/dist/claude-zeropty"   # starts the server if none is running
+zeropty new-session -d -s work -x 220 -y 80 -c ~/proj "$PWD/dist/zeropty-tty python3"   # starts the server if none is running
 zeropty capture-pane -p -e -S -200 -t '=work:'    # screen + 200 lines of scrollback, with colors
 zeropty wait-pane -t '=work:' -m '>' -q 1000 -T 60000   # until '>' appears and the session is quiet for 1s (60s max)
 zeropty send-keys -t '=work:' -l 'hello' && zeropty send-keys -t '=work:' Enter
@@ -206,7 +206,21 @@ zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"
 - Only the session's own socket counts as the terminal, whatever fd number it sits on: stdin, stdout and stderr are that one socket, as they are one PTY under tmux. `/dev/tty` opened for reading, writing or both is that socket too, so a program that reads keys and draws through it (`fzf` with its stdin piped in) works. A program whose stdout is piped on (`zeropty-tty prog | cat`) or redirected to a file, or whose stdin is `/dev/null`, sees no terminal there, just as under tmux, and its mode changes never land in that output. Children inherit `DYLD_INSERT_LIBRARIES`, and the same rule applies to them; outside a session the shim answers nothing. A session started by an older server and kept by `restart-server` still has a pipe for its input: the shim finds the pipe and the socket (from `ZEROPTY_TTY_ID`, or from the fds the program starts with when that is unset), and `/dev/tty` opened for reading there is the pipe, which cannot be written.
 - macOS does not let the shim into SIP-protected binaries such as those in `/usr/bin`, or into binaries signed with the hardened runtime. So `zeropty-tty` runs such programs from a copy with only the signature changed (`~/.zeropty/tty/`), and rebuilds the copy when the original changes. A program, copied or not, runs under the name it was run by (a `claude` symlink to `claude.exe` runs as `claude`), so `ps` and `pgrep` find it under that name.
 - The copy does not carry the original's privileges, so `top` and `ps` do not work. For scripts that go through `/usr/bin/env`, SIP strips the shim; launch the interpreter directly with `zeropty-tty`.
-- `dist/claude-zeropty` is a small wrapper that runs `zeropty-tty claude`. To use a different claude, give its path in `ZEROPTY_CLAUDE_REAL`.
+- Where a copy with a changed signature is not acceptable (a security policy, or a program you would rather leave as it is), a Node or Bun program can use a [runtime adapter](#a-runtime-adapter-instead-of-the-shim) instead.
+
+### A runtime adapter instead of the shim
+
+A program that runs on Node or Bun can be given a terminal without the shim, and without copying or re-signing its binary: the runtime loads a small script before the program, and the script tells the program's `tty` module and `process.stdout`/`process.stdin` what the shim would tell libc. [`examples/node/tty-adapter.cjs`](../examples/node/tty-adapter.cjs) is one; [`examples/node/adapter.sh`](../examples/node/adapter.sh) runs a Node program with it, resizes the session and sends a key in raw mode.
+
+```sh
+zeropty new-session -d -s app "NODE_OPTIONS='--require /path/to/tty-adapter.cjs' exec node app.js"
+zeropty new-session -d -s agent "BUN_OPTIONS='--preload /path/to/tty-adapter.cjs' exec claude"
+```
+
+- It needs nothing beyond what every session has: `ZEROPTY_TTY_ID` (which file is the terminal, as `dev:ino`), `ZEROPTY_SIZE_FILE` (`cols rows`, rewritten before SIGWINCH) and the `\033]zeropty-tty;N\007` sequence that reports a mode change (0 is raw, 15 a new terminal's modes; see [the line discipline](#key-input-and-the-line-discipline)).
+- It removes `NODE_OPTIONS` and `BUN_OPTIONS` from the environment, so the programs the program starts do not load it again.
+- It reaches only the JavaScript side: native code in the program that calls `isatty` itself still sees a socket.
+- claude's native build is a Bun executable signed with the hardened runtime, which the shim cannot enter. With the adapter it runs from its own binary, signature and hardened runtime unchanged. Checked with claude 2.1.110, 2.1.214 and 2.1.316 on macOS, and on Linux (arm64). A Bun executable can be compiled without `BUN_OPTIONS` support, so check that the program's first screen appears.
 
 ## Key input and the line discipline
 
@@ -420,7 +434,6 @@ import-sessions (giver → server)
 | `ZEROPTY_NODE` | `dist/zeropty.node` | Native module loaded by the Node client |
 | `ZEROPTY_SHIM` | `dist/shim.dylib` | Shim injected by `zeropty-tty`. A relative path is made absolute; a path with a colon (on Linux, also a space) is refused, since the loader splits the list there |
 | `ZEROPTY_CACHE` | `~/.zeropty` | Where `zeropty-tty` keeps re-signed copies (under `tty/`) |
-| `ZEROPTY_CLAUDE_REAL` | `claude` on `PATH` | The claude that `claude-zeropty` launches |
 | `ZEROPTY_PLUGIN_DIR` | (unset: off) | Plugin directory the server launches. Only when set are the executables and `.dylib` files in it run. A server started by `restart-server` or `new-session` takes the value from the shell that ran that command ([PLUGINS.md](PLUGINS.md#autostart-the-plugin-directory)) |
 | `ZEROPTY_PLUGIN_TIMEOUT_MS` | 10000 | Deadline for plugin commands and hooks. A plugin's `Host::command` waits up to half of it |
 

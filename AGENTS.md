@@ -66,7 +66,7 @@ docs/BENCHMARKS.md and keep going on everything else.
   with another; zeropty feeds bytes >= 0x80 to vte one at a time, and the oracle gets one byte at a time.
 - `capture-pane` output must stay byte-identical to what it was for the same screen unless the change
   is meant to alter it (compare against a saved binary).
-- End to end: start a real claude through `dist/claude-zeropty` in a session, then check send-keys,
+- End to end: start a real claude in a session through the runtime adapter (docs/USAGE.md), then check send-keys,
   paste-buffer, `capture-pane -e -S`, ONLCR (`echo` lines start at column 0) and kill-session.
 
 ## Independence
@@ -75,8 +75,8 @@ docs/BENCHMARKS.md and keep going on everything else.
   that needs one. Programs use zeropty the way they use tmux.
 - The interface is tmux's command format (`new-session`, `send-keys`, `capture-pane`, ...), the same
   through the CLI, the socket, and the embedded library.
-- claude is optional: plain programs (a shell, `cat`) run as sessions; `claude-zeropty` and the shim are an
-  add-on for programs that need a terminal.
+- claude is optional: plain programs (a shell, `cat`) run as sessions; the shim and the runtime adapter are
+  add-ons for programs that need a terminal. Nothing in the code is specific to claude.
 - Hosts decide policy (when to hand sessions over, when to exit); the engine only provides the means.
 
 ## Versions and change notes
@@ -130,7 +130,7 @@ docs/BENCHMARKS.md and keep going on everything else.
 - Moving or renaming a public item keeps the old path as a `#[deprecated]` re-export (src/lib.rs lists
   them).
 - `bindings/c`, `bindings/node`: the embedded engine for other languages. `shim/shim.c`: the isatty
-  shim; `claude-zeropty`: the claude wrapper; `client/zeropty.mjs`: the Node client.
+  shim; `examples/node/tty-adapter.cjs`: the runtime adapter; `client/zeropty.mjs`: the Node client.
 - A new command is a row in `src/engine/commands.rs`'s `COMMANDS` and a handler beside it.
 - `tests/server.rs` drives a real server through the CLI and the socket with plain programs.
 - Comments say why, name the gotcha, and keep the measured number that justified a choice.

@@ -1,7 +1,7 @@
 //! zeropty: tmux's session commands without PTYs, as a server and its client.
 //!
-//! Each session's program talks to plain pipes; shim/shim.dylib (loaded into claude through the claude-zeropty
-//! wrapper) makes those pipes look like a terminal. That sidesteps macOS's kernel cap of 999 PTYs
+//! Each session's program talks to plain pipes; shim/shim.dylib (loaded through zeropty-tty) or a runtime
+//! adapter (docs/USAGE.md) makes those pipes look like a terminal. That sidesteps macOS's kernel cap of 999 PTYs
 //! (PTMX_MAX_HARD in xnu tty_ptmx.c), so the session count is bounded only by memory.
 //!
 //! The binary is both the server (`zeropty serve`) and a tmux-compatible client (`zeropty send-keys -t ...`).

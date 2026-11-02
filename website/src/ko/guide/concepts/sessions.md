@@ -18,7 +18,7 @@ flowchart TB
     eng["엔진: 세션 · 화면 · 명령<br/>스레드 하나, kqueue 하나(Linux는 epoll)"]
   end
   subgraph sessions["세션"]
-    s1["work: claude-zeropty"]
+    s1["work: claude"]
     s2["build: sh"]
     s3["..."]
   end

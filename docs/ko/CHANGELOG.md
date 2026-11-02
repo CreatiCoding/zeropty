@@ -15,6 +15,18 @@ zeropty의 사용자에게 보이는 변경을 모두 여기에 적어요.
 
 ## [Unreleased]
 
+### Added
+
+- Node·Bun 프로그램용 런타임 어댑터 `examples/node/tty-adapter.cjs`: `NODE_OPTIONS=--require`나 `BUN_OPTIONS=--preload`로
+  불러오면 shim 없이 세션의 소켓이 프로그램에 터미널로 보여요. 그래서 프로그램의 바이너리를 복사하거나 다시 서명하지
+  않아요(docs/ko/USAGE.md). `examples/node/adapter.sh`가 이걸 실행해 봐요.
+
+### Removed
+
+- **BREAKING** `claude-zeropty`와 그 변수 `ZEROPTY_CLAUDE_REAL`을 `dist/`와 릴리스 묶음에서 뺐어요. zeropty는 특정
+  프로그램 전용 부분을 두지 않아요. 래퍼가 하던 일은 `zeropty-tty claude`가 그대로 해요. 다시 서명한 사본 없이 claude를
+  띄우려면 대신 런타임 어댑터를 불러오세요(`BUN_OPTIONS='--preload /path/to/tty-adapter.cjs' exec claude`).
+
 ### Fixed
 
 - 웹사이트: 랜딩 페이지 빠른 시작 블록에서 명령 두 줄이 YAML 객체로 보이던 문제를 고쳐, 적은 그대로 보여요.

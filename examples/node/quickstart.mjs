@@ -10,7 +10,7 @@ const sock = path.join(os.tmpdir(), `zeropty-quickstart-${process.pid}.sock`)
 const zp = (args, opts) => zeropty(args, { sock, ...opts })
 
 // Start a session; with no server on the socket, new-session starts one (as tmux does).
-// A real host runs an agent here: dist/claude-zeropty, or any program.
+// A real host runs an agent here, or any program.
 let r = await zp(['new-session', '-d', '-s', 'job', '-x', '80', '-y', '20', 'sh'])
 if (!r.ok) throw new Error(r.err)
 

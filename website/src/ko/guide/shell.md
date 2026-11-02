@@ -10,7 +10,7 @@ description: 셸 스크립트로 에이전트를 시작하고, 키를 보내고,
 
 - `PATH`에 zeropty가 있는 Mac이 필요해요. 자세한 내용은 [설치와 지원 플랫폼](/ko/guide/install)을 보세요.
 - bash builtin을 쓰려면 소스에서 빌드해야 해요(`./build.sh`가 `dist/zeropty_bash.dylib`를 만들어요). 릴리스 아카이브에는 들어 있지 않아요.
-- 아래 단계는 각 세션에서 `sh`를 실행하므로 claude가 없어도 돼요. 실제 스크립트에서는 대신 에이전트를 실행해요. 예를 들어 `dist/claude-zeropty`예요([claude와 다른 터미널 프로그램 실행하기](/ko/guide/terminal-programs) 참고).
+- 아래 단계는 각 세션에서 `sh`를 실행하므로 claude가 없어도 돼요. 실제 스크립트에서는 대신 에이전트를 실행해요. 예를 들어 claude예요([claude와 다른 터미널 프로그램 실행하기](/ko/guide/terminal-programs) 참고).
 
 ## 1. 세션 시작하기
 

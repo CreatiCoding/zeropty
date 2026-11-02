@@ -68,7 +68,7 @@ The architecture diagram is in [Design](docs/DESIGN.md#overall-architecture).
 - The screen must match the `vt100` crate (0.16). `cargo test` feeds recorded claude sessions and random input to both and compares them, with random freeze, thaw and packing mixed in between reads.
 - If you added a new code path, break it on purpose once (a mutation) and check that a test fails. If none fails, add a test. Restore the code afterwards.
 - Unless the change is meant to alter it, `capture-pane` output must stay byte-identical for the same screen (compare against a saved result).
-- End to end: if you can, start a real claude in a session through `dist/claude-zeropty` and check `send-keys`, `paste-buffer`, `capture-pane -e -S`, ONLCR (`echo` lines start at column 0) and `kill-session`.
+- End to end: if you can, start a real claude in a session (through the [runtime adapter](docs/USAGE.md#a-runtime-adapter-instead-of-the-shim)) and check `send-keys`, `paste-buffer`, `capture-pane -e -S`, ONLCR (`echo` lines start at column 0) and `kill-session`.
 
 **Compatibility**
 
@@ -186,7 +186,7 @@ How to reproduce: [Benchmarks: reproducing the measurements](docs/BENCHMARKS.md#
    - **clippy:** `cargo clippy --workspace --all-targets --locked -- -D warnings`.
    - **rustfmt:** `cargo fmt --all --check`.
    - **commit messages and changelog:** whether every commit after the base branch is a Conventional Commit and, if there are user-visible commits, whether `[Unreleased]` has new entries under the headings that match their types (`node scripts/check-commits.mjs --changelog`).
-   - From here on, steps are skipped with `--quick`. **rustdoc:** `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace` (undocumented public items, broken doc links). **examples:** the six shell, Node, C and Rust examples. **MSRV:** `rustup run 1.88.0 cargo check --workspace --all-targets --locked` (needs `rustup toolchain install 1.88.0`). **git-cliff draft:** whether `node scripts/release.mjs notes` produces a draft. **README images:** `docs/assets/cdn-check.sh`.
+   - From here on, steps are skipped with `--quick`. **rustdoc:** `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace` (undocumented public items, broken doc links). **examples:** the seven shell, Node, C and Rust examples. **MSRV:** `rustup run 1.88.0 cargo check --workspace --all-targets --locked` (needs `rustup toolchain install 1.88.0`). **git-cliff draft:** whether `node scripts/release.mjs notes` produces a draft. **README images:** `docs/assets/cdn-check.sh`.
 
    The base branch is `$ZEROPTY_CHECK_BASE`; if unset, the current branch's upstream; if there is none, `origin/main`.
 3. Each example uses a server on its own temporary socket or an engine inside the process and cleans up when done, so it never touches sessions in use.

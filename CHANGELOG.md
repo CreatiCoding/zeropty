@@ -17,6 +17,19 @@ release; polish that draft into entries written in English, and add the same ent
 
 ## [Unreleased]
 
+### Added
+
+- A runtime adapter for Node and Bun programs, `examples/node/tty-adapter.cjs`: loaded with `NODE_OPTIONS=--require`
+  or `BUN_OPTIONS=--preload`, it makes the session's socket a terminal to the program without the shim, so the
+  program's binary is neither copied nor re-signed (docs/USAGE.md). `examples/node/adapter.sh` runs it.
+
+### Removed
+
+- **BREAKING** `claude-zeropty` and its `ZEROPTY_CLAUDE_REAL` variable are gone from `dist/` and the release archives:
+  zeropty keeps nothing specific to one program. `zeropty-tty claude` does what the wrapper did; to start claude
+  without a re-signed copy, load the runtime adapter instead (`BUN_OPTIONS='--preload /path/to/tty-adapter.cjs'
+  exec claude`).
+
 ### Fixed
 
 - Website: the quick start block on the landing page showed two commands as YAML objects; they now render as written.

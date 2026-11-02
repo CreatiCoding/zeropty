@@ -50,6 +50,7 @@ All run from the repository root after `./build.sh`. None needs claude.
 | [`examples/shell/quickstart.sh`](../examples/shell/quickstart.sh) | `sh examples/shell/quickstart.sh` | Creating a session from the CLI, sending keys, `wait-pane`, reading the screen |
 | [`examples/node/quickstart.mjs`](../examples/node/quickstart.mjs) | `node examples/node/quickstart.mjs` | The same from the Node client, plus `grep-panes` |
 | [`examples/node/embedded.mjs`](../examples/node/embedded.mjs) | `node examples/node/embedded.mjs` | The engine inside Node with no server, and how long one command takes |
+| [`examples/node/adapter.sh`](../examples/node/adapter.sh) | `sh examples/node/adapter.sh` | A Node program given a terminal by the [runtime adapter](USAGE.md#a-runtime-adapter-instead-of-the-shim), no shim |
 | [`examples/c/hello.c`](../examples/c/hello.c) | See the comment at the top of the file | The C ABI |
 | [`examples/embed.rs`](../examples/embed.rs) | `cargo run --release --example embed` | Embedding the engine in Rust |
 | [`examples/polled.rs`](../examples/polled.rs) | `cargo run --release --example polled` | Running from a host loop with no engine thread, `wait-pane` without polling |

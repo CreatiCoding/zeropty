@@ -38,7 +38,7 @@
 
 ## Can I use it without claude?
 
-Yes. A session can run any program (`sh`, `cat`, `python3`, a build command ...). The tests and the [examples](README.md#examples) all run without claude. `claude-zeropty` is only a small wrapper that starts claude without a terminal.
+Yes. A session can run any program (`sh`, `cat`, `python3`, a build command ...). The tests and the [examples](README.md#examples) all run without claude. zeropty has no claude-specific part; [USAGE](USAGE.md#a-runtime-adapter-instead-of-the-shim) shows how to start claude in a session.
 
 ## Does it run on Linux or Windows?
 
@@ -60,8 +60,8 @@ This is what it leaves out. `cargo install` installs only a package's executable
 
 | Left out | Why | Without it |
 |---|---|---|
-| `shim.dylib` | A C file (`shim/shim.c`) built separately with `clang` | Programs that need a terminal (claude, vim) decide they are "not on a terminal" |
-| `zeropty-tty`, `claude-zeropty` | Shell scripts that look for `shim.dylib` in their own folder | claude cannot be started without a terminal |
+| `shim.dylib` | A C file (`shim/shim.c`) built separately with `clang` | Programs that need a terminal (vim, less) decide they are "not on a terminal" |
+| `zeropty-tty` | A shell script that looks for `shim.dylib` in its own folder | Programs that need a terminal cannot be started with the shim |
 | `libzeropty_c.dylib`, `zeropty.h`, `zeropty.node` | Libraries built by other crates of the workspace (`bindings/`) | No C or Node embedding (Rust embedding works through a git dependency) |
 | `zeropty_bash.dylib` | A C file (`shell/zeropty_bash.c`) built separately | No bash builtin (the regular CLI still works) |
 

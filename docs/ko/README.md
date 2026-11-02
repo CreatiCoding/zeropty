@@ -48,6 +48,7 @@
 | [`examples/shell/quickstart.sh`](../../examples/shell/quickstart.sh) | `sh examples/shell/quickstart.sh` | CLI로 세션 만들기, 키 보내기, `wait-pane`, 화면 읽기 |
 | [`examples/node/quickstart.mjs`](../../examples/node/quickstart.mjs) | `node examples/node/quickstart.mjs` | Node 클라이언트로 같은 일 + `grep-panes` |
 | [`examples/node/embedded.mjs`](../../examples/node/embedded.mjs) | `node examples/node/embedded.mjs` | 서버 없이 Node 안의 엔진, 명령 하나의 시간 |
+| [`examples/node/adapter.sh`](../../examples/node/adapter.sh) | `sh examples/node/adapter.sh` | shim 없이 [런타임 어댑터](USAGE.md#shim-대신-런타임-어댑터)로 터미널을 얻는 Node 프로그램 |
 | [`examples/c/hello.c`](../../examples/c/hello.c) | 파일 맨 위 주석 참고 | C ABI |
 | [`examples/embed.rs`](../../examples/embed.rs) | `cargo run --release --example embed` | Rust에서 엔진 넣기 |
 | [`examples/polled.rs`](../../examples/polled.rs) | `cargo run --release --example polled` | 엔진 스레드 없이 호스트 루프로, 폴링 없는 `wait-pane` |

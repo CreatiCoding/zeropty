@@ -1,7 +1,7 @@
 #!/bin/sh
 # Packs the Linux files a GitHub Release carries (docs/RELEASING.md) into dist/release/:
 #   zeropty-<version>-linux-<arch>.tar.gz   one folder of that name: zeropty, shim.so (for LD_PRELOAD),
-#                                           zeropty-tty, claude-zeropty, LICENSE-APACHE, LICENSE-MIT
+#                                           zeropty-tty, LICENSE-APACHE, LICENSE-MIT
 #   SHA256SUMS                              for `sha256sum -c SHA256SUMS`
 # Built on the oldest glibc it should run on (.github/workflows/release.yml uses Debian 11, glibc 2.31):
 # a binary needs the glibc it was linked against or newer. Then it unpacks the archive somewhere else and
@@ -19,8 +19,8 @@ mkdir -p "$stage"
 cargo build --release --locked -p zeropty --bin zeropty
 cp target/release/zeropty "$stage/"
 cc -shared -fPIC -O2 -Wall -o "$stage/shim.so" shim/shim.c -ldl
-cp zeropty-tty claude-zeropty LICENSE-APACHE LICENSE-MIT "$stage/"
-chmod 755 "$stage/zeropty" "$stage/zeropty-tty" "$stage/claude-zeropty"
+cp zeropty-tty LICENSE-APACHE LICENSE-MIT "$stage/"
+chmod 755 "$stage/zeropty" "$stage/zeropty-tty"
 chmod 644 "$stage/shim.so" "$stage/LICENSE-APACHE" "$stage/LICENSE-MIT"
 
 fail() {
@@ -50,7 +50,7 @@ trap cleanup EXIT
 cp "$out/SHA256SUMS" "$out/$name.tar.gz" "$tmp/"
 (cd "$tmp" && sha256sum -c SHA256SUMS >/dev/null) || fail "SHA256SUMS does not match"
 tar -C "$tmp" -xzf "$tmp/$name.tar.gz"
-test "$(cd "$dir" && LC_ALL=C ls -A | tr '\n' ' ')" = "LICENSE-APACHE LICENSE-MIT claude-zeropty shim.so zeropty zeropty-tty " ||
+test "$(cd "$dir" && LC_ALL=C ls -A | tr '\n' ' ')" = "LICENSE-APACHE LICENSE-MIT shim.so zeropty zeropty-tty " ||
 	fail "unexpected files: $(ls -A "$dir")"
 test -x "$dir/zeropty-tty" || fail "zeropty-tty lost its execute bit"
 test "$("$z" -V)" = "zeropty $version" || fail "-V: $("$z" -V)"

@@ -124,8 +124,8 @@ tmux 3.7c와 같은 기기(Apple M1)에서 같은 부하로 **번갈아** 쟀어
 ```js
 import { zeropty } from './client/zeropty.mjs'   // 서버가 없으면 첫 new-session이 띄워요
 
-// 에이전트 띄우기 (claude-zeropty: 터미널 없이 claude를 띄우는 래퍼)
-await zeropty(['new-session', '-d', '-s', 'fix-1', '-c', '/path/to/repo', 'dist/claude-zeropty'])
+// 에이전트 띄우기 (여기선 claude를 런타임 어댑터로: docs/ko/USAGE.md)
+await zeropty(['new-session', '-d', '-s', 'fix-1', '-c', '/path/to/repo', "BUN_OPTIONS='--preload /path/to/tty-adapter.cjs' exec claude"])
 
 // 일 시키기
 await zeropty(['send-keys', '-t', '=fix-1:', '-l', '실패하는 테스트를 고쳐줘'])
@@ -153,7 +153,7 @@ const { out } = await zeropty(['capture-pane', '-p', '-t', '=fix-1:'])
 
 ```js
 import { zeropty, listen } from './client/embedded.mjs'   // import만 바꾸면 돼요
-await zeropty(['new-session', '-d', '-s', 'w', 'dist/claude-zeropty'])
+await zeropty(['new-session', '-d', '-s', 'w', 'dist/zeropty-tty python3'])
 const { out } = await zeropty(['capture-pane', '-p', '-t', '=w:'])   // 0.06~0.07ms (바쁜 세션 0.10~0.17ms)
 listen(`${process.env.HOME}/.zeropty/app.sock`)   // 선택: ZEROPTY_SOCK=... zeropty attach -t w
 ```
@@ -189,7 +189,7 @@ cc -dynamiclib -Ibindings/c/include -o ~/.zeropty/plugins/tally.dylib examples/p
 
 ## 설치
 
-**릴리스에서 받기: Rust가 필요 없어요.** 0.1.3부터 [릴리스](https://github.com/CreatiCoding/zeropty/releases)마다 모든 맥(Apple silicon·Intel, macOS 11 이상. macOS 15와 26에서 확인)용 묶음 하나와 그 `SHA256SUMS`가 붙어 있어요. 묶음 안에는 폴더 하나가 있고, 그 안에 `zeropty`, `shim.dylib`, `zeropty-tty`, `claude-zeropty`와 라이선스가 들어 있어요.
+**릴리스에서 받기: Rust가 필요 없어요.** 0.1.3부터 [릴리스](https://github.com/CreatiCoding/zeropty/releases)마다 모든 맥(Apple silicon·Intel, macOS 11 이상. macOS 15와 26에서 확인)용 묶음 하나와 그 `SHA256SUMS`가 붙어 있어요. 묶음 안에는 폴더 하나가 있고, 그 안에 `zeropty`, `shim.dylib`, `zeropty-tty`와 라이선스가 들어 있어요.
 
 ```sh
 v=0.1.9   # 최신 버전은: v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/CreatiCoding/zeropty/releases/latest | sed 's|.*/v||')
@@ -201,7 +201,7 @@ export PATH="$PWD/zeropty-$v-darwin-universal:$PATH"   # 계속 쓰려면 ~/.zsh
 zeropty -V
 ```
 
-- 폴더는 어디에 풀어도 동작해요. `zeropty-tty`가 자기 옆의 `shim.dylib`를 찾아요. `zeropty-tty`나 `claude-zeropty`만 다른 곳에 심볼릭 링크하지 말고 폴더를 PATH에 넣거나, `ZEROPTY_SHIM`으로 shim을 가리켜 주세요.
+- 폴더는 어디에 풀어도 동작해요. `zeropty-tty`가 자기 옆의 `shim.dylib`를 찾아요. `zeropty-tty`만 다른 곳에 심볼릭 링크하지 말고 폴더를 PATH에 넣거나, `ZEROPTY_SHIM`으로 shim을 가리켜 주세요.
 - 스크립트에서 버전을 고정하려면 `v`와 그 릴리스 `SHA256SUMS`의 묶음 해시를 코드에 박고, 풀기 전에 비교하세요.
 - **Gatekeeper:** 파일은 ad-hoc 서명이고 공증은 받지 않았어요. `curl`은 quarantine 표시를 붙이지 않아서 위 순서대로면 그대로 실행돼요. 브라우저로 받으면 표시가 붙고, `tar`가 풀린 파일 모두에 그 표시를 옮겨서, macOS가 `zeropty`를 창을 띄워 막아요(명령은 그 창을 기다리며 멈춰요). 처음 실행하기 전에 표시를 지우세요: `xattr -dr com.apple.quarantine zeropty-$v-darwin-universal`.
 
@@ -222,7 +222,7 @@ cargo install --git https://github.com/CreatiCoding/zeropty   # ~/.cargo/bin/zer
 
 Rust가 없으면 먼저 `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`로 설치해요([rustup](https://rustup.rs)). Homebrew tap은 아직 없어요.
 
-**C·Node 임베딩과 bash builtin까지 전부 쓰려면 소스에서 빌드해요.** 릴리스 묶음에는 이것들이 없고, `cargo install`로는 claude·vim처럼 터미널이 필요한 프로그램용 shim과 `claude-zeropty`, 임베딩, builtin이 모두 설치되지 않아요([왜요?](docs/ko/FAQ.md#cargo-install로-설치하면-무엇이-빠지나요)). 빌드는 [1분 시작](#1분-시작)의 `git clone` + `./build.sh` 그대로예요(macOS, Rust stable, Xcode Command Line Tools). 계속 쓰려면 `dist/`를 PATH에 넣어 두세요.
+**C·Node 임베딩과 bash builtin까지 전부 쓰려면 소스에서 빌드해요.** 릴리스 묶음에는 이것들이 없고, `cargo install`로는 vim·less처럼 터미널이 필요한 프로그램용 shim과 `zeropty-tty`, 임베딩, builtin이 모두 설치되지 않아요([왜요?](docs/ko/FAQ.md#cargo-install로-설치하면-무엇이-빠지나요)). 빌드는 [1분 시작](#1분-시작)의 `git clone` + `./build.sh` 그대로예요(macOS, Rust stable, Xcode Command Line Tools). 계속 쓰려면 `dist/`를 PATH에 넣어 두세요.
 
 ```sh
 echo "export PATH=\"$PWD/dist:\$PATH\"" >> ~/.zshrc   # zeropty 폴더 안에서
@@ -240,7 +240,7 @@ enable -f "$PWD/dist/zeropty_bash.dylib" zeropty  # bash: send-keys 0.043~0.048m
 | `zeropty` | 서버와 CLI |
 | `libzeropty_c.dylib`, `zeropty.h` | C ABI로 엔진 넣기 |
 | `zeropty.node` | Node로 엔진 넣기 (`client/embedded.mjs`가 불러요) |
-| `shim.dylib`, `zeropty-tty`, `claude-zeropty` | 터미널이 필요한 프로그램(vim, claude) 띄우기 |
+| `shim.dylib`, `zeropty-tty` | 터미널이 필요한 프로그램(vim, less) 띄우기 |
 | `zeropty_bash.dylib` | bash builtin |
 
 Rust 프로그램에 넣을 때는 `./build.sh` 없이 git 의존성 한 줄이면 돼요(crates.io에는 아직 없어요). 예제: [docs/USAGE.md](docs/ko/USAGE.md#내-프로세스-안에-임베디드)
@@ -275,7 +275,7 @@ zeropty는 **프로그램을 띄워 두고 다루는 일**에 집중해요. 창 
 <details>
 <summary><b>vim이나 claude처럼 터미널이 필요한 프로그램은요?</b></summary>
 
-`zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"`처럼 `zeropty-tty`로 띄우면 돼요. claude는 `dist/claude-zeropty`가 같은 일을 해요. [자세히](docs/ko/USAGE.md#터미널이-필요한-프로그램-zeropty-tty)
+`zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"`처럼 `zeropty-tty`로 띄우면 돼요. claude 같은 Node·Bun 프로그램은 바이너리를 그대로 둔 채 [런타임 어댑터](docs/ko/USAGE.md#shim-대신-런타임-어댑터)를 불러올 수도 있어요. [자세히](docs/ko/USAGE.md#터미널이-필요한-프로그램-zeropty-tty)
 </details>
 
 <details>
@@ -312,7 +312,7 @@ macOS와 Linux(x86_64)에서 돼요. Windows는 안 돼요. Linux에서는 엔�
 cargo test --release
 ```
 
-호스팅 CI 없이 `scripts/check.sh`가 모든 검사를 돌려요(호스팅 작업은 릴리스 묶음 빌드 하나뿐이에요). 빌드, 테스트(doctest 포함), 예제 6개, `cargo doc -D warnings`, `clippy -D warnings`, `cargo fmt --check`, MSRV(Rust 1.88) 확인, 공개 API 기준선, 커밋 메시지·변경 기록 확인이 들어 있어요. `git config core.hooksPath .githooks`를 해 두면 push할 때마다 `.githooks/pre-push`가 이 스크립트를 돌려요. 자세한 단계는 [기여 안내](docs/ko/CONTRIBUTING.md#pull-request)에 있어요.
+호스팅 CI 없이 `scripts/check.sh`가 모든 검사를 돌려요(호스팅 작업은 릴리스 묶음 빌드 하나뿐이에요). 빌드, 테스트(doctest 포함), 예제 7개, `cargo doc -D warnings`, `clippy -D warnings`, `cargo fmt --check`, MSRV(Rust 1.88) 확인, 공개 API 기준선, 커밋 메시지·변경 기록 확인이 들어 있어요. `git config core.hooksPath .githooks`를 해 두면 push할 때마다 `.githooks/pre-push`가 이 스크립트를 돌려요. 자세한 단계는 [기여 안내](docs/ko/CONTRIBUTING.md#pull-request)에 있어요.
 
 화면은 `vt100` crate와 대조하고(녹화한 claude 세션 + 무작위 입력), 서버·임베디드·세션 옮기기는 `cat`, `printf` 같은 평범한 프로그램으로 확인해요. claude 없이 돌아가요.
 

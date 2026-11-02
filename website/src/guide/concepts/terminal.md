@@ -71,9 +71,9 @@ macOS does not let the shim into SIP-protected binaries, such as those in `/usr/
 - Scripts that go through `/usr/bin/env` lose the shim; start the interpreter itself with `zeropty-tty`.
 - `/usr/bin` programs typed at a shell inside a session run without the shim. Start them with `zeropty-tty` when they need a terminal.
 
-### claude-zeropty
+### A runtime adapter instead of the shim
 
-`claude-zeropty` is a small wrapper that runs `zeropty-tty claude`. It uses the `claude` on your `PATH`; set `ZEROPTY_CLAUDE_REAL` to use another one.
+A program that runs on Node or Bun can skip the shim and the copy: the runtime loads a small script before the program (`NODE_OPTIONS=--require`, `BUN_OPTIONS=--preload`), and the script makes the session's socket a terminal to the program's `tty` module and `process.stdout`/`process.stdin`. It reads `ZEROPTY_TTY_ID` and `ZEROPTY_SIZE_FILE`, follows SIGWINCH, and reports raw mode with the same OSC sequence the shim uses. The program's binary, its signature and its hardened runtime stay as they are. claude's native build is such a program. [`examples/node/tty-adapter.cjs`](https://github.com/CreatiCoding/zeropty/blob/main/examples/node/tty-adapter.cjs) is one adapter; [Run claude and other terminal programs](/guide/terminal-programs) uses it.
 
 ## The line discipline
 

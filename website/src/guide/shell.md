@@ -10,7 +10,7 @@ By the end of this guide, you drive several sessions from a shell script: you st
 
 - A Mac with zeropty on your `PATH`. For details, see [Install and platform support](/guide/install).
 - For the bash builtin, a build from source (`./build.sh` puts `dist/zeropty_bash.dylib` in place). The release archive does not carry it.
-- The steps run `sh` in each session, so you do not need claude. A real script runs an agent instead, for example `dist/claude-zeropty` (see [Run claude and other terminal programs](/guide/terminal-programs)).
+- The steps run `sh` in each session, so you do not need claude. A real script runs an agent instead, for example claude (see [Run claude and other terminal programs](/guide/terminal-programs)).
 
 ## 1. Start a session
 

@@ -124,8 +124,8 @@ With 1000 sessions replaying real claude work, zeropty stays at **4.65MB of memo
 ```js
 import { zeropty } from './client/zeropty.mjs'   // the first new-session starts the server if none is running
 
-// Start an agent (claude-zeropty: a wrapper that starts claude without a terminal)
-await zeropty(['new-session', '-d', '-s', 'fix-1', '-c', '/path/to/repo', 'dist/claude-zeropty'])
+// Start an agent (claude here, through a runtime adapter: docs/USAGE.md)
+await zeropty(['new-session', '-d', '-s', 'fix-1', '-c', '/path/to/repo', "BUN_OPTIONS='--preload /path/to/tty-adapter.cjs' exec claude"])
 
 // Give it work
 await zeropty(['send-keys', '-t', '=fix-1:', '-l', 'Fix the failing test'])
@@ -153,7 +153,7 @@ With the engine inside your process there is no server process, and a command is
 
 ```js
 import { zeropty, listen } from './client/embedded.mjs'   // only the import changes
-await zeropty(['new-session', '-d', '-s', 'w', 'dist/claude-zeropty'])
+await zeropty(['new-session', '-d', '-s', 'w', 'dist/zeropty-tty python3'])
 const { out } = await zeropty(['capture-pane', '-p', '-t', '=w:'])   // 0.06~0.07ms (busy session 0.10~0.17ms)
 listen(`${process.env.HOME}/.zeropty/app.sock`)   // optional: ZEROPTY_SOCK=... zeropty attach -t w
 ```
@@ -189,7 +189,7 @@ cc -dynamiclib -Ibindings/c/include -o ~/.zeropty/plugins/tally.dylib examples/p
 
 ## Install
 
-**Download a release: no Rust needed.** Each [release](https://github.com/CreatiCoding/zeropty/releases) since 0.1.3 carries one archive for every Mac (Apple silicon and Intel, macOS 11 or later; tested on macOS 15 and 26) and its `SHA256SUMS`. The archive holds one folder: `zeropty`, `shim.dylib`, `zeropty-tty`, `claude-zeropty` and the licenses.
+**Download a release: no Rust needed.** Each [release](https://github.com/CreatiCoding/zeropty/releases) since 0.1.3 carries one archive for every Mac (Apple silicon and Intel, macOS 11 or later; tested on macOS 15 and 26) and its `SHA256SUMS`. The archive holds one folder: `zeropty`, `shim.dylib`, `zeropty-tty` and the licenses.
 
 ```sh
 v=0.1.9   # or the latest: v=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/CreatiCoding/zeropty/releases/latest | sed 's|.*/v||')
@@ -201,7 +201,7 @@ export PATH="$PWD/zeropty-$v-darwin-universal:$PATH"   # add it to ~/.zshrc to k
 zeropty -V
 ```
 
-- The folder works wherever you unpack it: `zeropty-tty` finds `shim.dylib` next to itself. Put the folder on your PATH rather than symlinking `zeropty-tty` or `claude-zeropty` elsewhere, or point `ZEROPTY_SHIM` at the shim.
+- The folder works wherever you unpack it: `zeropty-tty` finds `shim.dylib` next to itself. Put the folder on your PATH rather than symlinking `zeropty-tty` elsewhere, or point `ZEROPTY_SHIM` at the shim.
 - To pin a version in a script, fix `v` and the archive's hash from that release's `SHA256SUMS`, and compare before unpacking.
 - **Gatekeeper:** the files are signed ad hoc, not notarized. `curl` adds no quarantine mark, so the steps above run as they are. A browser download is marked, `tar` passes the mark on to every unpacked file, and macOS then refuses `zeropty` with a dialog (the command waits on it). Clear the mark before the first run: `xattr -dr com.apple.quarantine zeropty-$v-darwin-universal`.
 
@@ -222,7 +222,7 @@ cargo install --git https://github.com/CreatiCoding/zeropty   # ~/.cargo/bin/zer
 
 If you have no Rust, install it first with `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh` ([rustup](https://rustup.rs)). There is no Homebrew tap yet.
 
-**For everything, including C and Node embedding and the bash builtin, build from source.** The release archive does not carry those, and `cargo install` installs none of the shim for programs that need a terminal (claude, vim), `claude-zeropty`, embedding or the builtin ([why?](docs/FAQ.md#what-is-missing-when-i-install-with-cargo-install)). Building is the `git clone` + `./build.sh` of [Quick start](#quick-start) (macOS, Rust stable, Xcode Command Line Tools). To keep using it, put `dist/` on your PATH:
+**For everything, including C and Node embedding and the bash builtin, build from source.** The release archive does not carry those, and `cargo install` installs none of the shim for programs that need a terminal (vim, less), `zeropty-tty`, embedding or the builtin ([why?](docs/FAQ.md#what-is-missing-when-i-install-with-cargo-install)). Building is the `git clone` + `./build.sh` of [Quick start](#quick-start) (macOS, Rust stable, Xcode Command Line Tools). To keep using it, put `dist/` on your PATH:
 
 ```sh
 echo "export PATH=\"$PWD/dist:\$PATH\"" >> ~/.zshrc   # from inside the zeropty folder
@@ -240,7 +240,7 @@ enable -f "$PWD/dist/zeropty_bash.dylib" zeropty  # bash: send-keys 0.043~0.048m
 | `zeropty` | The server and the CLI |
 | `libzeropty_c.dylib`, `zeropty.h` | Embedding the engine through the C ABI |
 | `zeropty.node` | Embedding the engine in Node (loaded by `client/embedded.mjs`) |
-| `shim.dylib`, `zeropty-tty`, `claude-zeropty` | Starting programs that need a terminal (vim, claude) |
+| `shim.dylib`, `zeropty-tty` | Starting programs that need a terminal (vim, less) |
 | `zeropty_bash.dylib` | The bash builtin |
 
 To use it from a Rust program, one git dependency is enough, with no `./build.sh` (it is not on crates.io yet). Example: [docs/USAGE.md](docs/USAGE.md#inside-your-process-embedded)
@@ -275,7 +275,7 @@ Mostly, by replacing `tmux` with `zeropty`. The differences: there are no window
 <details>
 <summary><b>What about programs that need a terminal, such as vim or claude?</b></summary>
 
-Start them through `zeropty-tty`, as in `zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"`. For claude, `dist/claude-zeropty` does the same. [More](docs/USAGE.md#programs-that-need-a-terminal-zeropty-tty)
+Start them through `zeropty-tty`, as in `zeropty new-session -d -s v "dist/zeropty-tty vim notes.txt"`. A Node or Bun program such as claude can instead load a [runtime adapter](docs/USAGE.md#a-runtime-adapter-instead-of-the-shim), its binary left as it is. [More](docs/USAGE.md#programs-that-need-a-terminal-zeropty-tty)
 </details>
 
 <details>
@@ -313,7 +313,7 @@ Bug reports, measurements and code are all welcome. [Contributing](CONTRIBUTING.
 cargo test --release
 ```
 
-There is no hosted CI: `scripts/check.sh` runs every check (the one hosted job builds the release archive). It covers the build, tests (including doctests), the 6 examples, `cargo doc -D warnings`, `clippy -D warnings`, `cargo fmt --check`, the MSRV (Rust 1.88), the public API baseline, links between the docs, and commit messages and the changelog. After `git config core.hooksPath .githooks`, `.githooks/pre-push` runs it on every push. The steps are described in [Contributing](CONTRIBUTING.md#pull-requests).
+There is no hosted CI: `scripts/check.sh` runs every check (the one hosted job builds the release archive). It covers the build, tests (including doctests), the 7 examples, `cargo doc -D warnings`, `clippy -D warnings`, `cargo fmt --check`, the MSRV (Rust 1.88), the public API baseline, links between the docs, and commit messages and the changelog. After `git config core.hooksPath .githooks`, `.githooks/pre-push` runs it on every push. The steps are described in [Contributing](CONTRIBUTING.md#pull-requests).
 
 Screens are compared with the `vt100` crate (recorded claude sessions plus random input), and the server, embedding and session moves are checked with ordinary programs such as `cat` and `printf`. None of it needs claude.
 

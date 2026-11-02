@@ -52,7 +52,7 @@ flowchart LR
 
 ## 1. Sockets instead of PTYs
 
-tmux opens one PTY per window and so runs into the macOS PTY limit (511 by default, 999 at most). zeropty connects sessions with socket pairs, so there is no such limit. claude gets `shim.dylib` injected so it sees a terminal (the `claude-zeropty` wrapper). The shim intercepts `isatty`, `tcgetattr`, `ioctl(TIOCGWINSZ)`, `tcsetpgrp`, `readpassphrase`, `getpass` and others.
+tmux opens one PTY per window and so runs into the macOS PTY limit (511 by default, 999 at most). zeropty connects sessions with socket pairs, so there is no such limit. A program that needs a terminal gets `shim.dylib` injected (`zeropty-tty`) so it sees one, or loads a runtime adapter if it runs on Node or Bun. The shim intercepts `isatty`, `tcgetattr`, `ioctl(TIOCGWINSZ)`, `tcsetpgrp`, `readpassphrase`, `getpass` and others.
 
 What the PTY used to do (turning Enter into a newline, `C-c` into a signal, line editing, echo), the engine emulates when it sends keys. The same keys were checked against tmux ([Usage: line discipline](USAGE.md#key-input-and-the-line-discipline)).
 

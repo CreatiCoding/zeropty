@@ -45,7 +45,7 @@ body:
         - C ABI (libzeropty_c)
         - Rust crate
         - attach
-        - zeropty-tty / claude-zeropty
+        - zeropty-tty
     validations:
       required: true
   - type: input

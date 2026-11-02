@@ -38,7 +38,7 @@
 
 ## claude가 없어도 쓸 수 있나요?
 
-네. 세션은 아무 프로그램이나 돼요(`sh`, `cat`, `python3`, 빌드 명령...). 테스트와 [예제](README.md#예제)도 모두 claude 없이 돌아가요. `claude-zeropty`는 claude를 터미널 없이 띄우기 위한 작은 래퍼일 뿐이에요.
+네. 세션은 아무 프로그램이나 돼요(`sh`, `cat`, `python3`, 빌드 명령...). 테스트와 [예제](README.md#예제)도 모두 claude 없이 돌아가요. zeropty에는 claude 전용 부분이 없어요. claude를 세션에 띄우는 방법은 [USAGE](USAGE.md#shim-대신-런타임-어댑터)에 있어요.
 
 ## Linux나 Windows에서도 되나요?
 
@@ -60,8 +60,8 @@ macOS와 Linux(x86_64, glibc 2.29·커널 5.3 이상)에서 돼요. Windows는 �
 
 | 빠지는 것 | 왜 빠지나요 | 없으면 |
 |---|---|---|
-| `shim.dylib` | C 파일(`shim/shim.c`)을 `clang`으로 따로 빌드해요 | 터미널이 필요한 프로그램(claude, vim)이 "터미널이 아니다"라고 판단해요 |
-| `zeropty-tty`, `claude-zeropty` | 셸 스크립트이고, 자기와 같은 폴더의 `shim.dylib`을 찾아요 | claude를 터미널 없이 띄울 수 없어요 |
+| `shim.dylib` | C 파일(`shim/shim.c`)을 `clang`으로 따로 빌드해요 | 터미널이 필요한 프로그램(vim, less)이 "터미널이 아니다"라고 판단해요 |
+| `zeropty-tty` | 셸 스크립트이고, 자기와 같은 폴더의 `shim.dylib`을 찾아요 | 터미널이 필요한 프로그램을 shim으로 띄울 수 없어요 |
 | `libzeropty_c.dylib`, `zeropty.h`, `zeropty.node` | 워크스페이스의 다른 crate(`bindings/`)가 만드는 라이브러리예요 | C·Node 임베딩을 못 해요(Rust 임베딩은 git 의존성으로 돼요) |
 | `zeropty_bash.dylib` | C 파일(`shell/zeropty_bash.c`)을 따로 빌드해요 | bash builtin이 없어요(일반 CLI는 그대로 돼요) |
 
