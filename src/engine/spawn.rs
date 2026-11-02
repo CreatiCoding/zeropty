@@ -1,6 +1,7 @@
 //! Starting programs: a session's (through /bin/sh, its terminal a socket pair, the environment a
 //! program under tmux would see), and a pipe-pane command's. Each leads its own process group, so
-//! signals for it (C-c, kill-session) reach whatever it started.
+//! signals for it (C-c, kill-session) reach whatever it started; a session's program leads its own
+//! session as well (sys::process::in_own_session).
 //!
 //! The OS side of super::backend::SystemPrograms: the engine reaches these only through `Programs`.
 
@@ -37,8 +38,10 @@ pub(super) fn session(p: &Spawn<'_>) -> Result<Spawned, String> {
         .env("ZEROPTY_TTY_ID", tty_id)
         // Sessions are not inside tmux even when the server was started from one; claude reads these.
         .env_remove("TMUX")
-        .env_remove("TMUX_PANE")
-        .process_group(0);
+        .env_remove("TMUX_PANE");
+    // A session of its own, not only a group: see in_own_session (a stopped program survives the
+    // server's exit at restart-server).
+    crate::sys::process::in_own_session(&mut cmd);
     for (k, v) in p.env {
         match v {
             Some(v) => cmd.env(k, v),

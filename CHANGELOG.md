@@ -20,6 +20,7 @@ release; polish that draft into entries written in English, and add the same ent
 ### Fixed
 
 - Website: the quick start block on the landing page showed two commands as YAML objects; they now render as written.
+- `restart-server` no longer loses a session whose program (or a child of it) is stopped at that moment, for example after `C-z`: the kernel used to hang up the whole process group when the old server exited. Each session's program now leads a session of its own (`setsid`), as under tmux.
 
 ## [0.1.9] - 2026-10-25
 
