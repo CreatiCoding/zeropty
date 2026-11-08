@@ -9,15 +9,13 @@
       ],
       "timeout": "40m",
       "steps": [
-        "vuln-check",
-        "cd website",
-        "corepack yarn install --immutable",
-        "corepack yarn build"
+        "ci-par vuln-check 'cd website && corepack yarn install --immutable && corepack yarn build'"
       ],
       "deploy": [
         "raW-nZJ_FHAdxkduCq5Px"
       ],
-      "notifyAutofix": true
+      "notifyAutofix": true,
+      "note": "병렬: ci-par 가 서로 상관없는 검사를 CI_CPUS(에이전트가 잡을 줄 때 남은 코어로 정함)만큼 동시에 돌린다"
     },
     {
       "id": "zeropty-release",
@@ -43,7 +41,7 @@
             "rustup target add aarch64-apple-darwin x86_64-apple-darwin",
             "if [ -n \"$CI_TAG\" ]; then node scripts/release.mjs check --tag \"$CI_TAG\"; fi",
             "notes=\"$TMPDIR/zeropty-notes-$CI_RUN_ID.md\"",
-            "node scripts/release.mjs release-notes \u003e\"$notes\" \u0026\u0026 cat \"$notes\"",
+            "node scripts/release.mjs release-notes >\"$notes\" && cat \"$notes\"",
             "scripts/package.sh",
             "cp \"$notes\" dist/release/notes.md"
           ]
@@ -81,11 +79,11 @@
           "when": "tag",
           "steps": [
             "cd dist/release",
-            "sha256sum ./*.tar.gz | sed 's| \\./| |' \u003eSHA256SUMS \u0026\u0026 cat SHA256SUMS",
+            "sha256sum ./*.tar.gz | sed 's| \\./| |' >SHA256SUMS && cat SHA256SUMS",
             "export GH_REPO=CreatiCoding/zeropty",
             "tag=\"$CI_TAG\"; pre=\"\"",
             "case \"$tag\" in *-*) pre=\"--prerelease\" ;; esac",
-            "gh release view \"$tag\" \u003e/dev/null 2\u003e\u00261 || gh release create \"$tag\" --verify-tag $pre --title \"zeropty ${tag#v}\" --notes-file notes.md || gh release view \"$tag\" \u003e/dev/null",
+            "gh release view \"$tag\" >/dev/null 2>&1 || gh release create \"$tag\" --verify-tag $pre --title \"zeropty ${tag#v}\" --notes-file notes.md || gh release view \"$tag\" >/dev/null",
             "gh release upload \"$tag\" ./*.tar.gz SHA256SUMS"
           ]
         }
