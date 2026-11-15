@@ -98,6 +98,10 @@ export default withMermaid(
     appearance: 'dark',
     head: [
       ['link', { rel: 'icon', href: '/icon.svg', type: 'image/svg+xml' }],
+      // The status bar colour: the top bar's (--vp-nav-bg-color). theme/index.ts follows a theme switch (AGENTS.md).
+      ['meta', { name: 'color-scheme', content: 'light dark' }],
+      ['meta', { name: 'theme-color', content: '#ffffff', media: '(prefers-color-scheme: light)' }],
+      ['meta', { name: 'theme-color', content: '#0a0a0b', media: '(prefers-color-scheme: dark)' }],
       ['meta', { property: 'og:image', content: 'https://zeropty.pubdoc.dev/social.png' }],
       ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
     ],

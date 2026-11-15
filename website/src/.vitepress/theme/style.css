@@ -207,3 +207,16 @@ a.zp-card[href]:hover h3 { color: var(--vp-c-brand-1); }
 /* mermaid line-height: the labels are sized with 1.5; the page's 1.75 would clip a second line. */
 .vp-doc .mermaid { line-height: 1.5; }
 .vp-doc .mermaid p { margin: 0; line-height: 1.5; }
+
+/* iOS home screen app: the status bar.
+   An iOS 26 home screen app walks up from the element 4px below the top looking for a fixed/sticky box at least 90% wide,
+   and paints the status bar with the first background on that path; with none it blurs it (AGENTS.md). Below 960px
+   VitePress keeps the top bar (.VPNav) relative, and on the home page without a background, so on narrow screens the top
+   bar is sticky and painted. The outline bar (.VPLocalNav) sticks right under it. */
+@media (max-width: 959px) {
+  :root .Layout .VPNav { position: sticky; }
+  :root .Layout .VPNavBar.home { background-color: var(--vp-nav-bg-color); }
+  :root .Layout .VPLocalNav { top: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px)); padding-top: 0; }
+  /* The outline dropdown: the top bar always stays, so leave its height out. */
+  :root .VPLocalNav .VPLocalNavOutlineDropdown .items { max-height: calc(100dvh - var(--vp-nav-height) - 86px); }
+}
