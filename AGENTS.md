@@ -137,3 +137,32 @@ docs/BENCHMARKS.md and keep going on everything else.
 - `./build.sh` deletes binaries in `dist/` before copying: macOS kills a binary overwritten in place.
 - Work in a git worktree, not the main checkout (other sessions may use it).
 - Never force-push `main`.
+
+## iOS home screen app: no blur over the status bar
+
+Opened from the iPhone home screen ("Add to Home Screen"), a page can get a blurred band over the clock and battery
+row at the top. The website (zeropty.pubdoc.dev, `website/`) avoids it; keep these rules for any page served to
+people.
+
+- Why: an iOS 26 home screen app walks up from the element 4px below the top of the screen looking for a
+  `position: fixed`/`sticky` box **at least 90% of the width**. With one, it paints the status bar with the first
+  background on that path; **with none, it blurs it.**
+- Rules:
+  1. Each page has its outer frame at `position: fixed; inset: 0` (scrolling inside it, `overflow: auto`), or a
+     full-width `position: sticky; top: 0` top bar. Separate pages (404, sign-in) too.
+  2. The path from that box up to the top element **has a background colour**. All transparent and iOS picks an
+     unrelated colour.
+  3. No `viewport-fit=cover` in `viewport`: with it, the content slides under the status bar.
+  4. Two `<meta name="theme-color">` (light and dark, `media="(prefers-color-scheme: …)"`) with the top bar's
+     background, and `<meta name="color-scheme" content="light dark">`. A page that switches theme in JS updates
+     theme-color with it.
+- Here (`website/src/.vitepress/`): below 960px VitePress keeps the top bar `.VPNav` relative and, on the home page,
+  without a background. `theme/style.css` makes `.VPNav` sticky on narrow screens, gives `.VPNavBar.home` the
+  `--vp-nav-bg-color` background and puts the outline bar `.VPLocalNav` right under it
+  (`top: var(--vp-nav-height)`). theme-color is `#ffffff`/`#0a0a0b` in `config.mts` (the site opens dark,
+  `appearance: 'dark'`), and `theme/index.ts` sets it to `--vp-nav-bg-color` whenever the theme (`isDark`) changes.
+- Inputs: iOS Safari zooms in when an `input` or `textarea` under 16px gets focus. Keep them at 16px or more on touch
+  devices (`@media (pointer: coarse)`); the website's search input is 16px.
+- Checking: at phone width (390px), walk up from `document.elementFromPoint(195, 4)` and look for the fixed/sticky
+  box and a background. The real check is on an iPhone home screen app.
+- Pitfall: when `body` itself is the `position: fixed` frame, also set `html { overflow: hidden }`; otherwise body does not scroll, long content is cut off and anchor links stop working. Scrolling now happens inside the frame, so scroll-to-top on navigation must scroll that frame, not `window` (seen in learn, tools and agent-bridge).
